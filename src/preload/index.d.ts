@@ -1,8 +1,10 @@
 import { ElectronAPI } from '@electron-toolkit/preload';
+import type { ScreenStudioApi } from './api';
 
 declare global {
   interface Window {
     electron: ElectronAPI;
+    screenStudio: ScreenStudioApi;
     api: {
       platform: string;
       minimize: () => void;
