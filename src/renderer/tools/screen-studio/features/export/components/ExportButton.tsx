@@ -1,6 +1,6 @@
-import type { JSX } from 'react'
-import { useExportAction } from '../hooks/useExportAction'
-import { cn } from '../../../lib/utils'
+import type { JSX } from 'react';
+import { useExportAction } from '../hooks/useExportAction';
+import { cn } from '../../../lib/utils';
 
 /**
  * Top-nav export trigger. Uses whatever's currently in useExportStore
@@ -8,7 +8,7 @@ import { cn } from '../../../lib/utils'
  * Export panel) rather than exposing format/codec/quality controls itself.
  */
 export function ExportButton(): JSX.Element {
-  const { status, error, progress, canExport, handleExport } = useExportAction()
+  const { status, error, progress, canExport, handleExport } = useExportAction();
 
   return (
     <div className="relative flex items-center">
@@ -29,5 +29,5 @@ export function ExportButton(): JSX.Element {
         </p>
       )}
     </div>
-  )
+  );
 }
