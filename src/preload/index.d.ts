@@ -1,5 +1,5 @@
 import { ElectronAPI } from '@electron-toolkit/preload';
-import type { ScreenStudioApi } from './api';
+import type { ScreenStudioApi } from './screen-stuido/api';
 import type { PostmanBridge } from './postman/api';
 
 declare global {

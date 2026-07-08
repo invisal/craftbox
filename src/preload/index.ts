@@ -1,6 +1,6 @@
 import { contextBridge, ipcRenderer } from 'electron';
 import { electronAPI } from '@electron-toolkit/preload';
-import { screenStudioApi } from './api';
+import { screenStudioApi } from './screen-stuido/api';
 import { postmanApi } from './postman/api';
 
 // Custom APIs for renderer
