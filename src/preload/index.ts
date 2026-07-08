@@ -1,5 +1,6 @@
 import { contextBridge, ipcRenderer } from 'electron';
 import { electronAPI } from '@electron-toolkit/preload';
+import { postmanApi } from './postman/api';
 
 // Custom APIs for renderer
 const api = {
@@ -7,7 +8,9 @@ const api = {
   minimize: () => ipcRenderer.send('window-minimize'),
   maximize: () => ipcRenderer.send('window-maximize'),
   close: () => ipcRenderer.send('window-close'),
-  openDirectory: () => ipcRenderer.invoke('open-directory')
+  openDirectory: () => ipcRenderer.invoke('open-directory'),
+
+  ...postmanApi
 };
 
 // Use `contextBridge` APIs to expose Electron APIs to
