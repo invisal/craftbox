@@ -10,7 +10,11 @@
   --color-text-dim: #a6adc8; /* Catppuccin Mocha Subtext 0 */
   --color-accent: #89b4fa; /* Catppuccin Mocha Blue */
   --color-danger: #f38ba8; /* Catppuccin Mocha Red */
-  --color-surface: #45475a; /* Catppuccin Mocha Surface 1 */
+  --color-surface: #000000; /* base background, pure black */
+  --color-surface-2: #101014; /* elevation 1 — hover on surface */
+  --color-surface-3: #1a1a20; /* elevation 2 — hover on surface-2, selected on surface */
+  --color-surface-4: #26262e; /* elevation 3 — selected on surface-2 */
+  --color-border: var(--color-surface-4); /* hairline border against bg-surface */
   --color-emphasis-text: #11111b; /* Catppuccin Mocha Crust — text on accent/danger fills */
   --color-text-base: #cdd6f4; /* Catppuccin Mocha Text */
   --color-scrollbar-track: #181825;
@@ -29,7 +33,11 @@
   --color-text-dim: #6c6f85; /* Catppuccin Latte Subtext 0 */
   --color-accent: #1e66f5; /* Catppuccin Latte Blue */
   --color-danger: #d20f39; /* Catppuccin Latte Red */
-  --color-surface: #bcc0cc; /* Catppuccin Latte Surface 1 */
+  --color-surface: #ffffff; /* base background, pure white */
+  --color-surface-2: #f2f2f5; /* elevation 1 — hover on surface */
+  --color-surface-3: #e3e3e9; /* elevation 2 — hover on surface-2, selected on surface */
+  --color-surface-4: #d0d0d9; /* elevation 3 — selected on surface-2 */
+  --color-border: var(--color-surface-4); /* hairline border against bg-surface */
   --color-emphasis-text: #ffffff; /* Latte's accent/danger are saturated — need light text */
   --color-text-base: #4c4f69; /* Catppuccin Latte Text */
   --color-scrollbar-track: #e6e9ef;

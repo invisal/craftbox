@@ -1,6 +1,7 @@
 import React from 'react';
 import { useLayoutStore } from '../../store/layout.store';
-import { Monitor, Send, Video, Terminal } from 'lucide-react';
+import { Monitor, Send, Video } from 'lucide-react';
+import { Button } from '../ui/Button';
 
 export const HomeTab: React.FC = () => {
   const addActivityInstance = useLayoutStore((s) => s.addActivityInstance);
@@ -8,7 +9,7 @@ export const HomeTab: React.FC = () => {
   const apps = [
     {
       id: 'lens' as const,
-      name: 'Lens K8s IDE',
+      name: 'Kubernetes',
       description:
         'Deploy, inspect, and monitor Kubernetes workloads, pods, deployments, and nodes in real-time.',
       icon: Monitor,
@@ -18,7 +19,7 @@ export const HomeTab: React.FC = () => {
     },
     {
       id: 'postman' as const,
-      name: 'Postman Client',
+      name: 'HTTP Request',
       description:
         'Compose API requests, trigger mock response payloads, customize HTTP headers, and inspect JSON bodies.',
       icon: Send,
@@ -28,7 +29,7 @@ export const HomeTab: React.FC = () => {
     },
     {
       id: 'screenstudio' as const,
-      name: 'ScreenStudio Canvas',
+      name: 'Screen Recorder',
       description:
         'Simulate high-fidelity screen recording sessions with mouse click zoom levels, canvas backdrops, and export presets.',
       icon: Video,
@@ -39,64 +40,41 @@ export const HomeTab: React.FC = () => {
   ];
 
   return (
-    <div className="flex-1 bg-editor-bg flex flex-col items-center justify-center p-6 relative overflow-hidden select-none text-zinc-300 antialiased font-sans rounded-lg border border-border-dark">
-      {/* Background soft ambient radial glows */}
-      <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] bg-accent/5 rounded-full blur-[120px] pointer-events-none" />
-      <div className="absolute bottom-[-20%] right-[-10%] w-[50%] h-[50%] bg-purple-500/5 rounded-full blur-[120px] pointer-events-none" />
+    <div className="bg-surface w-full h-screen p-8">
+      <h1 className="font-medium text-xl">benpocket</h1>
+      <p>various of random tools for developers</p>
 
-      {/* Header Info */}
-      <div className="text-center flex flex-col items-center gap-3 mb-10 max-w-lg z-10 animate-in fade-in duration-300">
-        <div className="flex items-center gap-2 bg-sidebar-bg/60 border border-border-dark px-3 py-1 rounded-full text-xs font-semibold text-accent shadow-sm">
-          <Terminal size={14} />
-          <span>CraftBox Dashboard</span>
-        </div>
-        <h1 className="text-3xl font-extrabold tracking-tight text-white sm:text-4xl bg-gradient-to-r from-white via-zinc-200 to-zinc-400 bg-clip-text text-transparent">
-          CraftBox Workspace Suite
-        </h1>
-        <p className="text-xs text-zinc-450 leading-relaxed">
-          Click an application below to instantiate it dynamically. Spawning an app opens it as a
-          dedicated icon in the Activity Bar. You can create multiple instances of any application.
-        </p>
-      </div>
+      <input
+        className="border w-md h-9 text-sm px-2 rounded mt-4 mb-12 bg-surface-2 border-border outline-none"
+        placeholder="Search tool..."
+      />
 
-      {/* Grid selector */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl w-full z-10 animate-in fade-in slide-in-from-bottom-4 duration-300">
-        {apps.map((app) => {
-          const Icon = app.icon;
+      <div className="space-y-2">
+        {apps.map((tool) => {
           return (
-            <div
-              key={app.id}
-              onClick={() => addActivityInstance(app.id)}
-              className={`group relative bg-sidebar-bg/60 border rounded-2xl p-6 flex flex-col gap-4 cursor-pointer hover:-translate-y-1 transition-all duration-200 shadow-xl backdrop-blur-md ${app.color}`}
+            <button
+              role="button"
+              key={tool.id}
+              className="flex gap-2 text-left"
+              onClick={() => addActivityInstance(tool.id)}
             >
-              {/* App Icon Circle */}
-              <div className="w-12 h-12 rounded-xl bg-editor-bg flex items-center justify-center border border-border-dark group-hover:scale-105 transition-transform duration-200">
-                <Icon size={24} />
-              </div>
-
-              {/* Text metadata */}
-              <div className="flex flex-col gap-1.5 mt-2">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-base font-bold text-white group-hover:text-white transition-colors">
-                    {app.name}
-                  </h3>
-                  <span className="text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 bg-editor-bg border border-border-dark rounded-full text-zinc-550">
-                    {app.badge}
-                  </span>
-                </div>
-                <p className="text-xs text-zinc-455 leading-relaxed">{app.description}</p>
-              </div>
-
-              {/* Bottom launch label */}
-              <div className="mt-auto pt-4 border-t border-border-dark/60 flex items-center justify-between text-[11px] font-semibold text-zinc-500 group-hover:text-white transition-colors">
-                <span>Instantiate & Launch</span>
-                <span className="opacity-0 group-hover:opacity-100 transition-opacity translate-x-1 group-hover:translate-x-0 duration-200">
-                  →
-                </span>
-              </div>
-            </div>
+              <span className="size-12 rounded bg-surface-2 inline-flex items-center justify-center">
+                <tool.icon size={18} />
+              </span>
+              <p className="flex flex-col text-sm justify-center">
+                <span className="font-medium">{tool.name}</span>
+                <span className="text-gray-500">{tool.description}</span>
+              </p>
+            </button>
           );
         })}
+      </div>
+
+      <div className="flex gap-2 mt-12">
+        <Button variant="primary">Primary</Button>
+        <Button variant="outline">Outline</Button>
+        <Button variant="secondary">Secondary</Button>
+        <Button variant="destructive">Destructive</Button>
       </div>
     </div>
   );
