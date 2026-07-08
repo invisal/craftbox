@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import {
   ComponentType,
   createContext,
@@ -8,7 +9,7 @@ import {
   useState
 } from 'react';
 
-interface ToolComponentProps<Payload> {
+export interface ToolComponentProps<Payload> {
   id: string;
   payload: Payload;
   isTabActive: boolean;
@@ -38,10 +39,10 @@ type TabShape<TTool> =
     ? { type: Name; payload: Payload }
     : never;
 
-type Tab<TTool extends Tool<string, unknown>> = BaseTab & TabShape<TTool>;
-type TabType<TTool extends Tool<string, unknown>> = Tab<TTool>['type'];
+type Tab<TTool extends Tool<string, any>> = BaseTab & TabShape<TTool>;
+type TabType<TTool extends Tool<string, any>> = Tab<TTool>['type'];
 
-interface TabContextValue<TTool extends Tool<string, unknown>> {
+interface TabContextValue<TTool extends Tool<string, any>> {
   tabs: Tab<TTool>[];
   activeTabId: string | undefined;
   openTab: <T extends TabType<TTool>>(
@@ -64,7 +65,7 @@ interface State<TTool extends Tool<string, unknown>> {
  * UI (e.g. the sidebar). Each call produces its own state tree and its own React
  * context, so independent tab regions never see or affect each other's tabs.
  */
-export function createTabProvider<TTool extends Tool<string, unknown>>(tools: readonly TTool[]) {
+export function createTabProvider<TTool extends Tool<string, any>>(tools: readonly TTool[]) {
   const toolsByName = Object.fromEntries(tools.map((tool) => [tool.name, tool])) as Record<
     TabType<TTool>,
     TTool
