@@ -1,6 +1,6 @@
 import React from 'react';
 import { useLayoutStore } from '../../store/layout.store';
-import { LensSidebar } from './sidebars/LensSidebar';
+import { KuberneterSidebar } from '../../../tools/kuberneter/KuberneterSidebar';
 import { PostmanSidebar } from '../../../tools/postman/PostmanSidebar';
 import { ScreenRecorderSidebar } from '../../../tools/screen-recorder/sidebar/ScreenRecorderSidebar';
 
@@ -35,7 +35,7 @@ export const LeftPanel: React.FC = () => {
     >
       {/* Dynamic Content */}
       <div className="flex-1 overflow-y-auto p-3 flex flex-col gap-4">
-        {activeActivity === 'lens' && <LensSidebar />}
+        {activeActivity === 'kuberneter' && <KuberneterSidebar />}
         {activeActivity === 'postman' && <PostmanSidebar />}
         {activeActivity === 'screenrecorder' && <ScreenRecorderSidebar />}
       </div>

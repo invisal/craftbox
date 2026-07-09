@@ -54,7 +54,7 @@ export const TitleBar: React.FC = () => {
 
       {/* Middle: Workspace Title / Search Bar */}
       <div className="flex-1 max-w-sm mx-auto h-5 bg-editor-bg border border-border-dark rounded flex items-center justify-center text-zinc-500 text-[10px] titlebar-nodrag hover:bg-sidebar-bg/60 cursor-pointer transition-colors">
-        <span>craftbox (Workspace) - Lens Search</span>
+        <span>craftbox (Workspace) - Kuberneter Search</span>
       </div>
 
       {/* Right side: Layout toggles and OS window controls */}

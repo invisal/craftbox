@@ -8,7 +8,7 @@ export const HomeTab: React.FC = () => {
 
   const apps = [
     {
-      id: 'lens' as const,
+      id: 'kuberneter' as const,
       name: 'Kubernetes',
       description:
         'Deploy, inspect, and monitor Kubernetes workloads, pods, deployments, and nodes in real-time.',
