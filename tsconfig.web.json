@@ -7,7 +7,7 @@
     "src/renderer/tools/**/*",
     "src/preload/**/*.d.ts",
     "src/shared/**/*",
-    "src/renderer/tools/screen-studio/**/*"
+    "src/renderer/tools/screen-recorder/**/*"
   ],
   "compilerOptions": {
     "target": "ES2022",
@@ -34,8 +34,8 @@
       "@shared/*": [
         "src/shared/*"
       ],
-      "@screen-studio/*": [
-        "src/renderer/tools/screen-studio/*"
+      "@screen-recorder/*": [
+        "src/renderer/tools/screen-recorder/*"
       ]
     }
   },

@@ -9,8 +9,8 @@ import { registerWebSocketHandlers, closeAllWebSocketConnections } from './postm
 import { registerCollectionHandlers } from './postman/ipc/collections';
 import { registerCollectionTransferHandlers } from './postman/ipc/collectionsTransfer';
 import { registerEnvironmentHandlers } from './postman/ipc/environments';
-import { registerIpcHandlers as registerScreenStudioHandlers } from './screen-studio/ipc/register-handlers';
-import { applyContentSecurityPolicy } from './screen-studio/security/content-security-policy';
+import { registerIpcHandlers as registerScreenRecorderHandlers } from './screen-recorder/ipc/register-handlers';
+import { applyContentSecurityPolicy } from './screen-recorder/security/content-security-policy';
 
 function createWindow(): void {
   // Create the browser window.
@@ -55,7 +55,7 @@ app.whenReady().then(() => {
 
   // Replaces index.html's static CSP meta tag: needs to differ between dev
   // (Vite HMR needs 'unsafe-eval' + a websocket connect-src) and production,
-  // and needs media-src blob: for ScreenStudio's recording preview.
+  // and needs media-src blob: for ScreenRecorder's recording preview.
   applyContentSecurityPolicy();
 
   // Default open or close DevTools by F12 in development
@@ -152,8 +152,8 @@ app.whenReady().then(() => {
 
   // Recording capture, project persistence, export, settings, window
   // controls, screen-recording permissions, and export-path dialogs for the
-  // ScreenStudio tool (src/main/screen-studio/ipc/*-handlers.ts).
-  registerScreenStudioHandlers();
+  // ScreenRecorder tool (src/main/screen-recorder/ipc/*-handlers.ts).
+  registerScreenRecorderHandlers();
 
   createWindow();
 

@@ -1,6 +1,6 @@
 import { contextBridge, ipcRenderer } from 'electron';
 import { electronAPI } from '@electron-toolkit/preload';
-import { screenStudioApi } from './screen-stuido/api';
+import { screenRecorderApi } from './screen-recorder/api';
 import { postmanApi } from './postman/api';
 
 // Custom APIs for renderer
@@ -20,7 +20,7 @@ if (process.contextIsolated) {
   try {
     contextBridge.exposeInMainWorld('electron', electronAPI);
     contextBridge.exposeInMainWorld('api', api);
-    contextBridge.exposeInMainWorld('screenStudio', screenStudioApi);
+    contextBridge.exposeInMainWorld('screenRecorder', screenRecorderApi);
   } catch (error) {
     console.error(error);
   }
@@ -30,5 +30,5 @@ if (process.contextIsolated) {
   // @ts-ignore (define in dts)
   window.api = api;
   // @ts-ignore (define in dts)
-  window.screenStudio = screenStudioApi;
+  window.screenRecorder = screenRecorderApi;
 }

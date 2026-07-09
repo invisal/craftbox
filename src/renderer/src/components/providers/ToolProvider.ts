@@ -1,7 +1,7 @@
 import { HttpClientMain } from './../../../tools/postman';
 import { HomeMain } from './../../../tools/home';
 import { createTabProvider, registerTool } from './createTabProvider';
-import { ScreenRecordMain } from '@screen-studio/index';
+import { ScreenRecordMain } from '@screen-recorder/index';
 
 const homeTool = registerTool({
   name: 'home',
@@ -18,7 +18,7 @@ const httpClientTool = registerTool({
 });
 
 const screenRecordTool = registerTool({
-  name: 'screen-record',
+  name: 'screen-recorder',
   component: ScreenRecordMain,
   generateName: () => 'Screen Recorder',
   label: ''

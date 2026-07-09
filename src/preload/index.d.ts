@@ -1,11 +1,11 @@
 import { ElectronAPI } from '@electron-toolkit/preload';
-import type { ScreenStudioApi } from './screen-stuido/api';
+import type { ScreenRecorderApi } from './screen-recorder/api';
 import type { PostmanBridge } from './postman/api';
 
 declare global {
   interface Window {
     electron: ElectronAPI;
-    screenStudio: ScreenStudioApi;
+    screenRecorder: ScreenRecorderApi;
     api: {
       platform: string;
       minimize: () => void;
