@@ -1,11 +1,13 @@
 import { ElectronAPI } from '@electron-toolkit/preload';
 import type { ScreenRecorderApi } from './screen-recorder/api';
 import type { PostmanBridge } from './postman/api';
+import type { KuberneterApi } from './kuberneter/api';
 
 declare global {
   interface Window {
     electron: ElectronAPI;
     screenRecorder: ScreenRecorderApi;
+    kuberneter: KuberneterApi;
     api: {
       platform: string;
       minimize: () => void;

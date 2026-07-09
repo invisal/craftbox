@@ -11,6 +11,7 @@ import { registerCollectionTransferHandlers } from './postman/ipc/collectionsTra
 import { registerEnvironmentHandlers } from './postman/ipc/environments';
 import { registerIpcHandlers as registerScreenRecorderHandlers } from './screen-recorder/ipc/register-handlers';
 import { applyContentSecurityPolicy } from './screen-recorder/security/content-security-policy';
+import { registerKuberneterHandlers } from './kuberneter';
 
 function createWindow(): void {
   // Create the browser window.
@@ -154,6 +155,9 @@ app.whenReady().then(() => {
   // controls, screen-recording permissions, and export-path dialogs for the
   // ScreenRecorder tool (src/main/screen-recorder/ipc/*-handlers.ts).
   registerScreenRecorderHandlers();
+
+  // Kuberneter contexts selection and live resources query handlers
+  registerKuberneterHandlers();
 
   createWindow();
 
