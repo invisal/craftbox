@@ -8,7 +8,7 @@ export default defineConfig({
     resolve: {
       alias: {
         '@shared': resolve('src/shared'),
-        '@screen-studio': resolve('src/renderer/tools/screen-studio')
+        '@screen-recorder': resolve('src/renderer/tools/screen-recorder')
       }
     }
   },
@@ -16,7 +16,7 @@ export default defineConfig({
     resolve: {
       alias: {
         '@shared': resolve('src/shared'),
-        '@screen-studio': resolve('src/renderer/tools/screen-studio')
+        '@screen-recorder': resolve('src/renderer/tools/screen-recorder')
       }
     }
   },
@@ -25,7 +25,7 @@ export default defineConfig({
       alias: {
         '@renderer': resolve('src/renderer/src'),
         '@shared': resolve('src/shared'),
-        '@screen-studio': resolve('src/renderer/tools/screen-studio')
+        '@screen-recorder': resolve('src/renderer/tools/screen-recorder')
       }
     },
     plugins: [react(), tailwindcss()]

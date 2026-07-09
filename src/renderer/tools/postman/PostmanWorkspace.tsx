@@ -10,12 +10,11 @@ import { WebSocketComposer } from './components/WebSocketComposer';
 import { WebSocketLog } from './components/WebSocketLog';
 import { SaveRequestPopover } from './components/SaveRequestPopover';
 import { EnvironmentSelector } from './components/EnvironmentSelector';
+import { useToolTabs } from '@renderer/components/providers/ToolProvider';
 
 export const PostmanWorkspace: React.FC = () => {
-  const activeTabId = useLayoutStore((s) => s.activeTabId);
-
+  const { activeTabId } = useToolTabs();
   if (!activeTabId) return null;
-
   return <PostmanClient tabId={activeTabId} />;
 };
 
@@ -37,7 +36,9 @@ const PostmanClient: React.FC<{ tabId: string }> = ({ tabId }) => {
             <Tabs.Tab
               value="HTTP"
               className={`px-4 py-1.5 rounded-md font-semibold cursor-pointer transition-colors ${
-                client.protocol === 'HTTP' ? 'bg-accent text-white' : 'text-zinc-400 hover:text-white'
+                client.protocol === 'HTTP'
+                  ? 'bg-accent text-white'
+                  : 'text-zinc-400 hover:text-white'
               }`}
             >
               REST Client
@@ -45,7 +46,9 @@ const PostmanClient: React.FC<{ tabId: string }> = ({ tabId }) => {
             <Tabs.Tab
               value="WEBSOCKET"
               className={`px-4 py-1.5 rounded-md font-semibold cursor-pointer transition-colors ${
-                client.protocol === 'WEBSOCKET' ? 'bg-accent text-white' : 'text-zinc-400 hover:text-white'
+                client.protocol === 'WEBSOCKET'
+                  ? 'bg-accent text-white'
+                  : 'text-zinc-400 hover:text-white'
               }`}
             >
               WebSocket Client
@@ -98,7 +101,10 @@ const PostmanClient: React.FC<{ tabId: string }> = ({ tabId }) => {
             onBodyChange={client.http.setBody}
           />
 
-          <ResponseInspector response={client.http.state.response} isLoading={client.http.state.isLoading} />
+          <ResponseInspector
+            response={client.http.state.response}
+            isLoading={client.http.state.isLoading}
+          />
         </Tabs.Panel>
 
         <Tabs.Panel value="WEBSOCKET" className="flex flex-col gap-3 min-h-0 flex-1">

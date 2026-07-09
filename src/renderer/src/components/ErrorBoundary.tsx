@@ -5,7 +5,7 @@ interface ErrorBoundaryState {
 }
 
 // Without this, an uncaught error anywhere in the tree (e.g. a preload API
-// call failing because `window.screenStudio` isn't exposed) unmounts the
+// call failing because `window.screenRecorder` isn't exposed) unmounts the
 // whole app with nothing rendered in its place -- which looks exactly like
 // the dark theme's near-black background doing nothing. This surfaces the
 // actual error instead.
