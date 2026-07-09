@@ -5,7 +5,7 @@ import type {
   RecordingRequest,
   RecordingSession
 } from '@screen-recorder/types/recording';
-import type { Project } from '@screen-recorder/types/project';
+import type { Project, CursorPathPoint } from '@screen-recorder/types/project';
 import type { ExportFormat, ExportOptions, ExportProgress } from '@screen-recorder/types/export';
 import type { ScreenRecordingStatus } from '@screen-recorder/types/permissions';
 
@@ -18,6 +18,23 @@ export const screenRecorderApi = {
     stop: (): Promise<void> => ipcRenderer.invoke(IpcChannels.StopRecording),
     saveFile: (fileName: string, data: ArrayBuffer): Promise<string> =>
       ipcRenderer.invoke(IpcChannels.SaveRecordingFile, fileName, data)
+  },
+  cursor: {
+    startTracking: (
+      bounds: { x: number; y: number; width: number; height: number },
+      startedAt: number
+    ): Promise<void> => ipcRenderer.invoke(IpcChannels.StartCursorTracking, bounds, startedAt),
+    stopTracking: (): Promise<void> => ipcRenderer.invoke(IpcChannels.StopCursorTracking),
+    onSample: (callback: (sample: CursorPathPoint) => void): (() => void) => {
+      const listener = (_event: unknown, sample: CursorPathPoint): void => callback(sample);
+      ipcRenderer.on(IpcChannels.CursorPositionSample, listener);
+      return () => ipcRenderer.removeListener(IpcChannels.CursorPositionSample, listener);
+    },
+    onClickSample: (callback: (sample: CursorPathPoint) => void): (() => void) => {
+      const listener = (_event: unknown, sample: CursorPathPoint): void => callback(sample);
+      ipcRenderer.on(IpcChannels.CursorClickSample, listener);
+      return () => ipcRenderer.removeListener(IpcChannels.CursorClickSample, listener);
+    }
   },
   project: {
     open: (projectId: string): Promise<Project | null> =>

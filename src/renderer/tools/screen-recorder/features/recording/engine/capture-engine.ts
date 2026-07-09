@@ -28,6 +28,8 @@ export interface CaptureRequest {
 export interface CaptureHandle {
   /** The combined video (+ mixed audio) stream feeding the recorder. */
   stream: MediaStream;
+  /** `Date.now()` at the exact moment the recorder started -- the true t=0 of the output file's timeline, for anything (cursor tracking) that needs to line up samples against it. */
+  startedAt: number;
   /** Stops all tracks and the recorder, resolving with the final recording. */
   stop: () => Promise<Blob>;
 }
@@ -128,6 +130,7 @@ export async function startCapture(request: CaptureRequest): Promise<CaptureHand
 
   return {
     stream: finalStream,
+    startedAt,
     stop: async (): Promise<Blob> => {
       if (recorder.state !== 'inactive') recorder.stop();
       const rawBlob = await recorderStopped;

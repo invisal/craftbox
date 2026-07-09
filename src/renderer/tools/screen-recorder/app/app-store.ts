@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import type { CursorPathPoint } from '@screen-recorder/types/project';
 
 export type ScreenRecorderRoute =
   'record-setup' | 'recording-hud' | 'editor' | 'library' | 'presets' | 'settings';
@@ -8,6 +9,10 @@ interface LastRecording {
   filePath: string | null;
   sizeBytes: number;
   createdAt: number;
+  /** Recorded system-cursor samples, source-timeline `atMs`. Empty for window captures. */
+  cursorPath: CursorPathPoint[];
+  /** Recorded real mousedown events (see click-tracker.ts), same convention as cursorPath. */
+  clickPath: CursorPathPoint[];
 }
 
 interface AppStoreState {

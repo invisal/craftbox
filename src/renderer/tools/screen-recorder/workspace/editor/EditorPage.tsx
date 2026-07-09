@@ -153,7 +153,13 @@ export function EditorPage(): JSX.Element {
         active={activeTool}
         onSelect={(tool) => setActiveTool((current) => (current === tool ? null : tool))}
       />
-      {activeTool && <EditorToolPanel tool={activeTool} currentTimeMs={currentTimeMs} />}
+      {activeTool && (
+        <EditorToolPanel
+          tool={activeTool}
+          currentTimeMs={currentTimeMs}
+          sourceResolution={sourceResolution}
+        />
+      )}
     </div>
   );
 }

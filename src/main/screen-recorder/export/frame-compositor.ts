@@ -6,11 +6,19 @@ import {
   type CanvasRenderingContext2D,
   type Image
 } from 'canvas';
-import type { Project, BackgroundSettings, Annotation } from '@screen-recorder/types/project';
+import type {
+  Project,
+  BackgroundSettings,
+  Annotation,
+  CursorSettings
+} from '@screen-recorder/types/project';
 import type { WebcamOptions } from '@screen-recorder/types/recording';
-import type { ZoomKeyframe } from '@screen-recorder/types/timeline';
+import type { CursorPathPoint } from '@shared/cursor-path';
 import { REFERENCE_CANVAS_WIDTH } from '@shared/constants';
 import { findWallpaperPreset } from '@shared/wallpaper-presets';
+import { smoothCursorPath, sampleCursorPath } from '@shared/cursor-path';
+import { resolveCursorStyle, CURSOR_SIZE_UNIT_PX } from '@shared/cursor-styles';
+import { resolveZoom } from '@shared/zoom-resolve';
 
 export interface InnerRect {
   x: number;
@@ -40,39 +48,6 @@ export function computeInnerRect(
     width: Math.round(width),
     height: Math.round(height)
   };
-}
-
-function ease(t: number, easing: ZoomKeyframe['easing']): number {
-  switch (easing) {
-    case 'linear':
-      return t;
-    case 'ease-in':
-      return t * t;
-    case 'ease-out':
-      return 1 - (1 - t) * (1 - t);
-    case 'ease-in-out':
-      return t < 0.5 ? 2 * t * t : 1 - (-2 * t + 2) ** 2 / 2;
-  }
-}
-
-/**
- * `'auto-cursor'` keyframes fall back to a fixed center point -- no cursor
- * position is ever recorded during capture, so there's nothing to follow.
- */
-function resolveZoom(
-  atMs: number,
-  keyframes: ZoomKeyframe[]
-): { depth: number; focal: { x: number; y: number } } {
-  const active = keyframes.find((k) => atMs >= k.atMs && atMs <= k.atMs + k.durationMs);
-  if (!active) return { depth: 1, focal: { x: 0.5, y: 0.5 } };
-
-  const progress = active.durationMs > 0 ? (atMs - active.atMs) / active.durationMs : 1;
-  const envelope =
-    progress < 0.5 ? ease(progress * 2, active.easing) : ease((1 - progress) * 2, active.easing);
-  const depth = 1 + (active.depth - 1) * envelope;
-  const focal = active.position === 'auto-cursor' ? { x: 0.5, y: 0.5 } : active.position;
-
-  return { depth, focal };
 }
 
 /**
@@ -221,6 +196,105 @@ function drawWebcamPlaceholder(
   ctx.restore();
 }
 
+/** Same path data as CursorStyleIcon.tsx's SVG, authored in a 24x24 box. */
+function traceCursorIconPath(ctx: CanvasRenderingContext2D): void {
+  ctx.beginPath();
+  ctx.moveTo(5, 3);
+  ctx.lineTo(5, 20.5);
+  ctx.lineTo(9.5, 16.2);
+  ctx.lineTo(12.3, 21.8);
+  ctx.lineTo(15, 20.4);
+  ctx.lineTo(12.1, 14.8);
+  ctx.lineTo(18.5, 14.5);
+  ctx.closePath();
+}
+
+function drawCursorIcon(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  sizePx: number,
+  fill: string,
+  stroke: string,
+  alpha: number
+): void {
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  ctx.translate(x, y);
+  ctx.scale(sizePx / 24, sizePx / 24);
+  traceCursorIconPath(ctx);
+  ctx.fillStyle = fill;
+  ctx.fill();
+  ctx.lineWidth = 1.4;
+  ctx.strokeStyle = stroke;
+  ctx.stroke();
+  ctx.restore();
+}
+
+/**
+ * Draws the recorded cursor (already smoothed once, in the caller, since
+ * smoothing doesn't depend on `atMs`). Position is mapped through
+ * `innerRect` exactly like the zoom focal point; the caller draws this
+ * *inside* the zoom-transformed block so the cursor pans/scales with the
+ * content, matching a real on-screen cursor rather than a fixed overlay.
+ */
+function drawCursor(
+  ctx: CanvasRenderingContext2D,
+  outputWidth: number,
+  innerRect: InnerRect,
+  cursor: CursorSettings,
+  smoothedPath: CursorPathPoint[],
+  atMs: number
+): void {
+  if (!cursor.visible || smoothedPath.length === 0) return;
+  const point = sampleCursorPath(smoothedPath, atMs);
+  if (!point) return;
+
+  const scale = outputWidth / REFERENCE_CANVAS_WIDTH;
+  const sizePx = cursor.size * CURSOR_SIZE_UNIT_PX * scale;
+  const preset = resolveCursorStyle(cursor.style);
+
+  ctx.save();
+  if (cursor.clipToCanvas) {
+    ctx.beginPath();
+    ctx.rect(innerRect.x, innerRect.y, innerRect.width, innerRect.height);
+    ctx.clip();
+  }
+
+  // Motion blur: a handful of trailing ghost copies sampled a little earlier
+  // on the path, fading out -- `motionBlur` (0-1) controls both the trail's
+  // reach (how far back in time it samples) and its opacity.
+  if (cursor.motionBlur > 0) {
+    const ghostCount = 4;
+    for (let i = ghostCount; i >= 1; i--) {
+      const ghostAtMs = atMs - i * 14 * cursor.motionBlur;
+      const ghostPoint = sampleCursorPath(smoothedPath, ghostAtMs);
+      if (!ghostPoint) continue;
+      const alpha = cursor.motionBlur * 0.12 * (1 - i / (ghostCount + 1));
+      drawCursorIcon(
+        ctx,
+        innerRect.x + ghostPoint.x * innerRect.width,
+        innerRect.y + ghostPoint.y * innerRect.height,
+        sizePx,
+        preset.fill,
+        preset.stroke,
+        alpha
+      );
+    }
+  }
+
+  drawCursorIcon(
+    ctx,
+    innerRect.x + point.x * innerRect.width,
+    innerRect.y + point.y * innerRect.height,
+    sizePx,
+    preset.fill,
+    preset.stroke,
+    1
+  );
+  ctx.restore();
+}
+
 function isAnnotationActive(atMs: number, annotation: Annotation): boolean {
   return atMs >= annotation.atMs && atMs <= annotation.atMs + annotation.durationMs;
 }
@@ -293,6 +367,7 @@ export class FrameCompositor {
   private readonly scratchCtx: CanvasRenderingContext2D;
   private backgroundImage: Image | undefined;
   private readonly annotationImages = new Map<string, Image>();
+  private smoothedCursorPath: CursorPathPoint[] = [];
 
   private constructor(
     private readonly outputWidth: number,
@@ -318,6 +393,9 @@ export class FrameCompositor {
       project.background.padding
     );
     const compositor = new FrameCompositor(outputWidth, outputHeight, innerRect);
+    // Smoothing doesn't depend on `atMs`, so it's computed once up front
+    // rather than per frame.
+    compositor.smoothedCursorPath = smoothCursorPath(project.cursorPath, project.cursor.smoothing);
 
     // Only 'image' loads a user file -- 'wallpaper' is a bundled gradient
     // preset rendered procedurally by fillLinearGradient, no image I/O needed.
@@ -344,13 +422,23 @@ export class FrameCompositor {
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     drawBackground(ctx, outputWidth, outputHeight, project.background, this.backgroundImage);
 
-    const { depth, focal } = resolveZoom(atMs, project.zoomKeyframes);
+    const { depth, focal, shift } = resolveZoom(
+      atMs,
+      project.zoomKeyframes,
+      this.smoothedCursorPath
+    );
     const focalPx = {
       x: innerRect.x + focal.x * innerRect.width,
       y: innerRect.y + focal.y * innerRect.height
     };
 
     ctx.save();
+    // `shift` recenters the focal point toward the middle of the frame as
+    // the zoom deepens -- applied as a flat translate *outside* the
+    // focal-anchored scale below, so it just carries the whole (already
+    // correctly zoomed) scene to the recentered position rather than
+    // affecting the scale math itself.
+    ctx.translate(shift.x * innerRect.width, shift.y * innerRect.height);
     ctx.translate(focalPx.x, focalPx.y);
     ctx.scale(depth, depth);
     ctx.translate(-focalPx.x, -focalPx.y);
@@ -366,15 +454,17 @@ export class FrameCompositor {
     );
     scratchCtx.putImageData(new ImageData(clamped, innerRect.width, innerRect.height), 0, 0);
     ctx.drawImage(this.scratch, innerRect.x, innerRect.y, innerRect.width, innerRect.height);
+
+    // Drawn inside the zoom transform (before restore) so the cursor pans
+    // and scales with the content -- it's part of the recorded scene, not a
+    // fixed overlay.
+    drawCursor(ctx, outputWidth, innerRect, project.cursor, this.smoothedCursorPath, atMs);
     ctx.restore();
 
     // Webcam/annotations are drawn untransformed so content zoom doesn't
     // affect them (matches a fixed on-top PiP/overlay, not part of the scene).
     drawWebcamPlaceholder(ctx, outputWidth, project.webcam);
     drawAnnotations(ctx, outputWidth, project.annotations, atMs, this.annotationImages);
-
-    // No cursor overlay: nothing in the capture pipeline records a cursor
-    // position track, so there is no real path to draw.
 
     // getImageData (not canvas.toBuffer('raw')) guarantees RGBA byte order
     // matching the pix_fmt declared to the encoder, regardless of platform.

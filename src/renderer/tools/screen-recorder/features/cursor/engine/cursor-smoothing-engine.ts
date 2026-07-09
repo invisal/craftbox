@@ -1,13 +1,6 @@
-export interface CursorPathPoint {
-  atMs: number;
-  x: number;
-  y: number;
-}
-
-// TODO: post-recording smoothing pass over the raw cursor path (e.g.
-// Catmull-Rom spline or exponential smoothing) to remove jitter while
-// preserving intentional, fast movements. `_smoothing` is 0 (off) - 1 (max).
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-export function smoothCursorPath(path: CursorPathPoint[], _smoothing: number): CursorPathPoint[] {
-  return path;
-}
+// The actual smoothing/sampling logic lives in @shared/cursor-path so the
+// main-process export compositor can draw the exact same trajectory as this
+// live preview -- this file just re-exports it as the cursor feature's
+// canonical entry point.
+export { smoothCursorPath, sampleCursorPath } from '@shared/cursor-path';
+export type { CursorPathPoint } from '@shared/cursor-path';

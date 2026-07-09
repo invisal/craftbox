@@ -5,9 +5,24 @@ import { IpcChannels } from '@shared/ipc-channels';
 import type { RecordingRequest } from '@screen-recorder/types/recording';
 import { listCaptureSources } from '../capture/screen-source-provider';
 import { recordingController } from '../capture/recording-controller';
+import { cursorTracker, type CursorTrackerBounds } from '../capture/cursor-tracker';
+import { clickTracker } from '../capture/click-tracker';
 
 export function registerRecordingHandlers(): void {
   ipcMain.handle(IpcChannels.GetCaptureSources, () => listCaptureSources());
+
+  ipcMain.handle(
+    IpcChannels.StartCursorTracking,
+    (event, bounds: CursorTrackerBounds, startedAt: number) => {
+      cursorTracker.start(event.sender, bounds, startedAt);
+      clickTracker.start(event.sender, bounds, startedAt);
+    }
+  );
+
+  ipcMain.handle(IpcChannels.StopCursorTracking, () => {
+    cursorTracker.stop();
+    clickTracker.stop();
+  });
 
   ipcMain.handle(IpcChannels.StartRecording, (_event, request: RecordingRequest) =>
     recordingController.start(request)
