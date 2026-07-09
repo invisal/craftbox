@@ -2,6 +2,14 @@ import { ElectronAPI } from '@electron-toolkit/preload';
 import type { ScreenRecorderApi } from './screen-recorder/api';
 import type { PostmanBridge } from './postman/api';
 import type { KuberneterApi } from './kuberneter/api';
+import type { PostmanBridge } from './http-client/api';
+
+interface FileTreeNode {
+  name: string;
+  path: string;
+  isDirectory: boolean;
+  children?: FileTreeNode[];
+}
 
 declare global {
   interface Window {
@@ -15,12 +23,7 @@ declare global {
       close: () => void;
       openDirectory: () => Promise<{
         path: string;
-        tree: {
-          name: string;
-          path: string;
-          isDirectory: boolean;
-          children?: Array<any>;
-        } | null;
+        tree: FileTreeNode | null;
       } | null>;
     } & PostmanBridge;
   }

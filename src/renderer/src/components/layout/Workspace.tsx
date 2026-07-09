@@ -3,7 +3,7 @@ import { FileText, X, Home } from 'lucide-react';
 import { useLayoutStore, type Tab } from '../../store/layout.store';
 import { HomeTab } from './HomeTab';
 import { KuberneterWorkspace } from '../../../tools/kuberneter/components/workspace/KuberneterWorkspace';
-import { PostmanWorkspace } from '../../../tools/postman/PostmanWorkspace';
+import { HttpClientWorkspace } from '../../../tools/http-client/HttpClientWorkspace';
 import { ScreenRecorderWorkspace } from './workspaces/ScreenRecorderWorkspace';
 
 export const Workspace: React.FC = () => {
@@ -51,7 +51,7 @@ export const Workspace: React.FC = () => {
             resource={(activeTab.meta as { resource?: string })?.resource || 'overview'}
           />
         )}
-        {activeTab.type === 'postman' && <PostmanWorkspace />}
+        {activeTab.type === 'postman' && <HttpClientWorkspace />}
         {activeTab.type === 'screenrecorder' && <ScreenRecorderWorkspace />}
       </div>
     </div>

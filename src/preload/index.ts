@@ -1,8 +1,8 @@
 import { contextBridge, ipcRenderer } from 'electron';
 import { electronAPI } from '@electron-toolkit/preload';
 import { screenRecorderApi } from './screen-recorder/api';
-import { postmanApi } from './postman/api';
 import { kuberneterApi } from './kuberneter/api';
+import { postmanApi } from './http-client/api';
 
 // Custom APIs for renderer
 const api = {

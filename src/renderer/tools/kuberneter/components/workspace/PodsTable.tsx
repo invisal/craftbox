@@ -1,12 +1,21 @@
 import React, { useState } from 'react';
 
+interface PodRow {
+  name: string;
+  ns: string;
+  status: string;
+  restarts: number;
+  age: string;
+}
+
 interface PodsTableProps {
-  podsData: Array<{ name: string; ns: string; status: string; restarts: number; age: string }>;
+  podsData: PodRow[];
   kuberneterSelectedNamespace: string;
 }
 
 export const PodsTable: React.FC<PodsTableProps> = ({ podsData, kuberneterSelectedNamespace }) => {
-  const [selectedPod, setSelectedPod] = useState<any>(null);
+  const [selectedPod, setSelectedPod] = useState<PodRow | null>(null);
+
 
   return (
     <div className="flex-1 flex gap-4 min-h-0">

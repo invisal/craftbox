@@ -214,7 +214,7 @@ export const useLayoutStore = create<LayoutState>()(
           const typeCount = state.activeInstances.filter((i) => i.type === type).length + 1;
           const appNames = {
             kuberneter: 'Kuberneter',
-            postman: 'Postman',
+            postman: 'HTTP Client',
             screenrecorder: 'ScreenRecorder'
           };
           const title = `${appNames[type]} (${typeCount})`;

@@ -1,8 +1,8 @@
 import React from 'react';
 import { useLayoutStore } from '../../store/layout.store';
 import { KuberneterSidebar } from '../../../tools/kuberneter/components/sidebar/KuberneterSidebar';
-import { PostmanSidebar } from '../../../tools/postman/PostmanSidebar';
 import { ScreenRecorderSidebar } from '../../../tools/screen-recorder/sidebar/ScreenRecorderSidebar';
+import { HttpClientSidebar } from 'src/renderer/tools/http-client/HttpClientSidebar';
 
 export const LeftPanel: React.FC = () => {
   const { leftPanelWidth, setLeftPanelWidth, activeActivity, isLeftPanelOpen } = useLayoutStore();
@@ -36,7 +36,7 @@ export const LeftPanel: React.FC = () => {
       {/* Dynamic Content */}
       <div className="flex-1 overflow-y-auto p-3 flex flex-col gap-4">
         {activeActivity === 'kuberneter' && <KuberneterSidebar />}
-        {activeActivity === 'postman' && <PostmanSidebar />}
+        {activeActivity === 'postman' && <HttpClientSidebar />}
         {activeActivity === 'screenrecorder' && <ScreenRecorderSidebar />}
       </div>
 
