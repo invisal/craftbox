@@ -28,7 +28,7 @@ export const HomeTab: React.FC = () => {
       badge: 'API Workspace'
     },
     {
-      id: 'screenstudio' as const,
+      id: 'screenrecorder' as const,
       name: 'Screen Recorder',
       description:
         'Simulate high-fidelity screen recording sessions with mouse click zoom levels, canvas backdrops, and export presets.',

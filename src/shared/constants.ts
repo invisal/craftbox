@@ -1,4 +1,3 @@
-export const APP_NAME = 'ScreenStudio';
 export const DEFAULT_ZOOM_DEPTH = 1.5;
 export const DEFAULT_ZOOM_DURATION_MS = 600;
 export const TIMELINE_SNAP_THRESHOLD_PX = 6;

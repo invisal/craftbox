@@ -2,7 +2,7 @@ import React from 'react';
 import { useLayoutStore } from '../../store/layout.store';
 import { LensSidebar } from './sidebars/LensSidebar';
 import { PostmanSidebar } from '../../../tools/postman/PostmanSidebar';
-import { ScreenStudioSidebar } from '../../../tools/screen-studio/sidebar/ScreenStudioSidebar';
+import { ScreenRecorderSidebar } from '../../../tools/screen-recorder/sidebar/ScreenRecorderSidebar';
 
 export const LeftPanel: React.FC = () => {
   const { leftPanelWidth, setLeftPanelWidth, activeActivity, isLeftPanelOpen } = useLayoutStore();
@@ -37,7 +37,7 @@ export const LeftPanel: React.FC = () => {
       <div className="flex-1 overflow-y-auto p-3 flex flex-col gap-4">
         {activeActivity === 'lens' && <LensSidebar />}
         {activeActivity === 'postman' && <PostmanSidebar />}
-        {activeActivity === 'screenstudio' && <ScreenStudioSidebar />}
+        {activeActivity === 'screenrecorder' && <ScreenRecorderSidebar />}
       </div>
 
       {/* Resize Handle */}

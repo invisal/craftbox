@@ -4,7 +4,7 @@ import { persist } from 'zustand/middleware';
 export interface Tab {
   id: string;
   title: string;
-  type: 'lens' | 'postman' | 'screenstudio' | 'home';
+  type: 'lens' | 'postman' | 'screenrecorder' | 'home';
   instanceId: string;
   /** Tool-specific tab seed data (e.g. PostmanTabSeed). Each tool narrows/casts this at its own read site. */
   meta?: unknown;
@@ -12,12 +12,12 @@ export interface Tab {
 
 export interface ActivityInstance {
   id: string;
-  type: 'lens' | 'postman' | 'screenstudio';
+  type: 'lens' | 'postman' | 'screenrecorder';
   title: string;
 }
 
 interface LayoutState {
-  activeActivity: 'lens' | 'postman' | 'screenstudio' | null;
+  activeActivity: 'lens' | 'postman' | 'screenrecorder' | null;
   isLeftPanelOpen: boolean;
   leftPanelWidth: number;
   isRightPanelOpen: boolean;
@@ -62,7 +62,7 @@ interface LayoutState {
   ) => void;
 
   // Instance Lifecycle Actions
-  addActivityInstance: (type: 'lens' | 'postman' | 'screenstudio') => void;
+  addActivityInstance: (type: 'lens' | 'postman' | 'screenrecorder') => void;
   closeActivityInstance: (id: string) => void;
   setActiveInstanceId: (id: string | 'home') => void;
 }
@@ -157,7 +157,7 @@ export const useLayoutStore = create<LayoutState>()(
       const appNames = {
         lens: 'Lens K8s',
         postman: 'Postman',
-        screenstudio: 'ScreenStudio'
+        screenrecorder: 'ScreenRecorder'
       };
       const title = `${appNames[type]} (${typeCount})`;
 
@@ -176,8 +176,8 @@ export const useLayoutStore = create<LayoutState>()(
       } else if (type === 'postman') {
         defaultTabId = `postman-req-${instanceId}`;
         defaultTabTitle = 'New API Request';
-      } else if (type === 'screenstudio') {
-        defaultTabId = `screenstudio-session-${instanceId}`;
+      } else if (type === 'screenrecorder') {
+        defaultTabId = `screenrecorder-session-${instanceId}`;
         defaultTabTitle = 'Screen Recording';
       }
 
@@ -209,7 +209,7 @@ export const useLayoutStore = create<LayoutState>()(
       const filteredTabs = state.openTabs.filter((t) => t.instanceId !== id);
 
       let nextInstanceId: string | 'home' = 'home';
-      let nextActivity: 'lens' | 'postman' | 'screenstudio' | null = null;
+      let nextActivity: 'lens' | 'postman' | 'screenrecorder' | null = null;
       let nextActiveTabId: string | null = null;
 
       if (state.activeInstanceId === id) {
@@ -248,7 +248,7 @@ export const useLayoutStore = create<LayoutState>()(
         return { isLeftPanelOpen: !state.isLeftPanelOpen };
       }
 
-      let activeActivity: 'lens' | 'postman' | 'screenstudio' | null = null;
+      let activeActivity: 'lens' | 'postman' | 'screenrecorder' | null = null;
       let nextActiveTabId: string | null = null;
 
       if (id !== 'home') {
