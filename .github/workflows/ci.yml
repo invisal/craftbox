@@ -17,6 +17,16 @@ jobs:
           node-version: 22
           cache: npm
 
+      # uiohook-napi (global input capture, screen-recorder cursor/click
+      # tracking) has no prebuilt binary for Electron's ABI, so
+      # `electron-builder install-app-deps` (npm's postinstall) falls back to
+      # compiling its libuiohook dependency from source -- which needs these
+      # X11 dev headers on Linux runners (not installed by default).
+      - name: Install libuiohook build dependencies (Linux)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libx11-dev libxtst-dev libxinerama-dev libxkbfile-dev libxrandr-dev libxt-dev libxkbcommon-dev libxxf86misc-dev
+
       - run: npm ci
 
       - name: Lint
@@ -42,6 +52,12 @@ jobs:
         with:
           node-version: 22
           cache: npm
+
+      - name: Install libuiohook build dependencies (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libx11-dev libxtst-dev libxinerama-dev libxkbfile-dev libxrandr-dev libxt-dev libxkbcommon-dev libxxf86misc-dev
 
       - run: npm ci
 
