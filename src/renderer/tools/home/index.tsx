@@ -1,7 +1,6 @@
 import { ToolComponentProps } from '@renderer/components/providers/createTabProvider';
 import { useToolTabs } from '@renderer/components/providers/ToolProvider';
-import { Button } from '@renderer/components/ui/Button';
-import { GlobeIcon } from 'lucide-react';
+import { GlobeIcon, PlusIcon } from 'lucide-react';
 import { useLayoutStore } from '@renderer/store/layout.store';
 import { ReactNode } from 'react';
 import kuberneterIcon from '@renderer/assets/kuberneter-icon.svg';
@@ -22,10 +21,11 @@ export function HomeMain({}: ToolComponentProps<Props>) {
         placeholder="Search tool..."
       />
 
-      <div className="space-y-2">
+      <div className="space-y-2 mb-8">
+        <h2 className="text-sm font-medium">Tools</h2>
         <ToolItem
-          name="Kubernetes"
-          icon={<img src={kuberneterIcon} className="size-4" />}
+          name="Connect Kubernete"
+          icon={<img src={kuberneterIcon} className="size-5" />}
           onClick={() => {
             const instanceId = `kuberneter-${Date.now()}`;
             useLayoutStore.getState().addActivityInstance('kuberneter', instanceId);
@@ -44,11 +44,25 @@ export function HomeMain({}: ToolComponentProps<Props>) {
         />
       </div>
 
-      <div className="flex gap-2 mt-12">
-        <Button variant="primary">Primary</Button>
-        <Button variant="outline">Outline</Button>
-        <Button variant="secondary">Secondary</Button>
-        <Button variant="destructive">Destructive</Button>
+      <div className="space-y-2 border-t pt-4 border-border">
+        <h2 className="text-sm font-medium">Workspaces</h2>
+
+        <div className="w-xs border border-dashed rounded border-border text-xs p-2 bg-surface-2 hover:bg-surface-3 inline-flex items-center gap-1">
+          <PlusIcon size={14} />
+          <span>Add Workspace</span>
+        </div>
+
+        <ToolItem
+          name="testing-01"
+          icon={<img src={kuberneterIcon} className="size-5" />}
+          onClick={() => {}}
+        />
+
+        <ToolItem
+          name="kube-local"
+          icon={<img src={kuberneterIcon} className="size-5" />}
+          onClick={() => {}}
+        />
       </div>
     </div>
   );
