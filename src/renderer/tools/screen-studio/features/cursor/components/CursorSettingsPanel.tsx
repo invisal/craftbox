@@ -1,89 +1,114 @@
 import type { JSX } from 'react';
 import { useCursorStore } from '../store/cursor-store';
+import { useAppStore } from '../../../app/app-store';
 import { Slider } from '../../../components/ui/slider';
+import { Switch } from '../../../components/ui/switch';
+import { CursorStyleIcon } from './CursorStyleIcon';
+import { CURSOR_STYLE_PRESETS } from '@shared/cursor-styles';
 import { cn } from '../../../lib/utils';
 
-const THEMES = [
-  { id: 'default', label: 'Default' },
-  { id: 'pointer', label: 'Pointer' },
-  { id: 'crosshair', label: 'Crosshair' },
-  { id: 'dot', label: 'Dot' }
-];
-
-const CLICK_EFFECTS: { id: 'none' | 'ripple' | 'highlight'; label: string }[] = [
-  { id: 'none', label: 'None' },
-  { id: 'ripple', label: 'Ripple' },
-  { id: 'highlight', label: 'Highlight' }
-];
-
 export function CursorSettingsPanel(): JSX.Element {
-  const { theme, size, smoothing, clickEffect, setTheme, setSize, setSmoothing, setClickEffect } =
-    useCursorStore();
+  const {
+    visible,
+    clipToCanvas,
+    style,
+    size,
+    smoothing,
+    motionBlur,
+    clickBounce,
+    setVisible,
+    setClipToCanvas,
+    setStyle,
+    setSize,
+    setSmoothing,
+    setMotionBlur,
+    setClickBounce
+  } = useCursorStore();
+  const cursorPointCount = useAppStore((s) => s.lastRecording?.cursorPath.length ?? 0);
 
   return (
     <div className="flex flex-col gap-4">
+      <p
+        className={cn(
+          'rounded-md px-2 py-1.5 text-[11px]',
+          cursorPointCount > 0 ? 'bg-accent/10 text-accent' : 'bg-white/5 text-white/40'
+        )}
+      >
+        {cursorPointCount > 0
+          ? `Tracking ${cursorPointCount} recorded cursor point(s) from this recording.`
+          : 'No cursor movement recorded for this recording -- the icon below is a static style preview, not the real path. Record a screen (not window) source with mouse movement to see it move.'}
+      </p>
+
+      <div className="flex items-center justify-between">
+        <span className="text-xs font-medium text-white/70">Show Cursor</span>
+        <Switch checked={visible} onChange={setVisible} label="Show cursor" />
+      </div>
+
+      <div className="flex items-center justify-between">
+        <span className="text-xs font-medium text-white/70">Clip to Canvas</span>
+        <Switch checked={clipToCanvas} onChange={setClipToCanvas} label="Clip cursor to canvas" />
+      </div>
+
       <div className="flex flex-col gap-2">
         <span className="text-xs font-medium uppercase tracking-wide text-white/40">
-          Cursor theme
+          Cursor Style
         </span>
-        <div className="grid grid-cols-2 gap-2">
-          {THEMES.map((option) => (
+        <div className="grid grid-cols-4 gap-2">
+          {CURSOR_STYLE_PRESETS.map((preset) => (
             <button
-              key={option.id}
-              onClick={() => setTheme(option.id)}
+              key={preset.id}
+              onClick={() => setStyle(preset.id)}
+              title={preset.id}
               className={cn(
-                'rounded-lg border py-1.5 text-xs font-medium transition-colors',
-                theme === option.id
-                  ? 'border-accent bg-accent/10 text-accent'
-                  : 'border-line text-white/60 hover:border-white/20'
+                'flex items-center justify-center rounded-lg border py-2 transition-colors',
+                style === preset.id
+                  ? 'border-accent bg-accent/10'
+                  : 'border-line hover:border-white/20'
               )}
             >
-              {option.label}
+              <CursorStyleIcon fill={preset.fill} stroke={preset.stroke} />
             </button>
           ))}
         </div>
       </div>
 
-      <div className="flex flex-col gap-1">
-        <div className="flex items-center justify-between">
-          <span className="text-xs font-medium uppercase tracking-wide text-white/40">Size</span>
-          <span className="text-xs text-white/50">{size.toFixed(1)}×</span>
+      <div className="grid grid-cols-2 gap-3">
+        <div className="flex flex-col gap-1">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-medium uppercase tracking-wide text-white/40">Size</span>
+            <span className="text-xs text-white/50">{size.toFixed(1)}</span>
+          </div>
+          <Slider value={size} min={2} max={20} step={0.1} onChange={setSize} />
         </div>
-        <Slider value={size} min={0.5} max={3} step={0.1} onChange={setSize} />
-      </div>
 
-      <div className="flex flex-col gap-1">
-        <div className="flex items-center justify-between">
-          <span className="text-xs font-medium uppercase tracking-wide text-white/40">
-            Smoothing
-          </span>
-          <span className="text-xs text-white/50">{Math.round(smoothing * 100)}%</span>
+        <div className="flex flex-col gap-1">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-medium uppercase tracking-wide text-white/40">
+              Smoothing
+            </span>
+            <span className="text-xs text-white/50">{Math.round(smoothing * 100)}%</span>
+          </div>
+          <Slider value={smoothing} min={0} max={1} step={0.01} onChange={setSmoothing} />
         </div>
-        <Slider value={smoothing} min={0} max={1} step={0.05} onChange={setSmoothing} />
-        <p className="text-[11px] text-white/30">
-          Smooths out jittery mouse movement after recording.
-        </p>
-      </div>
 
-      <div className="flex flex-col gap-2">
-        <span className="text-xs font-medium uppercase tracking-wide text-white/40">
-          Click effect
-        </span>
-        <div className="grid grid-cols-3 gap-2">
-          {CLICK_EFFECTS.map((option) => (
-            <button
-              key={option.id}
-              onClick={() => setClickEffect(option.id)}
-              className={cn(
-                'rounded-lg border py-1.5 text-xs font-medium transition-colors',
-                clickEffect === option.id
-                  ? 'border-accent bg-accent/10 text-accent'
-                  : 'border-line text-white/60 hover:border-white/20'
-              )}
-            >
-              {option.label}
-            </button>
-          ))}
+        <div className="flex flex-col gap-1">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-medium uppercase tracking-wide text-white/40">
+              Motion Blur
+            </span>
+            <span className="text-xs text-white/50">{Math.round(motionBlur * 100)}%</span>
+          </div>
+          <Slider value={motionBlur} min={0} max={1} step={0.01} onChange={setMotionBlur} />
+        </div>
+
+        <div className="flex flex-col gap-1">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-medium uppercase tracking-wide text-white/40">
+              Click Bounce
+            </span>
+            <span className="text-xs text-white/50">{clickBounce.toFixed(1)}</span>
+          </div>
+          <Slider value={clickBounce} min={0} max={5} step={0.1} onChange={setClickBounce} />
         </div>
       </div>
     </div>

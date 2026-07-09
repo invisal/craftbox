@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import type { CursorPathPoint } from '@screen-studio/types/project';
 
 export type ScreenStudioRoute =
   'record-setup' | 'recording-hud' | 'editor' | 'library' | 'presets' | 'settings';
@@ -8,6 +9,8 @@ interface LastRecording {
   filePath: string | null;
   sizeBytes: number;
   createdAt: number;
+  /** Recorded system-cursor samples, source-timeline `atMs`. Empty for window captures. */
+  cursorPath: CursorPathPoint[];
 }
 
 interface AppStoreState {

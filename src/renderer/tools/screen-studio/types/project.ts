@@ -1,5 +1,8 @@
 import type { TimelineTrack, ZoomKeyframe } from './timeline';
 import type { WebcamOptions } from './recording';
+import type { CursorPathPoint } from '@shared/cursor-path';
+
+export type { CursorPathPoint };
 
 export interface BackgroundSettings {
   kind: 'wallpaper' | 'color' | 'gradient' | 'image';
@@ -16,10 +19,20 @@ export interface BackgroundSettings {
 }
 
 export interface CursorSettings {
-  theme: string;
+  /** Whether the cursor overlay is drawn at all, in preview and export. */
+  visible: boolean;
+  /** Hide the cursor whenever it strays outside the recorded canvas bounds. */
+  clipToCanvas: boolean;
+  /** id into `CURSOR_STYLE_PRESETS` (@shared/cursor-styles). */
+  style: string;
+  /** Icon size in reference-canvas units, see CURSOR_SIZE_UNIT_PX. */
   size: number;
+  /** 0 (raw/jittery) - 1 (max smoothing) applied to the recorded path. */
   smoothing: number;
-  clickEffect: 'none' | 'ripple' | 'highlight';
+  /** 0-1 intensity of the motion-blur trail drawn behind fast cursor movement. */
+  motionBlur: number;
+  /** 0-5 intensity of the squash/bounce animation played on click. No effect yet -- click events aren't captured (position-only tracking), kept for when click capture lands. */
+  clickBounce: number;
 }
 
 export interface CaptionSettings {
@@ -65,6 +78,8 @@ export interface Project {
   webcam: WebcamOptions;
   background: BackgroundSettings;
   cursor: CursorSettings;
+  /** Recorded system-cursor samples for `sourceVideoPath`, source-timeline `atMs`. Empty when the source was a 'window' capture (no display bounds to normalize against) or tracking failed. */
+  cursorPath: CursorPathPoint[];
   captions: CaptionSettings;
   annotations: Annotation[];
   motionBlur: boolean;

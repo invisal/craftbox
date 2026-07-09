@@ -1,11 +1,14 @@
 import type { JSX } from 'react';
-import { useRef, type RefObject } from 'react';
+import { useEffect, useRef, type RefObject } from 'react';
 import { Play } from 'lucide-react';
 import { useBackgroundStore } from '../../features/background/store/background-store';
 import { backgroundLayerStyle } from '../../features/background/lib/background-css';
 import { useWebcamStore } from '../../features/webcam/store/webcam-store';
 import { useCaptionsStore } from '../../features/captions/store/captions-store';
+// import { useCursorStore } from '../../features/cursor/store/cursor-store';
+// import { useAppStore } from '../../app/app-store';
 import { CropOverlay } from '../../features/crop/components/CropOverlay';
+// import { CursorOverlay } from '../../features/cursor/components/CursorOverlay';
 import { REFERENCE_CANVAS_WIDTH } from '@shared/constants';
 import { mediaErrorMessage } from '../../lib/media';
 import { cn } from '../../lib/utils';
@@ -53,8 +56,21 @@ export function PreviewStage({
   const webcam = useWebcamStore();
   const captionSegments = useCaptionsStore((s) => s.segments);
   const captionsEnabled = useCaptionsStore((s) => s.enabled);
+  // const cursor = useCursorStore();
+  // const cursorPath = useAppStore((s) => s.lastRecording?.cursorPath ?? []);
 
   const stageRef = useRef<HTMLDivElement>(null);
+  // const [stageWidthPx, setStageWidthPx] = useState(0);
+
+  // useEffect(() => {
+  //   const el = stageRef.current;
+  //   if (!el) return;
+  //   const observer = new ResizeObserver((entries) => {
+  //     setStageWidthPx(entries[0]?.contentRect.width ?? 0);
+  //   });
+  //   observer.observe(el);
+  //   return () => observer.disconnect();
+  // }, []);
   const dragState = useRef<{
     startClientX: number;
     startClientY: number;
@@ -139,6 +155,15 @@ export function PreviewStage({
               sourceHeight={sourceResolution.height}
             />
           )}
+
+          {/* {!cropToolActive && (
+            <CursorOverlay
+              cursor={cursor}
+              rawPath={cursorPath}
+              currentTimeMs={currentTimeMs}
+              stageWidthPx={stageWidthPx}
+            />
+          )} */}
         </div>
 
         {videoError && (

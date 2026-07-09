@@ -10,6 +10,10 @@ import {
   fileExtensionForBlob,
   type CaptureHandle
 } from '../features/recording/engine/capture-engine';
+import {
+  startCursorCapture,
+  type CursorCaptureHandle
+} from '../features/cursor/engine/cursor-capture';
 
 export const ScreenStudioSidebar: React.FC = () => {
   const { openTab, activeInstanceId } = useLayoutStore();
@@ -23,6 +27,7 @@ export const ScreenStudioSidebar: React.FC = () => {
 
   const [error, setError] = useState<string | null>(null);
   const captureRef = useRef<CaptureHandle | null>(null);
+  const cursorCaptureRef = useRef<CursorCaptureHandle | null>(null);
 
   function handleNewScreenStudioSession(): void {
     const sessionId = `screenstudio-session-${Date.now()}`;
@@ -42,6 +47,12 @@ export const ScreenStudioSidebar: React.FC = () => {
     setError(null);
     try {
       captureRef.current = await startCapture({ source: selectedSource, audio });
+      // Uses the recorder's *actual* startedAt (not a pre-call guess) so
+      // cursor samples line up exactly with the video's own t=0.
+      cursorCaptureRef.current = await startCursorCapture(
+        selectedSource,
+        captureRef.current.startedAt
+      );
       setIsRecording(true);
     } catch (err) {
       // Most likely cause: the user denied the (rare, OS-level) permission
@@ -58,6 +69,9 @@ export const ScreenStudioSidebar: React.FC = () => {
     const blob = await capture.stop();
     captureRef.current = null;
 
+    const cursorPath = (await cursorCaptureRef.current?.stop()) ?? [];
+    cursorCaptureRef.current = null;
+
     const previewUrl = URL.createObjectURL(blob);
     const extension = fileExtensionForBlob(blob);
     const fileName = `recording-${Date.now()}.${extension}`;
@@ -70,7 +84,13 @@ export const ScreenStudioSidebar: React.FC = () => {
       console.error('[ScreenStudioSidebar] failed to save recording to disk:', err);
     }
 
-    setLastRecording({ previewUrl, filePath, sizeBytes: blob.size, createdAt: Date.now() });
+    setLastRecording({
+      previewUrl,
+      filePath,
+      sizeBytes: blob.size,
+      createdAt: Date.now(),
+      cursorPath
+    });
     setRoute('editor');
   }
 
@@ -121,7 +141,9 @@ export const ScreenStudioSidebar: React.FC = () => {
           <button
             onClick={handleStart}
             disabled={!selectedSource || route !== 'record-setup'}
-            title={route !== 'record-setup' ? 'Go to New Recording to start a recording' : undefined}
+            title={
+              route !== 'record-setup' ? 'Go to New Recording to start a recording' : undefined
+            }
             className="flex w-full items-center justify-center gap-1.5 rounded py-1.5 text-xs font-medium text-white bg-accent hover:brightness-110 cursor-pointer transition-all disabled:pointer-events-none disabled:opacity-40"
           >
             Start Recording

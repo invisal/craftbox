@@ -13,7 +13,7 @@ import { useCaptionsStore } from '../../captions/store/captions-store';
  * so this is the only place the shared Project shape gets populated.
  */
 export function buildExportProject(sourceVideoPath: string, durationMs: number): Project {
-  const { projectName } = useAppStore.getState();
+  const { projectName, lastRecording } = useAppStore.getState();
   const webcamState = useWebcamStore.getState();
   const backgroundState = useBackgroundStore.getState();
   const cursorState = useCursorStore.getState();
@@ -46,11 +46,15 @@ export function buildExportProject(sourceVideoPath: string, durationMs: number):
       blur: backgroundState.blur
     },
     cursor: {
-      theme: cursorState.theme,
+      visible: cursorState.visible,
+      clipToCanvas: cursorState.clipToCanvas,
+      style: cursorState.style,
       size: cursorState.size,
       smoothing: cursorState.smoothing,
-      clickEffect: cursorState.clickEffect
+      motionBlur: cursorState.motionBlur,
+      clickBounce: cursorState.clickBounce
     },
+    cursorPath: lastRecording?.cursorPath ?? [],
     captions: {
       enabled: captionsState.enabled,
       language: captionsState.language,
