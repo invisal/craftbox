@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import {
+  Activity,
   ComponentType,
   createContext,
   ReactNode,
@@ -172,14 +173,11 @@ export function createTabProvider<TTool extends Tool<string, any>>(tools: readon
         {tabs.map((tab) => {
           const isTabActive = tab.id === activeTabId;
           return (
-            <div
-              key={tab.id}
-              style={{
-                visibility: isTabActive ? 'inherit' : 'hidden'
-              }}
-            >
-              <TabOutlet tab={tab} />
-            </div>
+            <Activity key={tab.id} mode={isTabActive ? 'visible' : 'hidden'}>
+              <div key={tab.id} className="flex h-full w-full flex-col">
+                <TabOutlet tab={tab} />
+              </div>
+            </Activity>
           );
         })}
       </>
