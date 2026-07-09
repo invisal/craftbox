@@ -1,12 +1,14 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useToolTabs } from '../providers/ToolProvider';
-import { GlobeIcon, HomeIcon, VideoIcon } from 'lucide-react';
+import { GlobeIcon, HomeIcon, PlusIcon, VideoIcon } from 'lucide-react';
 import cn from 'cnfast';
 import { ContextMenu } from '../ui/ContextMenu';
+import { ToolDialog } from '../dialog/ToolDialog';
 import kuberneterIcon from '@renderer/assets/kuberneter-icon.svg';
 
 export const ActivityBar: React.FC = () => {
   const { tabs, activeTabId, selectTab, closeTab } = useToolTabs();
+  const [isToolDialogOpen, setIsToolDialogOpen] = useState(false);
 
   const renderIcon = (type: string) => {
     switch (type) {
@@ -53,6 +55,15 @@ export const ActivityBar: React.FC = () => {
           </ContextMenu.Content>
         </ContextMenu.Root>
       ))}
+
+      <button
+        className="size-9 flex justify-center items-center rounded-lg cursor-pointer transition-colors hover:bg-surface-4 text-zinc-400"
+        onClick={() => setIsToolDialogOpen(true)}
+      >
+        <PlusIcon size={16} />
+      </button>
+
+      <ToolDialog open={isToolDialogOpen} onOpenChange={setIsToolDialogOpen} />
     </div>
   );
 };
