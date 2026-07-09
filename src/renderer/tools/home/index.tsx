@@ -33,7 +33,7 @@ export function HomeMain({}: ToolComponentProps<Props>) {
         <ToolItem
           name="Screen Recorder"
           description="Simulate high-fidelity screen recording sessions with mouse click zoom levels, canvas backdrops, and export presets."
-          onClick={() => openTab('screen-record', {})}
+          onClick={() => openTab('screen-recorder', {})}
         />
       </div>
 

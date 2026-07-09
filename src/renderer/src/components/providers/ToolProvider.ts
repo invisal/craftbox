@@ -18,7 +18,7 @@ const httpClientTool = registerTool({
 });
 
 const screenRecordTool = registerTool({
-  name: 'screen-record',
+  name: 'screen-recorder',
   component: ScreenRecordMain,
   generateName: () => 'Screen Recorder',
   label: ''
