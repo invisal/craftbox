@@ -1,7 +1,23 @@
 import { ipcRenderer } from 'electron';
 
+export interface K8sContext {
+  name: string;
+  cluster: string;
+  user: string;
+  namespace?: string;
+  server?: string;
+  isActive: boolean;
+}
+
+export type ListContextsResponse = K8sContext[] | { error: string };
+
+export interface GetResourcesResponse {
+  items?: unknown[];
+  error?: string;
+}
+
 export interface KuberneterApi {
-  listContexts: (kubeconfigPath?: string) => Promise<any>;
+  listContexts: (kubeconfigPath?: string) => Promise<ListContextsResponse>;
   selectKubeconfigFile: () => Promise<string | null>;
   saveKubeconfig: (content: string, filename: string) => Promise<string | { error: string }>;
   getResources: (
@@ -9,7 +25,7 @@ export interface KuberneterApi {
     contextName: string | undefined,
     resource: string,
     namespace?: string
-  ) => Promise<any>;
+  ) => Promise<GetResourcesResponse>;
 }
 
 export const kuberneterApi: KuberneterApi = {

@@ -42,7 +42,9 @@ export const KubeTitleBar: React.FC = () => {
         const configPathArg = configPath === 'default' ? undefined : configPath;
         const res = await window.kuberneter.getResources(configPathArg, cluster, 'namespaces');
         if (res && Array.isArray(res.items)) {
-          const names = res.items.map((item: any) => item.metadata?.name).filter(Boolean);
+          const names = (res.items as { metadata?: { name?: string } }[])
+            .map((item) => item.metadata?.name)
+            .filter(Boolean) as string[];
           setNamespaces(['All Namespaces', ...names]);
         }
       } catch (err) {

@@ -12,6 +12,61 @@ interface KuberneterWorkspaceProps {
   resource: string;
 }
 
+interface PodData {
+  name: string;
+  ns: string;
+  status: string;
+  restarts: number;
+  age: string;
+}
+
+interface DeployData {
+  name: string;
+  ns: string;
+  ready: string;
+  upToDate: number;
+  available: number;
+  age: string;
+}
+
+interface ServiceData {
+  name: string;
+  ns: string;
+  type: string;
+  clusterIp: string;
+  ports: string;
+  age: string;
+}
+
+interface ConfigMapData {
+  name: string;
+  ns: string;
+  keys: number;
+  age: string;
+}
+
+interface K8sResource {
+  metadata?: {
+    name?: string;
+    namespace?: string;
+    creationTimestamp?: string;
+  };
+  status?: {
+    phase?: string;
+    containerStatuses?: { restartCount?: number }[];
+    replicas?: number;
+    readyReplicas?: number;
+    updatedReplicas?: number;
+    availableReplicas?: number;
+  };
+  spec?: {
+    type?: string;
+    clusterIP?: string;
+    ports?: { port?: number; protocol?: string }[];
+  };
+  data?: Record<string, unknown>;
+}
+
 function formatAge(creationTimestamp: string): string {
   if (!creationTimestamp) return '-';
   const created = new Date(creationTimestamp).getTime();
@@ -39,10 +94,10 @@ export const KuberneterWorkspace: React.FC<KuberneterWorkspaceProps> = ({ resour
   );
 
   // States for dynamic resources
-  const [podsData, setPodsData] = useState<any[]>([]);
-  const [deploysData, setDeploysData] = useState<any[]>([]);
-  const [servicesData, setServicesData] = useState<any[]>([]);
-  const [configMapsData, setConfigMapsData] = useState<any[]>([]);
+  const [podsData, setPodsData] = useState<PodData[]>([]);
+  const [deploysData, setDeploysData] = useState<DeployData[]>([]);
+  const [servicesData, setServicesData] = useState<ServiceData[]>([]);
+  const [configMapsData, setConfigMapsData] = useState<ConfigMapData[]>([]);
 
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -75,14 +130,14 @@ export const KuberneterWorkspace: React.FC<KuberneterWorkspaceProps> = ({ resour
         return;
       }
 
-      const items = res.items || [];
+      const items = (res.items as K8sResource[]) || [];
 
       // Transform data to fit the table props
       if (resource === 'pods') {
-        const transformed = items.map((item: any) => {
+        const transformed = items.map((item) => {
           const containerStatuses = item.status?.containerStatuses || [];
           const restarts = containerStatuses.reduce(
-            (acc: number, c: any) => acc + (c.restartCount || 0),
+            (acc: number, c) => acc + (c.restartCount || 0),
             0
           );
           return {
@@ -90,12 +145,12 @@ export const KuberneterWorkspace: React.FC<KuberneterWorkspaceProps> = ({ resour
             ns: item.metadata?.namespace || '',
             status: item.status?.phase || 'Unknown',
             restarts,
-            age: formatAge(item.metadata?.creationTimestamp)
+            age: formatAge(item.metadata?.creationTimestamp || '')
           };
         });
         setPodsData(transformed);
       } else if (resource === 'deployments') {
-        const transformed = items.map((item: any) => {
+        const transformed = items.map((item) => {
           const replicas = item.status?.replicas || 0;
           const readyReplicas = item.status?.readyReplicas || 0;
           return {
@@ -104,45 +159,47 @@ export const KuberneterWorkspace: React.FC<KuberneterWorkspaceProps> = ({ resour
             ready: `${readyReplicas}/${replicas}`,
             upToDate: item.status?.updatedReplicas || 0,
             available: item.status?.availableReplicas || 0,
-            age: formatAge(item.metadata?.creationTimestamp)
+            age: formatAge(item.metadata?.creationTimestamp || '')
           };
         });
         setDeploysData(transformed);
       } else if (resource === 'services') {
-        const transformed = items.map((item: any) => {
-          const ports =
-            item.spec?.ports?.map((p: any) => `${p.port}/${p.protocol}`).join(', ') || '';
+        const transformed = items.map((item) => {
+          const ports = item.spec?.ports?.map((p) => `${p.port}/${p.protocol}`).join(', ') || '';
           return {
             name: item.metadata?.name || '',
             ns: item.metadata?.namespace || '',
             type: item.spec?.type || 'ClusterIP',
             clusterIp: item.spec?.clusterIP || '',
             ports,
-            age: formatAge(item.metadata?.creationTimestamp)
+            age: formatAge(item.metadata?.creationTimestamp || '')
           };
         });
         setServicesData(transformed);
       } else if (resource === 'configmaps') {
-        const transformed = items.map((item: any) => {
+        const transformed = items.map((item) => {
           const keys = Object.keys(item.data || {}).length;
           return {
             name: item.metadata?.name || '',
             ns: item.metadata?.namespace || '',
             keys,
-            age: formatAge(item.metadata?.creationTimestamp)
+            age: formatAge(item.metadata?.creationTimestamp || '')
           };
         });
         setConfigMapsData(transformed);
       }
-    } catch (err: any) {
-      setErrorMsg(err.message || 'Failed to fetch cluster resources.');
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      setErrorMsg(msg || 'Failed to fetch cluster resources.');
     } finally {
       setIsLoading(false);
     }
   };
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchResources();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [resource, kuberneterSelectedCluster, kuberneterSelectedNamespace, activeConfigPath]);
 
   // If we are not on the home connection view and there's no connected cluster

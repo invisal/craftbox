@@ -27,7 +27,7 @@ interface SidebarCategory {
 
 function highlightText(text: string, search: string): React.ReactNode {
   if (!search) return text;
-  const regex = new RegExp(`(${search.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&')})`, 'gi');
+  const regex = new RegExp(`(${search.replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&')})`, 'gi');
   const parts = text.split(regex);
   return (
     <>
