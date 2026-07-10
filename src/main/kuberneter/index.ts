@@ -9,13 +9,14 @@ export function registerKuberneterHandlers(): void {
     try {
       const resolvedPath = kubeconfigPath || undefined;
       return await listKubeconfigContexts(resolvedPath);
-    } catch (err: any) {
-      return { error: err.message };
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      return { error: message };
     }
   });
 
   // 2. Select and load local kubeconfig file via OS file dialog
-  ipcMain.handle('kuberneter:select-kubeconfig-file', async (event) => {
+  ipcMain.handle('kuberneter:select-kubeconfig-file', async () => {
     const result = await dialog.showOpenDialog({
       properties: ['openFile'],
       filters: [{ name: 'Kubeconfig', extensions: ['*', 'yaml', 'yml', 'conf'] }]
@@ -43,8 +44,9 @@ export function registerKuberneterHandlers(): void {
 
       fs.writeFileSync(filePath, content, 'utf8');
       return filePath;
-    } catch (err: any) {
-      return { error: err.message };
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      return { error: message };
     }
   });
 
@@ -88,8 +90,9 @@ export function registerKuberneterHandlers(): void {
         const data = JSON.parse(stdout);
 
         return { items: data.items || [] };
-      } catch (err: any) {
-        return { error: err.message };
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        return { error: message };
       }
     }
   );

@@ -48,7 +48,16 @@ export async function listKubeconfigContexts(kubeconfigPath?: string): Promise<K
       }
     }
 
-    return contexts.map((ctx: any) => {
+    interface KubeconfigContext {
+      name: string;
+      context?: {
+        cluster?: string;
+        user?: string;
+        namespace?: string;
+      };
+    }
+
+    return contexts.map((ctx: KubeconfigContext) => {
       const name = ctx.name || '';
       const contextData = ctx.context || {};
       const clusterName = contextData.cluster || '';
@@ -61,7 +70,7 @@ export async function listKubeconfigContexts(kubeconfigPath?: string): Promise<K
         isActive: name === currentContext
       };
     });
-  } catch (err: any) {
+  } catch (err) {
     console.error('Error listing contexts:', err);
     throw err;
   }

@@ -36,8 +36,9 @@ export const KuberneterHomeView: React.FC = () => {
         addKuberneterKubeconfig(filePath);
         setKuberneterInstanceConfigPath(activeInstanceId, filePath);
       }
-    } catch (err: any) {
-      setErrorMsg(err.message || 'Failed to select Kubeconfig file.');
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      setErrorMsg(msg || 'Failed to select Kubeconfig file.');
     }
   };
 

@@ -24,7 +24,7 @@ interface K8sContext {
 
 function highlightText(text: string, search: string): React.ReactNode {
   if (!search) return text;
-  const regex = new RegExp(`(${search.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&')})`, 'gi');
+  const regex = new RegExp(`(${search.replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&')})`, 'gi');
   const parts = text.split(regex);
   return (
     <>
@@ -134,7 +134,7 @@ export const ConfigTree: React.FC<ConfigTreeProps> = ({
       const pathArg = configPath === 'default' ? undefined : configPath;
       const res = await window.kuberneter.listContexts(pathArg);
 
-      if (res && res.error) {
+      if (res && typeof res === 'object' && 'error' in res) {
         setErrorMap((prev) => ({ ...prev, [configPath]: res.error }));
         setContextsMap((prev) => ({ ...prev, [configPath]: [] }));
       } else if (Array.isArray(res)) {
@@ -144,8 +144,9 @@ export const ConfigTree: React.FC<ConfigTreeProps> = ({
           setExpandedConfigs((prev) => ({ ...prev, [configPath]: true }));
         }
       }
-    } catch (err: any) {
-      setErrorMap((prev) => ({ ...prev, [configPath]: err.message || 'Failed to list contexts' }));
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      setErrorMap((prev) => ({ ...prev, [configPath]: msg || 'Failed to list contexts' }));
     } finally {
       setLoadingMap((prev) => ({ ...prev, [configPath]: false }));
     }
@@ -155,8 +156,10 @@ export const ConfigTree: React.FC<ConfigTreeProps> = ({
   useEffect(() => {
     for (const configPath of allConfigs) {
       // Fetch if not already loaded or if the list of paths changes
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       fetchConfigContexts(configPath);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [JSON.stringify(configPaths)]);
 
   const toggleExpand = (configPath: string) => {
