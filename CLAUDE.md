@@ -11,3 +11,10 @@ npm run typecheck     # tsc --noEmit for both node and web targets
 ```
 
 Run all three after finishing a change. If `lint` have error or warning in files and fix them .
+
+## Receipts
+
+Topic-specific reference docs live in `docs/receipts/`. Check the relevant one before
+touching that area of the code:
+
+- [colors.md](docs/receipts/colors.md) — Tailwind color tokens
