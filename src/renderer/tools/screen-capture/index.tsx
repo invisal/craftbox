@@ -123,7 +123,7 @@ export function ScreenCaptureMain({}: ToolComponentProps<Props>): JSX.Element {
                 <Download size={14} />
                 Save to file
               </Button>
-              <Button variant="primary" onClick={() => void runCapture()}>
+              <Button variant="primary" onClick={handleCaptureAgain}>
                 <Camera size={14} />
                 Capture again
               </Button>
