@@ -10,7 +10,8 @@ npm run lint          # eslint --cache .
 npm run typecheck     # tsc --noEmit for both node and web targets
 ```
 
-Run all three after finishing a change. If `lint` have error or warning in files and fix them .
+- Run all three after finishing a change. If `lint` have error or warning in files and fix them .
+- Use `cn` from `cnfast` to combine class names — not manual string template concatenation.
 
 ## Receipts
 

@@ -1,6 +1,7 @@
 import { ipcMain, app, shell } from 'electron';
 import * as fs from 'fs';
 import * as path from 'path';
+import * as os from 'os';
 
 export interface FileEntry {
   name: string;
@@ -13,11 +14,98 @@ export interface FileEntry {
 
 export type ListDirectoryResponse = { entries: FileEntry[] } | { error: string };
 
+export interface SidebarItem {
+  label: string;
+  path: string;
+}
+
+export interface SidebarSections {
+  favorites: SidebarItem[];
+  locations: SidebarItem[];
+}
+
 const iconCache = new Map<string, string>();
+
+function pathExists(target: string): boolean {
+  try {
+    fs.accessSync(target);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function getFavorites(): SidebarItem[] {
+  const candidates: SidebarItem[] = [
+    { label: 'Home', path: app.getPath('home') },
+    { label: 'Desktop', path: app.getPath('desktop') },
+    { label: 'Documents', path: app.getPath('documents') },
+    { label: 'Downloads', path: app.getPath('downloads') }
+  ];
+  return candidates.filter((item) => pathExists(item.path));
+}
+
+function getWindowsLocations(): SidebarItem[] {
+  const drives: SidebarItem[] = [];
+  for (let code = 'C'.charCodeAt(0); code <= 'Z'.charCodeAt(0); code++) {
+    const letter = String.fromCharCode(code);
+    const drivePath = `${letter}:\\`;
+    if (pathExists(drivePath)) {
+      drives.push({ label: `Local Disk (${letter}:)`, path: drivePath });
+    }
+  }
+  return drives;
+}
+
+function getMacLocations(): SidebarItem[] {
+  const locations: SidebarItem[] = [{ label: 'Macintosh HD', path: '/' }];
+  try {
+    const volumes = fs.readdirSync('/Volumes', { withFileTypes: true });
+    for (const entry of volumes) {
+      if (entry.name === 'Macintosh HD') continue;
+      locations.push({ label: entry.name, path: path.join('/Volumes', entry.name) });
+    }
+  } catch {
+    // /Volumes unreadable -- fall back to just the root volume
+  }
+  return locations;
+}
+
+function getLinuxLocations(): SidebarItem[] {
+  const locations: SidebarItem[] = [{ label: 'Filesystem', path: '/' }];
+  const mountRoots = [`/media/${os.userInfo().username}`, '/media', '/mnt'];
+  for (const mountRoot of mountRoots) {
+    try {
+      const entries = fs.readdirSync(mountRoot, { withFileTypes: true });
+      for (const entry of entries) {
+        if (!entry.isDirectory()) continue;
+        locations.push({ label: entry.name, path: path.join(mountRoot, entry.name) });
+      }
+    } catch {
+      // mount root doesn't exist or isn't readable -- skip it
+    }
+  }
+  return locations;
+}
+
+function getLocations(): SidebarItem[] {
+  switch (process.platform) {
+    case 'win32':
+      return getWindowsLocations();
+    case 'darwin':
+      return getMacLocations();
+    default:
+      return getLinuxLocations();
+  }
+}
 
 export function registerFileExplorerHandlers(): void {
   ipcMain.handle('file-explorer:get-home-dir', () => {
     return app.getPath('home');
+  });
+
+  ipcMain.handle('file-explorer:get-sidebar-sections', (): SidebarSections => {
+    return { favorites: getFavorites(), locations: getLocations() };
   });
 
   ipcMain.handle(

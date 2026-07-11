@@ -5,6 +5,8 @@ import { Breadcrumb } from './components/Breadcrumb';
 import { getParentPath } from './lib/paths';
 import { FileTable } from './components/FileTable';
 import { FileEntry } from './components/columns';
+import { FileExplorerSidebar } from './components/FileExplorerSidebar';
+import { ResizablePanel } from '@renderer/components/ui/ResizablePanel';
 
 interface Props {}
 
@@ -14,6 +16,7 @@ export function FileExplorerMain({}: ToolComponentProps<Props>) {
   const [entries, setEntries] = useState<FileEntry[]>([]);
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading');
   const [errorMessage, setErrorMessage] = useState('');
+  const [sidebarWidth, setSidebarWidth] = useState(200);
 
   useEffect(() => {
     window.fileExplorer.getHomeDir().then(setCurrentPath);
@@ -53,31 +56,44 @@ export function FileExplorerMain({}: ToolComponentProps<Props>) {
   const parentPath = getParentPath(currentPath);
 
   return (
-    <div className="flex-1 flex flex-col min-h-0 bg-surface">
-      <Breadcrumb currentPath={currentPath} onNavigate={setCurrentPath} />
+    <div className="flex-1 flex min-h-0 min-w-0 bg-surface">
+      <ResizablePanel
+        edge="right"
+        size={sidebarWidth}
+        onResize={setSidebarWidth}
+        min={150}
+        max={400}
+        className="bg-surface-2 border-r border-border-dark flex flex-col h-full p-3 overflow-y-auto"
+      >
+        <FileExplorerSidebar currentPath={currentPath} onNavigate={setCurrentPath} />
+      </ResizablePanel>
 
-      {status === 'loading' && (
-        <div className="flex-1 flex items-center justify-center text-text-dim">
-          <Loader2 size={20} className="animate-spin" />
-        </div>
-      )}
+      <div className="flex-1 flex flex-col min-h-0 min-w-0">
+        <Breadcrumb currentPath={currentPath} onNavigate={setCurrentPath} />
 
-      {status === 'error' && (
-        <div className="flex-1 flex flex-col items-center justify-center gap-3 text-text-dim text-xs px-4 text-center">
-          <AlertCircle size={20} className="text-red-500" />
-          <span>Cannot access this folder: {errorMessage}</span>
-          {parentPath && (
-            <button
-              onClick={() => setCurrentPath(parentPath)}
-              className="px-3 py-1.5 rounded-md border border-border hover:bg-surface-3 text-text-base"
-            >
-              Go Back
-            </button>
-          )}
-        </div>
-      )}
+        {status === 'loading' && (
+          <div className="flex-1 flex items-center justify-center text-text-dim">
+            <Loader2 size={20} className="animate-spin" />
+          </div>
+        )}
 
-      {status === 'ready' && <FileTable entries={entries} onNavigate={setCurrentPath} />}
+        {status === 'error' && (
+          <div className="flex-1 flex flex-col items-center justify-center gap-3 text-text-dim text-xs px-4 text-center">
+            <AlertCircle size={20} className="text-red-500" />
+            <span>Cannot access this folder: {errorMessage}</span>
+            {parentPath && (
+              <button
+                onClick={() => setCurrentPath(parentPath)}
+                className="px-3 py-1.5 rounded-md border border-border hover:bg-surface-3 text-text-base"
+              >
+                Go Back
+              </button>
+            )}
+          </div>
+        )}
+
+        {status === 'ready' && <FileTable entries={entries} onNavigate={setCurrentPath} />}
+      </div>
     </div>
   );
 }
