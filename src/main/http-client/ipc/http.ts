@@ -63,7 +63,7 @@ export function registerHttpHandlers(): void {
         });
 
         const arrayBuffer = await response.arrayBuffer();
-        const bodyText = Buffer.from(arrayBuffer).toString('utf-8');
+        const bodyBase64 = Buffer.from(arrayBuffer).toString('base64');
         const durationMs = performance.now() - startedAt;
 
         const responseHeaders: Record<string, string> = {};
@@ -78,7 +78,7 @@ export function registerHttpHandlers(): void {
           headers: responseHeaders,
           durationMs: Math.round(durationMs),
           sizeBytes: arrayBuffer.byteLength,
-          body: bodyText,
+          bodyBase64,
           url: requestUrl
         };
       } catch (err) {
@@ -97,7 +97,7 @@ export function registerHttpHandlers(): void {
           headers: {},
           durationMs: Math.round(durationMs),
           sizeBytes: 0,
-          body: '',
+          bodyBase64: '',
           url: requestUrl,
           error: message
         };

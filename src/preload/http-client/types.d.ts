@@ -31,7 +31,8 @@ export interface HttpResponsePayload {
   headers: Record<string, string>;
   durationMs: number;
   sizeBytes: number;
-  body: string;
+  /** Raw response bytes, base64-encoded, so binary bodies (images, etc.) survive the IPC hop losslessly. */
+  bodyBase64: string;
   url: string;
   error?: string;
 }
