@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { usePostmanTabsStore } from './store/tabs.store';
 import { useCollectionsStore } from './store/collections.store';
+import { WorkspaceSelector } from './components/WorkspaceSelector';
 import type {
   Collection,
   CollectionFolder,
@@ -217,9 +218,7 @@ export const HttpClientSidebar: React.FC = () => {
   return (
     <div className="flex flex-col gap-3">
       <div className="flex items-center justify-between">
-        <h3 className="text-[10px] font-bold tracking-wider text-zinc-500 uppercase">
-          HTTP Client
-        </h3>
+        <WorkspaceSelector />
         <button
           onClick={handleNewPostmanRequest}
           title="Create Request"

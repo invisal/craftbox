@@ -97,8 +97,14 @@ export interface Collection {
   id: string;
   name: string;
   createdAt: number;
+  workspaceId: string;
   requests: SavedRequest[];
   folders: CollectionFolder[];
+}
+
+export interface CreateCollectionPayload {
+  name: string;
+  workspaceId: string;
 }
 
 export interface RenameCollectionPayload {
@@ -184,7 +190,13 @@ export interface Environment {
   id: string;
   name: string;
   createdAt: number;
+  workspaceId: string;
   variables: KeyValuePair[];
+}
+
+export interface CreateEnvironmentPayload {
+  name: string;
+  workspaceId: string;
 }
 
 export interface RenameEnvironmentPayload {
@@ -199,4 +211,19 @@ export interface DeleteEnvironmentPayload {
 export interface SaveEnvironmentVariablesPayload {
   environmentId: string;
   variables: KeyValuePair[];
+}
+
+export interface Workspace {
+  id: string;
+  name: string;
+  createdAt: number;
+}
+
+export interface RenameWorkspacePayload {
+  workspaceId: string;
+  name: string;
+}
+
+export interface DeleteWorkspacePayload {
+  workspaceId: string;
 }

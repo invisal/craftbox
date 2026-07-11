@@ -5,6 +5,7 @@ import type {
   ImportCollectionResult,
   SavedRequest
 } from '../../../../preload/http-client/types';
+import { useWorkspacesStore } from './workspaces.store';
 
 interface CollectionsState {
   collections: Collection[];
@@ -52,12 +53,15 @@ export const useCollectionsStore = create<CollectionsState>((set, get) => ({
   isLoaded: false,
 
   load: async () => {
-    const collections = await window.api.collections.list();
+    const workspaceId = useWorkspacesStore.getState().activeWorkspaceId;
+    const collections = workspaceId ? await window.api.collections.list(workspaceId) : [];
     set({ collections, isLoaded: true });
   },
 
   createCollection: async (name) => {
-    const collection = await window.api.collections.create(name);
+    const workspaceId = useWorkspacesStore.getState().activeWorkspaceId;
+    if (!workspaceId) throw new Error('No active workspace.');
+    const collection = await window.api.collections.create({ name, workspaceId });
     await get().load();
     return collection;
   },
@@ -115,7 +119,9 @@ export const useCollectionsStore = create<CollectionsState>((set, get) => ({
   exportCollection: async (collectionId) => window.api.collections.exportToFile({ collectionId }),
 
   importCollection: async () => {
-    const result = await window.api.collections.importFromFile();
+    const workspaceId = useWorkspacesStore.getState().activeWorkspaceId;
+    if (!workspaceId) return { ok: false, error: 'No active workspace.' };
+    const result = await window.api.collections.importFromFile(workspaceId);
     if (result.ok && !result.canceled) await get().load();
     return result;
   }

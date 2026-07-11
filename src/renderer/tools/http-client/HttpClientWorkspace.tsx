@@ -1,8 +1,11 @@
-import React, { useState, type ComponentType } from 'react';
+import React, { useEffect, useState, type ComponentType } from 'react';
 import { Tabs } from '@base-ui/react/tabs';
 import { FileText, Globe, Waves, X } from 'lucide-react';
 import { cn } from 'cnfast';
 import { usePostmanTabsStore, type PostmanTab } from './store/tabs.store';
+import { useCollectionsStore } from './store/collections.store';
+import { useEnvironmentsStore } from './store/environments.store';
+import { useWorkspacesStore } from './store/workspaces.store';
 import { HttpClientSidebar } from './HttpClientSidebar';
 import { useApiClient, disposeApiClientTab, type ProtocolTab } from './hooks/useApiClient';
 import type { PostmanTabSeed } from './types';
@@ -41,6 +44,25 @@ export const HttpClientWorkspace: React.FC = () => {
   const closeTab = usePostmanTabsStore((s) => s.closeTab);
   const renameTab = usePostmanTabsStore((s) => s.renameTab);
   const openNewRequestTab = usePostmanTabsStore((s) => s.openNewRequestTab);
+
+  const workspacesLoaded = useWorkspacesStore((s) => s.isLoaded);
+  const loadWorkspaces = useWorkspacesStore((s) => s.load);
+  const activeWorkspaceId = useWorkspacesStore((s) => s.activeWorkspaceId);
+  const loadCollections = useCollectionsStore((s) => s.load);
+  const loadEnvironments = useEnvironmentsStore((s) => s.load);
+
+  useEffect(() => {
+    if (!workspacesLoaded) loadWorkspaces();
+  }, [workspacesLoaded, loadWorkspaces]);
+
+  // Re-scope collections/environments to whichever workspace is active, both on
+  // first load and whenever the user switches workspaces.
+  useEffect(() => {
+    if (activeWorkspaceId) {
+      loadCollections();
+      loadEnvironments();
+    }
+  }, [activeWorkspaceId, loadCollections, loadEnvironments]);
 
   const handleCloseTab = (id: string): void => {
     closeTab(id);
