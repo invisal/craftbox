@@ -9,7 +9,7 @@ import { blobToDataUrl, captureFromSystemPicker, screenshotFileName } from './li
 
 interface Props {}
 
-type Phase = 'idle' | 'capturing' | 'failed' | 'result';
+type Phase = 'idle' | 'capturing' | 'result';
 
 async function copyViaRenderer(blob: Blob): Promise<boolean> {
   try {
@@ -47,11 +47,9 @@ export function ScreenCaptureMain({}: ToolComponentProps<Props>): JSX.Element {
   const [phase, setPhase] = useState<Phase>('idle');
   const [previewDataUrl, setPreviewDataUrl] = useState<string | null>(null);
   const [previewBlob, setPreviewBlob] = useState<Blob | null>(null);
-  const [error, setError] = useState<string | null>(null);
 
   const runCapture = async (): Promise<void> => {
     setPhase('capturing');
-    setError(null);
     setPreviewDataUrl(null);
     setPreviewBlob(null);
 
@@ -73,11 +71,10 @@ export function ScreenCaptureMain({}: ToolComponentProps<Props>): JSX.Element {
         notifySuccess('Screenshot captured.');
         notifyError('Could not copy to clipboard.');
       }
-    } catch (err) {
-      const message = err instanceof Error ? err.message : String(err);
-      setError(message);
-      setPhase('failed');
-      notifyError(message);
+    } catch {
+      // Chromium throws jargon like "Could not start video source" when Screen
+      // Recording permission is missing — don't surface that. Idle + banner is enough.
+      setPhase('idle');
     }
   };
 
@@ -85,7 +82,6 @@ export function ScreenCaptureMain({}: ToolComponentProps<Props>): JSX.Element {
     setPhase('idle');
     setPreviewDataUrl(null);
     setPreviewBlob(null);
-    setError(null);
   };
 
   const handleCopy = async (): Promise<void> => {
@@ -121,15 +117,15 @@ export function ScreenCaptureMain({}: ToolComponentProps<Props>): JSX.Element {
         <p className="mt-0.5 text-xs text-text-dim">
           {phase === 'idle' && 'Take a screenshot of your screen or a window.'}
           {phase === 'capturing' && 'Choose what to share in the system dialog…'}
-          {phase === 'failed' && 'Capture failed.'}
           {phase === 'result' && 'Save your screenshot or capture again.'}
         </p>
       </div>
 
-      <div className="flex min-h-0 flex-1 flex-col p-6">
+      <div className="flex min-h-0 flex-1 flex-col gap-4 p-6">
+        <ScreenRecordingPermissionBanner />
+
         {phase === 'idle' && (
-          <div className="flex flex-1 flex-col items-center justify-center gap-6">
-            <ScreenRecordingPermissionBanner />
+          <div className="flex flex-1 flex-col items-center justify-center">
             <Button variant="primary" onClick={() => void runCapture()}>
               <Camera size={14} />
               Capture
@@ -140,16 +136,6 @@ export function ScreenCaptureMain({}: ToolComponentProps<Props>): JSX.Element {
         {phase === 'capturing' && (
           <div className="flex flex-1 items-center justify-center">
             <p className="text-sm text-text-dim">Capturing…</p>
-          </div>
-        )}
-
-        {phase === 'failed' && (
-          <div className="flex flex-1 flex-col items-center justify-center gap-4">
-            <p className="max-w-md text-center text-sm text-danger">{error}</p>
-            <Button variant="primary" onClick={handleCaptureAgain}>
-              <Camera size={14} />
-              Capture again
-            </Button>
           </div>
         )}
 
