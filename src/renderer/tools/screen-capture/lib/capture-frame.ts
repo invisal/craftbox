@@ -1,74 +1,107 @@
-import type { CaptureSource } from '@screen-recorder/types/recording';
+const CAPTURE_TIMEOUT_MS = 15_000;
 
-interface DesktopVideoConstraint {
-  mandatory: {
-    chromeMediaSource: 'desktop';
-    chromeMediaSourceId: string;
-    maxWidth: number;
-    maxHeight: number;
-  };
+function withTimeout<T>(promise: Promise<T>, ms: number, message: string): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<T>((_, reject) => {
+      setTimeout(() => reject(new Error(message)), ms);
+    })
+  ]);
 }
 
-async function getDesktopVideoStream(source: CaptureSource): Promise<MediaStream> {
-  const constraints: MediaStreamConstraints = {
-    audio: false,
-    video: {
-      mandatory: {
-        chromeMediaSource: 'desktop',
-        chromeMediaSourceId: source.id,
-        maxWidth: window.screen.width * (window.devicePixelRatio || 1),
-        maxHeight: window.screen.height * (window.devicePixelRatio || 1)
+function waitForVideoReady(video: HTMLVideoElement, timeoutMs: number): Promise<void> {
+  if (video.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA && video.videoWidth > 0) {
+    return Promise.resolve();
+  }
+
+  return new Promise((resolve, reject) => {
+    const onReady = (): void => {
+      if (video.videoWidth > 0) {
+        cleanup();
+        resolve();
       }
-    } as unknown as DesktopVideoConstraint as never
-  };
+    };
 
-  return navigator.mediaDevices.getUserMedia(constraints);
-}
+    const timer = setTimeout(() => {
+      cleanup();
+      reject(new Error('Timed out waiting for capture frame'));
+    }, timeoutMs);
 
-function waitForVideoFrame(video: HTMLVideoElement): Promise<void> {
-  return new Promise((resolve) => {
-    if ('requestVideoFrameCallback' in video) {
-      video.requestVideoFrameCallback(() => resolve());
-      return;
-    }
-    requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
+    const cleanup = (): void => {
+      clearTimeout(timer);
+      video.removeEventListener('loadeddata', onReady);
+      video.removeEventListener('playing', onReady);
+    };
+
+    video.addEventListener('loadeddata', onReady);
+    video.addEventListener('playing', onReady);
   });
 }
 
-/** Grabs a single PNG frame from the chosen desktop source. */
-export async function captureFrame(source: CaptureSource): Promise<Blob> {
-  const stream = await getDesktopVideoStream(source);
+async function grabPngFromStream(stream: MediaStream): Promise<Blob> {
   const video = document.createElement('video');
-  video.srcObject = stream;
   video.muted = true;
+  video.playsInline = true;
+  video.srcObject = stream;
+  Object.assign(video.style, {
+    position: 'fixed',
+    opacity: '0',
+    width: '1px',
+    height: '1px',
+    pointerEvents: 'none'
+  });
+  document.body.appendChild(video);
 
   try {
-    await new Promise<void>((resolve, reject) => {
-      video.onloadedmetadata = () => {
-        video.play().then(resolve).catch(reject);
-      };
-      video.onerror = () => reject(new Error('Failed to load capture stream'));
-    });
-
-    await waitForVideoFrame(video);
+    await withTimeout(video.play(), CAPTURE_TIMEOUT_MS, 'Timed out starting capture');
+    await waitForVideoReady(video, CAPTURE_TIMEOUT_MS);
 
     const canvas = document.createElement('canvas');
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
     const ctx = canvas.getContext('2d');
-    if (!ctx) throw new Error('Canvas not supported');
-
+    if (!ctx || canvas.width === 0 || canvas.height === 0) {
+      throw new Error('Captured screenshot is empty.');
+    }
     ctx.drawImage(video, 0, 0);
 
-    return new Promise<Blob>((resolve, reject) => {
-      canvas.toBlob(
-        (blob) => (blob ? resolve(blob) : reject(new Error('Failed to encode image'))),
-        'image/png'
-      );
-    });
+    return withTimeout(
+      new Promise<Blob>((resolve, reject) => {
+        canvas.toBlob((blob) => {
+          if (blob) resolve(blob);
+          else reject(new Error('Failed to encode screenshot'));
+        }, 'image/png');
+      }),
+      5_000,
+      'Timed out encoding screenshot'
+    );
   } finally {
     stream.getTracks().forEach((track) => track.stop());
+    video.remove();
   }
+}
+
+async function openDisplayMediaStream(): Promise<MediaStream> {
+  try {
+    return await navigator.mediaDevices.getDisplayMedia({
+      audio: false,
+      video: {
+        width: { ideal: window.screen.width * (window.devicePixelRatio || 1) },
+        height: { ideal: window.screen.height * (window.devicePixelRatio || 1) }
+      }
+    });
+  } catch (err) {
+    if (err instanceof DOMException && err.name === 'NotAllowedError') {
+      throw new Error('Capture cancelled.');
+    }
+    throw err;
+  }
+}
+
+/** Opens the OS capture picker, then grabs one PNG frame from the chosen source. */
+export async function captureFromSystemPicker(): Promise<Blob> {
+  const stream = await openDisplayMediaStream();
+  return grabPngFromStream(stream);
 }
 
 export function screenshotFileName(): string {

@@ -4,14 +4,11 @@ import { Camera, ClipboardCopy, Download } from 'lucide-react';
 import { ToolComponentProps } from '@renderer/components/providers/createTabProvider';
 import { Button } from '@renderer/components/ui/Button';
 import { ScreenRecordingPermissionBanner } from '@screen-recorder/features/recording/components/ScreenRecordingPermissionBanner';
-import { captureFrame, blobToDataUrl, screenshotFileName } from './lib/capture-frame';
+import { blobToDataUrl, captureFromSystemPicker, screenshotFileName } from './lib/capture-frame';
 
 interface Props {}
 
-type Phase = 'idle' | 'capturing' | 'result';
-
-const PRELOAD_MISSING_ERROR =
-  'Capture API unavailable (preload script did not load). Check the console.';
+type Phase = 'idle' | 'capturing' | 'failed' | 'result';
 
 async function copyToClipboard(blob: Blob): Promise<void> {
   try {
@@ -28,21 +25,15 @@ export function ScreenCaptureMain({}: ToolComponentProps<Props>): JSX.Element {
   const [previewBlob, setPreviewBlob] = useState<Blob | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const handleStartCapture = (): void => {
+  const runCapture = (): void => {
     setPhase('capturing');
+    setError(null);
     setPreviewDataUrl(null);
     setPreviewBlob(null);
-    setError(null);
 
     const run = async (): Promise<void> => {
       try {
-        if (!window.screenRecorder) throw new Error(PRELOAD_MISSING_ERROR);
-
-        const sources = await window.screenRecorder.recording.getCaptureSources();
-        if (sources.length === 0) throw new Error('No capture sources found.');
-
-        // ponytail: always grabs the first listed source; add picker later if needed
-        const blob = await captureFrame(sources[0]);
+        const blob = await captureFromSystemPicker();
         const dataUrl = await blobToDataUrl(blob);
         await copyToClipboard(blob);
         setPreviewBlob(blob);
@@ -50,7 +41,7 @@ export function ScreenCaptureMain({}: ToolComponentProps<Props>): JSX.Element {
         setPhase('result');
       } catch (err) {
         setError(err instanceof Error ? err.message : String(err));
-        setPhase('idle');
+        setPhase('failed');
       }
     };
 
@@ -86,7 +77,8 @@ export function ScreenCaptureMain({}: ToolComponentProps<Props>): JSX.Element {
         <h1 className="text-base font-medium">Screen Capture</h1>
         <p className="mt-0.5 text-xs text-text-dim">
           {phase === 'idle' && 'Take a screenshot of your screen or a window.'}
-          {phase === 'capturing' && 'Capturing…'}
+          {phase === 'capturing' && 'Choose what to share in the system dialog…'}
+          {phase === 'failed' && 'Capture failed.'}
           {phase === 'result' && 'Save your screenshot or capture again.'}
         </p>
       </div>
@@ -95,8 +87,7 @@ export function ScreenCaptureMain({}: ToolComponentProps<Props>): JSX.Element {
         {phase === 'idle' && (
           <div className="flex flex-1 flex-col items-center justify-center gap-6">
             <ScreenRecordingPermissionBanner />
-            {error && <p className="text-xs text-danger">{error}</p>}
-            <Button variant="primary" onClick={handleStartCapture}>
+            <Button variant="primary" onClick={runCapture}>
               <Camera size={14} />
               Capture
             </Button>
@@ -106,6 +97,16 @@ export function ScreenCaptureMain({}: ToolComponentProps<Props>): JSX.Element {
         {phase === 'capturing' && (
           <div className="flex flex-1 items-center justify-center">
             <p className="text-sm text-text-dim">Capturing…</p>
+          </div>
+        )}
+
+        {phase === 'failed' && (
+          <div className="flex flex-1 flex-col items-center justify-center gap-4">
+            <p className="max-w-md text-center text-sm text-danger">{error}</p>
+            <Button variant="primary" onClick={handleCaptureAgain}>
+              <Camera size={14} />
+              Capture again
+            </Button>
           </div>
         )}
 
@@ -126,7 +127,7 @@ export function ScreenCaptureMain({}: ToolComponentProps<Props>): JSX.Element {
                 <Download size={14} />
                 Save to file
               </Button>
-              <Button variant="primary" onClick={handleCaptureAgain}>
+              <Button variant="primary" onClick={runCapture}>
                 <Camera size={14} />
                 Capture again
               </Button>

@@ -11,8 +11,8 @@ import type { ScreenRecordingStatus } from '@screen-recorder/types/permissions';
 
 export const screenRecorderApi = {
   recording: {
-    getCaptureSources: (): Promise<CaptureSource[]> =>
-      ipcRenderer.invoke(IpcChannels.GetCaptureSources),
+    getCaptureSources: (options?: { skipThumbnails?: boolean }): Promise<CaptureSource[]> =>
+      ipcRenderer.invoke(IpcChannels.GetCaptureSources, options),
     start: (request: RecordingRequest): Promise<RecordingSession> =>
       ipcRenderer.invoke(IpcChannels.StartRecording, request),
     stop: (): Promise<void> => ipcRenderer.invoke(IpcChannels.StopRecording),
@@ -78,6 +78,8 @@ export const screenRecorderApi = {
       ipcRenderer.invoke(IpcChannels.ShowSaveExportDialog, defaultFileName, format)
   },
   screenshot: {
+    capture: (sourceId: string, size: { width: number; height: number }): Promise<ArrayBuffer> =>
+      ipcRenderer.invoke(IpcChannels.CaptureScreenshot, { sourceId, ...size }),
     save: (data: ArrayBuffer, defaultFileName: string): Promise<string | null> =>
       ipcRenderer.invoke(IpcChannels.SaveScreenshot, data, defaultFileName)
   }
