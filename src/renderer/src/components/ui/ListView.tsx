@@ -1,7 +1,23 @@
-import { Fragment, KeyboardEvent, MouseEvent, ReactNode, useMemo, useRef, useState } from 'react';
+import {
+  Fragment,
+  KeyboardEvent,
+  MouseEvent,
+  ReactNode,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState
+} from 'react';
 import { flexRender, Table } from '@tanstack/react-table';
+import { useVirtualizer } from '@tanstack/react-virtual';
 import { cn } from 'cnfast';
 import { ContextMenu } from './ContextMenu';
+
+// Virtualization requires every row to report the same height up front
+// (no per-row measurement), so this must match the actual rendered row
+// height below (row cell padding + line height).
+const ROW_HEIGHT = 28;
 
 interface ListViewContextMenuArgs<TData> {
   row: TData;
@@ -17,6 +33,7 @@ interface ListViewProps<TData> {
   onRowDoubleClick?: (row: TData) => void;
   renderContextMenu?: (args: ListViewContextMenuArgs<TData>) => ReactNode;
   emptyState?: ReactNode;
+  rowHeight?: number;
 }
 
 export function ListView<TData>({
@@ -27,14 +44,53 @@ export function ListView<TData>({
   onRowClick,
   onRowDoubleClick,
   renderContextMenu,
-  emptyState
+  emptyState,
+  rowHeight = ROW_HEIGHT
 }: ListViewProps<TData>) {
   const rows = table.getRowModel().rows;
   const containerRef = useRef<HTMLDivElement>(null);
-  const rowRefs = useRef(new Map<string, HTMLDivElement>());
+  const headerRef = useRef<HTMLDivElement>(null);
   const anchorIdRef = useRef<string | null>(null);
   const [focusedId, setFocusedId] = useState<string | null>(null);
   const [isFocusWithin, setIsFocusWithin] = useState(false);
+  // The header is sticky *inside* the scrollable container rather than
+  // outside it, so it permanently overlaps the top of the viewport once
+  // scrolled. The virtualizer needs its height (as scrollMargin/
+  // scrollPaddingStart) to keep rows from landing underneath it.
+  const [headerHeight, setHeaderHeight] = useState(0);
+
+  useLayoutEffect(() => {
+    const el = headerRef.current;
+    if (!el) return;
+    const observer = new ResizeObserver(([entry]) => {
+      setHeaderHeight(entry.borderBoxSize?.[0]?.blockSize ?? entry.contentRect.height);
+    });
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
+  // Holding an arrow key fires keydown repeats faster than a full
+  // state-update + scroll + render cycle can paint, so events queue up and
+  // several index-advances would land in one frame. Coalesce them into a
+  // single move applied once per animation frame instead.
+  const pendingMoveRef = useRef<{ baseIndex: number; delta: number; extend: boolean } | null>(null);
+  const rafIdRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (rafIdRef.current !== null) cancelAnimationFrame(rafIdRef.current);
+    };
+  }, []);
+
+  // eslint-disable-next-line react-hooks/incompatible-library -- TanStack Virtual memoizes its own return value; not a React Compiler concern
+  const rowVirtualizer = useVirtualizer({
+    count: rows.length,
+    getScrollElement: () => containerRef.current,
+    estimateSize: () => rowHeight,
+    overscan: 16,
+    scrollMargin: headerHeight,
+    scrollPaddingStart: headerHeight
+  });
 
   const effectiveFocusedId = useMemo(() => {
     if (focusedId && rows.some((r) => getRowId(r.original) === focusedId)) return focusedId;
@@ -73,12 +129,40 @@ export function ListView<TData>({
     const clamped = Math.min(Math.max(index, 0), rows.length - 1);
     const id = getRowId(rows[clamped].original);
     setFocusedId(id);
-    rowRefs.current.get(id)?.scrollIntoView({ block: 'nearest' });
+    rowVirtualizer.scrollToIndex(clamped, { align: 'auto' });
     if (extend && anchorIdRef.current) {
       onSelectionChange(idsInRange(anchorIdRef.current, id));
     } else {
       onSelectionChange(new Set([id]));
       anchorIdRef.current = id;
+    }
+  };
+
+  const cancelPendingMove = () => {
+    if (rafIdRef.current !== null) {
+      cancelAnimationFrame(rafIdRef.current);
+      rafIdRef.current = null;
+    }
+    pendingMoveRef.current = null;
+  };
+
+  const flushPendingMove = () => {
+    rafIdRef.current = null;
+    const pending = pendingMoveRef.current;
+    if (!pending) return;
+    pendingMoveRef.current = null;
+    moveFocus(pending.baseIndex + pending.delta, pending.extend);
+  };
+
+  const queueMoveFocus = (currentIndex: number, direction: 1 | -1, extend: boolean) => {
+    if (pendingMoveRef.current) {
+      pendingMoveRef.current.delta += direction;
+      pendingMoveRef.current.extend = extend;
+    } else {
+      pendingMoveRef.current = { baseIndex: currentIndex, delta: direction, extend };
+    }
+    if (rafIdRef.current === null) {
+      rafIdRef.current = requestAnimationFrame(flushPendingMove);
     }
   };
 
@@ -116,29 +200,33 @@ export function ListView<TData>({
     switch (e.key) {
       case 'ArrowDown':
         e.preventDefault();
-        moveFocus(currentIndex + 1, e.shiftKey);
+        queueMoveFocus(currentIndex, 1, e.shiftKey);
         break;
       case 'ArrowUp':
         e.preventDefault();
-        moveFocus(currentIndex - 1, e.shiftKey);
+        queueMoveFocus(currentIndex, -1, e.shiftKey);
         break;
       case 'Home':
         e.preventDefault();
+        cancelPendingMove();
         moveFocus(0, e.shiftKey);
         break;
       case 'End':
         e.preventDefault();
+        cancelPendingMove();
         moveFocus(rows.length - 1, e.shiftKey);
         break;
       case 'a':
       case 'A':
         if (e.ctrlKey || e.metaKey) {
           e.preventDefault();
+          cancelPendingMove();
           onSelectionChange(new Set(rows.map((r) => getRowId(r.original))));
         }
         break;
       case ' ': {
         e.preventDefault();
+        cancelPendingMove();
         const next = new Set(selectedIds);
         if (next.has(effectiveFocusedId)) next.delete(effectiveFocusedId);
         else next.add(effectiveFocusedId);
@@ -148,6 +236,7 @@ export function ListView<TData>({
       }
       case 'Enter':
         e.preventDefault();
+        cancelPendingMove();
         if (currentIndex >= 0) onRowDoubleClick?.(rows[currentIndex].original);
         break;
       default:
@@ -166,7 +255,7 @@ export function ListView<TData>({
       onKeyDown={handleKeyDown}
       className="flex-1 overflow-auto min-h-0 outline-none"
     >
-      <div role="rowgroup" className="sticky top-0 z-10">
+      <div ref={headerRef} role="rowgroup" className="sticky top-0 z-10">
         {table.getHeaderGroups().map((headerGroup) => (
           <div
             key={headerGroup.id}
@@ -202,21 +291,33 @@ export function ListView<TData>({
           </div>
         ))}
       </div>
-      <div role="rowgroup">
-        {rows.map((row) => {
+      <div
+        role="rowgroup"
+        style={{
+          position: 'relative',
+          height: `${rowVirtualizer.getTotalSize() - headerHeight}px`
+        }}
+      >
+        {rowVirtualizer.getVirtualItems().map((virtualRow) => {
+          const row = rows[virtualRow.index];
           const entry = row.original;
           const id = getRowId(entry);
           const isSelected = selectedIds.has(id);
           const isFocusedRow = id === effectiveFocusedId;
           const rowElement = (
             <div
-              ref={(el) => {
-                if (el) rowRefs.current.set(id, el);
-                else rowRefs.current.delete(id);
-              }}
               role="row"
               aria-selected={isSelected}
-              style={{ display: 'grid', gridTemplateColumns }}
+              style={{
+                display: 'grid',
+                gridTemplateColumns,
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                width: '100%',
+                height: `${virtualRow.size}px`,
+                transform: `translateY(${virtualRow.start - headerHeight}px)`
+              }}
               onClick={(e) => handleRowClick(entry, id, e)}
               onDoubleClick={() => onRowDoubleClick?.(entry)}
               onContextMenu={() => handleRowContextMenu(id)}

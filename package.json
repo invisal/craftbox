@@ -27,6 +27,7 @@
     "@electron-toolkit/utils": "^4.0.0",
     "@fix-webm-duration/fix": "^1.0.1",
     "@tanstack/react-table": "^8.21.3",
+    "@tanstack/react-virtual": "^3.14.5",
     "canvas": "^3.2.3",
     "cnfast": "^0.0.8",
     "electron-store": "^8.2.0",
