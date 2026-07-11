@@ -1,5 +1,14 @@
 import { useEffect, useState, ReactNode } from 'react';
-import { ChevronLeft, Folder, FolderOpen, GlobeIcon, Plus, Server, VideoIcon } from 'lucide-react';
+import {
+  ChevronLeft,
+  CameraIcon,
+  Folder,
+  FolderOpen,
+  GlobeIcon,
+  Plus,
+  Server,
+  VideoIcon
+} from 'lucide-react';
 import { cn } from 'cnfast';
 import { Dialog } from '../ui/Dialog';
 import { useToolTabs } from '../providers/ToolProvider';
@@ -75,6 +84,11 @@ export function ToolDialog({ open, onOpenChange }: ToolDialogProps) {
     close();
   };
 
+  const handleOpenScreenCapture = () => {
+    openTab('screen-capture', {});
+    close();
+  };
+
   const handleOpenFileExplorer = () => {
     openTab('file-explorer', {});
     close();
@@ -105,6 +119,12 @@ export function ToolDialog({ open, onOpenChange }: ToolDialogProps) {
                 name="Screen Recorder"
                 description="Record and export your screen."
                 onClick={handleOpenScreenRecorder}
+              />
+              <ToolRow
+                icon={<CameraIcon size={18} />}
+                name="Screen Capture"
+                description="Capture a still image from your screen."
+                onClick={handleOpenScreenCapture}
               />
               <ToolRow
                 icon={<Folder size={18} />}

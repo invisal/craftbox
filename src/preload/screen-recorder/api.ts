@@ -76,6 +76,10 @@ export const screenRecorderApi = {
   dialog: {
     showSaveExportPath: (defaultFileName: string, format: ExportFormat): Promise<string | null> =>
       ipcRenderer.invoke(IpcChannels.ShowSaveExportDialog, defaultFileName, format)
+  },
+  screenshot: {
+    save: (data: ArrayBuffer, defaultFileName: string): Promise<string | null> =>
+      ipcRenderer.invoke(IpcChannels.SaveScreenshot, data, defaultFileName)
   }
 };
 
