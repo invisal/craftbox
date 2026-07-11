@@ -2,6 +2,7 @@ import { ContextMenu as ContextMenuPrimitive } from '@base-ui/react';
 import { cn } from 'cnfast';
 import { Check, ChevronRight, Circle } from 'lucide-react';
 import { ComponentProps } from 'react';
+import { formatShortcut } from '@renderer/lib/shortcut';
 
 export function ContextMenuContent({
   className,
@@ -35,8 +36,9 @@ export function ContextMenuContent({
 export function ContextMenuItem({
   className,
   children,
+  shortcut,
   ...props
-}: ComponentProps<typeof ContextMenuPrimitive.Item>) {
+}: ComponentProps<typeof ContextMenuPrimitive.Item> & { shortcut?: string }) {
   return (
     <ContextMenuPrimitive.Item
       className={cn(
@@ -47,7 +49,12 @@ export function ContextMenuItem({
       )}
       {...props}
     >
-      {children}
+      <span className="flex-1">{children}</span>
+      {shortcut && (
+        <span aria-hidden className="text-[11px] text-text-dim">
+          {formatShortcut(shortcut)}
+        </span>
+      )}
     </ContextMenuPrimitive.Item>
   );
 }
