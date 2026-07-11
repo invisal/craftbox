@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { Camera, ClipboardCopy, Download } from 'lucide-react';
 import { ToolComponentProps } from '@renderer/components/providers/createTabProvider';
 import { Button } from '@renderer/components/ui/Button';
+import { notifyError, notifySuccess } from '@renderer/lib/notify';
 import { ScreenRecordingPermissionBanner } from '@screen-recorder/features/recording/components/ScreenRecordingPermissionBanner';
 import { blobToDataUrl, captureFromSystemPicker, screenshotFileName } from './lib/capture-frame';
 
@@ -10,11 +11,12 @@ interface Props {}
 
 type Phase = 'idle' | 'capturing' | 'failed' | 'result';
 
-async function copyToClipboard(blob: Blob): Promise<void> {
+async function copyToClipboard(blob: Blob): Promise<boolean> {
   try {
     await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
+    return true;
   } catch {
-    // Clipboard API unavailable/denied - nothing else to fall back to.
+    return false;
   }
 }
 
@@ -34,13 +36,21 @@ export function ScreenCaptureMain({}: ToolComponentProps<Props>): JSX.Element {
     try {
       const blob = await captureFromSystemPicker();
       const dataUrl = await blobToDataUrl(blob);
-      await copyToClipboard(blob);
+      const copied = await copyToClipboard(blob);
       setPreviewBlob(blob);
       setPreviewDataUrl(dataUrl);
       setPhase('result');
+      if (copied) {
+        notifySuccess('Screenshot captured and copied to clipboard.');
+      } else {
+        notifySuccess('Screenshot captured.');
+        notifyError('Could not copy to clipboard.');
+      }
     } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
+      const message = err instanceof Error ? err.message : String(err);
+      setError(message);
       setPhase('failed');
+      notifyError(message);
     }
   };
 
@@ -51,9 +61,13 @@ export function ScreenCaptureMain({}: ToolComponentProps<Props>): JSX.Element {
     setError(null);
   };
 
-  const handleCopy = (): void => {
+  const handleCopy = async (): Promise<void> => {
     if (!previewBlob) return;
-    void copyToClipboard(previewBlob);
+    if (await copyToClipboard(previewBlob)) {
+      notifySuccess('Copied to clipboard.');
+    } else {
+      notifyError('Could not copy to clipboard.');
+    }
   };
 
   const handleSave = async (): Promise<void> => {
@@ -61,9 +75,15 @@ export function ScreenCaptureMain({}: ToolComponentProps<Props>): JSX.Element {
 
     try {
       const arrayBuffer = await previewBlob.arrayBuffer();
-      await window.screenRecorder.screenshot.save(arrayBuffer, screenshotFileName());
-    } catch {
-      // Save dialog cancelled or write failed - stay silent.
+      const filePath = await window.screenRecorder.screenshot.save(
+        arrayBuffer,
+        screenshotFileName()
+      );
+      if (filePath) {
+        notifySuccess(`Saved to ${filePath}.`);
+      }
+    } catch (err) {
+      notifyError(err instanceof Error ? err.message : 'Could not save screenshot.');
     }
   };
 
@@ -115,7 +135,7 @@ export function ScreenCaptureMain({}: ToolComponentProps<Props>): JSX.Element {
             />
 
             <div className="flex shrink-0 flex-wrap items-center justify-center gap-2">
-              <Button variant="secondary" onClick={handleCopy}>
+              <Button variant="secondary" onClick={() => void handleCopy()}>
                 <ClipboardCopy size={14} />
                 Copy to clipboard
               </Button>

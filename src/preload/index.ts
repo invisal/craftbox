@@ -1,5 +1,6 @@
 import { contextBridge, ipcRenderer } from 'electron';
 import { electronAPI } from '@electron-toolkit/preload';
+import { IpcChannels } from '@shared/ipc-channels';
 import { screenRecorderApi } from './screen-recorder/api';
 import { kuberneterApi } from './kuberneter/api';
 import { postmanApi } from './http-client/api';
@@ -12,6 +13,8 @@ const api = {
   maximize: () => ipcRenderer.send('window-maximize'),
   close: () => ipcRenderer.send('window-close'),
   openDirectory: () => ipcRenderer.invoke('open-directory'),
+  showNotification: (title: string, body: string): Promise<boolean> =>
+    ipcRenderer.invoke(IpcChannels.ShowNotification, title, body),
   ...postmanApi
 };
 
