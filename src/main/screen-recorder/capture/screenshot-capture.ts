@@ -1,20 +1,9 @@
 import { desktopCapturer, screen } from 'electron';
 
-const CAPTURE_TIMEOUT_MS = 10_000;
-
 export interface ScreenshotCaptureRequest {
   sourceId: string;
   width: number;
   height: number;
-}
-
-async function withTimeout<T>(promise: Promise<T>, ms: number, message: string): Promise<T> {
-  return Promise.race([
-    promise,
-    new Promise<T>((_, reject) => {
-      setTimeout(() => reject(new Error(message)), ms);
-    })
-  ]);
 }
 
 function defaultCaptureSize(): { width: number; height: number } {
@@ -32,14 +21,10 @@ export async function captureSourcePng(request: ScreenshotCaptureRequest): Promi
   const height = request.height > 0 ? request.height : fallback.height;
 
   const isScreen = request.sourceId.startsWith('screen');
-  const sources = await withTimeout(
-    desktopCapturer.getSources({
-      types: isScreen ? ['screen'] : ['window'],
-      thumbnailSize: { width, height }
-    }),
-    CAPTURE_TIMEOUT_MS,
-    'Timed out capturing screenshot'
-  );
+  const sources = await desktopCapturer.getSources({
+    types: isScreen ? ['screen'] : ['window'],
+    thumbnailSize: { width, height }
+  });
 
   const source = sources.find((item) => item.id === request.sourceId);
   if (!source) throw new Error('Capture source not found.');

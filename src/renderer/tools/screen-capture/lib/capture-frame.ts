@@ -1,11 +1,3 @@
-const CAPTURE_TIMEOUT_MS = 15_000;
-// ponytail: fixed delay for WM hide animation before grabbing a monitor frame
-const HIDE_SETTLE_MS = 400;
-
-function delay(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
 function isMonitorCapture(stream: MediaStream): boolean {
   const track = stream.getVideoTracks()[0];
   if (!track) return false;
@@ -32,45 +24,52 @@ async function showApp(): Promise<void> {
   await window.screenRecorder?.window.restore();
 }
 
-function withTimeout<T>(promise: Promise<T>, ms: number, message: string): Promise<T> {
-  return Promise.race([
-    promise,
-    new Promise<T>((_, reject) => {
-      setTimeout(() => reject(new Error(message)), ms);
-    })
-  ]);
+function canvasToPngBlob(canvas: HTMLCanvasElement): Promise<Blob> {
+  return new Promise((resolve, reject) => {
+    canvas.toBlob((blob) => {
+      if (blob) resolve(blob);
+      else reject(new Error('Failed to encode screenshot'));
+    }, 'image/png');
+  });
 }
 
-function waitForVideoReady(video: HTMLVideoElement, timeoutMs: number): Promise<void> {
-  if (video.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA && video.videoWidth > 0) {
+function waitForVideoFrame(video: HTMLVideoElement): Promise<void> {
+  if (video.videoWidth > 0 && video.videoHeight > 0) {
     return Promise.resolve();
   }
 
   return new Promise((resolve, reject) => {
     const onReady = (): void => {
-      if (video.videoWidth > 0) {
+      if (video.videoWidth > 0 && video.videoHeight > 0) {
         cleanup();
         resolve();
       }
     };
 
-    const timer = setTimeout(() => {
+    const onError = (): void => {
       cleanup();
-      reject(new Error('Timed out waiting for capture frame'));
-    }, timeoutMs);
+      reject(new Error('Capture video failed to load'));
+    };
 
     const cleanup = (): void => {
-      clearTimeout(timer);
       video.removeEventListener('loadeddata', onReady);
       video.removeEventListener('playing', onReady);
+      video.removeEventListener('resize', onReady);
+      video.removeEventListener('error', onError);
     };
 
     video.addEventListener('loadeddata', onReady);
     video.addEventListener('playing', onReady);
+    video.addEventListener('resize', onReady);
+    video.addEventListener('error', onError);
   });
 }
 
 async function grabPngFromStream(stream: MediaStream): Promise<Blob> {
+  const track = stream.getVideoTracks()[0];
+  if (!track) throw new Error('No video track in capture stream.');
+  if (track.readyState === 'ended') throw new Error('Capture cancelled.');
+
   const video = document.createElement('video');
   video.muted = true;
   video.playsInline = true;
@@ -85,8 +84,8 @@ async function grabPngFromStream(stream: MediaStream): Promise<Blob> {
   document.body.appendChild(video);
 
   try {
-    await withTimeout(video.play(), CAPTURE_TIMEOUT_MS, 'Timed out starting capture');
-    await waitForVideoReady(video, CAPTURE_TIMEOUT_MS);
+    await video.play();
+    await waitForVideoFrame(video);
 
     const canvas = document.createElement('canvas');
     canvas.width = video.videoWidth;
@@ -97,18 +96,9 @@ async function grabPngFromStream(stream: MediaStream): Promise<Blob> {
     }
     ctx.drawImage(video, 0, 0);
 
-    return withTimeout(
-      new Promise<Blob>((resolve, reject) => {
-        canvas.toBlob((blob) => {
-          if (blob) resolve(blob);
-          else reject(new Error('Failed to encode screenshot'));
-        }, 'image/png');
-      }),
-      5_000,
-      'Timed out encoding screenshot'
-    );
+    return canvasToPngBlob(canvas);
   } finally {
-    stream.getTracks().forEach((track) => track.stop());
+    stream.getTracks().forEach((item) => item.stop());
     video.remove();
   }
 }
@@ -137,7 +127,6 @@ export async function captureFromSystemPicker(): Promise<Blob> {
 
   if (shouldHideApp) {
     await hideApp();
-    await delay(HIDE_SETTLE_MS);
   }
 
   try {

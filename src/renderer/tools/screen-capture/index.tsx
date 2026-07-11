@@ -25,27 +25,23 @@ export function ScreenCaptureMain({}: ToolComponentProps<Props>): JSX.Element {
   const [previewBlob, setPreviewBlob] = useState<Blob | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const runCapture = (): void => {
+  const runCapture = async (): Promise<void> => {
     setPhase('capturing');
     setError(null);
     setPreviewDataUrl(null);
     setPreviewBlob(null);
 
-    const run = async (): Promise<void> => {
-      try {
-        const blob = await captureFromSystemPicker();
-        const dataUrl = await blobToDataUrl(blob);
-        await copyToClipboard(blob);
-        setPreviewBlob(blob);
-        setPreviewDataUrl(dataUrl);
-        setPhase('result');
-      } catch (err) {
-        setError(err instanceof Error ? err.message : String(err));
-        setPhase('failed');
-      }
-    };
-
-    void run();
+    try {
+      const blob = await captureFromSystemPicker();
+      const dataUrl = await blobToDataUrl(blob);
+      await copyToClipboard(blob);
+      setPreviewBlob(blob);
+      setPreviewDataUrl(dataUrl);
+      setPhase('result');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+      setPhase('failed');
+    }
   };
 
   const handleCaptureAgain = (): void => {
@@ -87,7 +83,7 @@ export function ScreenCaptureMain({}: ToolComponentProps<Props>): JSX.Element {
         {phase === 'idle' && (
           <div className="flex flex-1 flex-col items-center justify-center gap-6">
             <ScreenRecordingPermissionBanner />
-            <Button variant="primary" onClick={runCapture}>
+            <Button variant="primary" onClick={() => void runCapture()}>
               <Camera size={14} />
               Capture
             </Button>
@@ -127,7 +123,7 @@ export function ScreenCaptureMain({}: ToolComponentProps<Props>): JSX.Element {
                 <Download size={14} />
                 Save to file
               </Button>
-              <Button variant="primary" onClick={runCapture}>
+              <Button variant="primary" onClick={() => void runCapture()}>
                 <Camera size={14} />
                 Capture again
               </Button>

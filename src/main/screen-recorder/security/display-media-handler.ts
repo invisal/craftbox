@@ -10,7 +10,7 @@ function isWaylandLinux(): boolean {
 /** Routes getDisplayMedia to the OS picker (PipeWire portal on Wayland). */
 export function registerDisplayMediaHandler(): void {
   session.defaultSession.setDisplayMediaRequestHandler(
-    (_request, callback) => {
+    async (_request, callback) => {
       if (isWaylandLinux()) {
         // PipeWire shows its own picker when capture starts — getSources() would
         // open a redundant portal session that can't be reused for the stream.
@@ -18,9 +18,11 @@ export function registerDisplayMediaHandler(): void {
         return;
       }
 
-      void desktopCapturer
-        .getSources({ types: ['screen', 'window'], thumbnailSize: { width: 0, height: 0 } })
-        .then((sources) => callback({ video: sources[0] ?? null }));
+      const sources = await desktopCapturer.getSources({
+        types: ['screen', 'window'],
+        thumbnailSize: { width: 0, height: 0 }
+      });
+      callback({ video: sources[0] ?? null });
     },
     { useSystemPicker: true }
   );

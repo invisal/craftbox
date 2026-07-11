@@ -5,6 +5,32 @@ function windowFromEvent(event: Electron.IpcMainInvokeEvent): BrowserWindow | nu
   return BrowserWindow.fromWebContents(event.sender);
 }
 
+async function waitForWindowHidden(win: BrowserWindow): Promise<void> {
+  if (!win.isVisible()) return;
+
+  await new Promise<void>((resolve) => {
+    const done = (): void => {
+      win.removeListener('hide', done);
+      resolve();
+    };
+    win.on('hide', done);
+    if (!win.isVisible()) done();
+  });
+}
+
+async function waitForWindowShown(win: BrowserWindow): Promise<void> {
+  if (win.isVisible()) return;
+
+  await new Promise<void>((resolve) => {
+    const done = (): void => {
+      win.removeListener('show', done);
+      resolve();
+    };
+    win.on('show', done);
+    if (win.isVisible()) done();
+  });
+}
+
 // Powers the custom, frameless titlebar in app/layout/TitleBar.tsx -- see
 // main-window.ts for why the window has no native frame/traffic lights.
 export function registerWindowHandlers(): void {
@@ -12,15 +38,23 @@ export function registerWindowHandlers(): void {
     windowFromEvent(event)?.minimize();
   });
 
-  ipcMain.handle(IpcChannels.WindowHide, (event) => {
-    windowFromEvent(event)?.hide();
+  ipcMain.handle(IpcChannels.WindowHide, async (event) => {
+    const win = windowFromEvent(event);
+    if (!win || !win.isVisible()) return;
+    const hidden = waitForWindowHidden(win);
+    win.hide();
+    await hidden;
   });
 
-  ipcMain.handle(IpcChannels.WindowRestore, (event) => {
+  ipcMain.handle(IpcChannels.WindowRestore, async (event) => {
     const win = windowFromEvent(event);
     if (!win) return;
     if (win.isMinimized()) win.restore();
-    win.show();
+    if (!win.isVisible()) {
+      const shown = waitForWindowShown(win);
+      win.show();
+      await shown;
+    }
 
     // GNOME/Wayland blocks background apps from stealing focus and shows an
     // "app is ready" notification instead — briefly pin on top so show() lands.
