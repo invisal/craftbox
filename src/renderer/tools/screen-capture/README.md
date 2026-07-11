@@ -50,11 +50,11 @@ Shared with main/preload (not under this directory):
 
 When `window.api.usesOsCapturePicker` is true (Linux Wayland), the thumbnail grid is skipped.
 
-| Phase       | Header (in-app picker)                                 | Header (OS picker / Wayland)           | Body                                        |
-| ----------- | ------------------------------------------------------ | -------------------------------------- | ------------------------------------------- |
-| `idle`      | Entire Screen / Window / **Region** tabs + **Capture** | Screen / **Region** tabs + **Capture** | Permission banner + grid / region hint      |
-| `capturing` | Hidden                                                 | Hidden                                 | “Capturing…” / “Choose what to share…”      |
-| `result`    | **Preview** title + description                        | same                                   | Preview image + Copy / Save / Capture again |
+| Phase       | Header (in-app picker)          | Header (OS picker / Wayland) | Body / footer (idle)                                                                 |
+| ----------- | ------------------------------- | ---------------------------- | ------------------------------------------------------------------------------------ |
+| `idle`      | Entire Screen / Window tabs     | Title + short description    | Scrollable source grid; footer pinned bottom-right: **Capture region** + **Capture** |
+| `capturing` | Hidden                          | Hidden                       | “Capturing…” / region / portal message                                               |
+| `result`    | **Preview** title + description | same                         | Preview scales to fit; footer pinned bottom-right: Copy / Save / Capture again       |
 
 **Capture again** resets to `idle` with the source grid on macOS/Windows/X11 — it does **not** immediately re-capture. On **Linux Wayland**, **Capture again** reopens the OS portal picker immediately (still uses the button click as the user gesture).
 
@@ -73,7 +73,7 @@ Thumbnails come from `main/screen-recorder/capture/screen-source-provider.ts` (`
 
 ## Region capture (`selectAndCaptureRegion`)
 
-**Region** tab: drag a rectangle on a fullscreen overlay, then capture and crop to that area. Works on **all platforms** (overlay is a separate `BrowserWindow`).
+**Capture region** and **Capture** sit together in a footer pinned to the bottom-right of the app (scroll the source grid above).
 
 1. Hide the main CraftBox window only (`window.hide({ mainOnly: true })`) so the overlay can show on macOS
 2. `window.screenRecorder.screenshot.selectRegion()` — transparent overlay spanning the virtual desktop

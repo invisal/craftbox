@@ -1,7 +1,7 @@
 import type { JSX } from 'react';
 import { useState } from 'react';
 import { Tabs } from '@base-ui/react/tabs';
-import { Camera, ClipboardCopy, Download } from 'lucide-react';
+import { Camera, ClipboardCopy, Download, Scan } from 'lucide-react';
 import { cn } from 'cnfast';
 import { ToolComponentProps } from '@renderer/components/providers/createTabProvider';
 import { Button } from '@renderer/components/ui/Button';
@@ -21,6 +21,7 @@ import {
 interface Props {}
 
 type Phase = 'idle' | 'capturing' | 'result';
+type CaptureMode = 'source' | 'region';
 
 function headerTabClass(active: boolean): string {
   return cn(
@@ -64,6 +65,7 @@ async function copyAfterCapture(blob: Blob): Promise<boolean> {
 export function ScreenCaptureMain({}: ToolComponentProps<Props>): JSX.Element {
   const usesOsPicker = window.api?.usesOsCapturePicker ?? false;
   const [phase, setPhase] = useState<Phase>('idle');
+  const [captureMode, setCaptureMode] = useState<CaptureMode>('source');
   const [selectedSource, setSelectedSource] = useState<CaptureSource | null>(null);
   const [previewDataUrl, setPreviewDataUrl] = useState<string | null>(null);
   const [previewBlob, setPreviewBlob] = useState<Blob | null>(null);
@@ -76,8 +78,6 @@ export function ScreenCaptureMain({}: ToolComponentProps<Props>): JSX.Element {
   const handleTabChange = (value: string): void => {
     const tab = value as SourceTab;
     setActiveTab(tab);
-    if (tab === 'region') return;
-
     const tabSources = tab === 'screen' ? screens : windows;
     if (tabSources.length === 0) {
       setSelectedSource(null);
@@ -88,38 +88,52 @@ export function ScreenCaptureMain({}: ToolComponentProps<Props>): JSX.Element {
     }
   };
 
-  const runCapture = async (): Promise<void> => {
-    if (activeTab !== 'region' && !usesOsPicker && !selectedSource) return;
+  const finishCapture = async (blob: Blob | null): Promise<void> => {
+    if (!blob) {
+      setPhase('idle');
+      return;
+    }
+    const dataUrl = await blobToDataUrl(blob);
+    setPreviewBlob(blob);
+    setPreviewDataUrl(dataUrl);
+    setPhase('result');
 
+    void copyAfterCapture(blob).then((copied) => {
+      if (copied) {
+        notifySuccess('Screenshot captured and copied to clipboard.');
+      } else {
+        notifySuccess('Screenshot captured.');
+        notifyError('Could not copy to clipboard.');
+      }
+    });
+  };
+
+  const runRegionCapture = async (): Promise<void> => {
+    setCaptureMode('region');
     setPhase('capturing');
     setPreviewDataUrl(null);
     setPreviewBlob(null);
 
     try {
-      const blob =
-        activeTab === 'region'
-          ? await selectAndCaptureRegion(sources, usesOsPicker)
-          : usesOsPicker
-            ? await captureFromSystemPicker()
-            : await captureFromSource(selectedSource!);
+      await finishCapture(await selectAndCaptureRegion(sources, usesOsPicker));
+    } catch {
+      setPhase('idle');
+    }
+  };
 
-      if (!blob) {
-        setPhase('idle');
-        return;
-      }
-      const dataUrl = await blobToDataUrl(blob);
-      setPreviewBlob(blob);
-      setPreviewDataUrl(dataUrl);
-      setPhase('result');
+  const runCapture = async (): Promise<void> => {
+    if (!usesOsPicker && !selectedSource) return;
 
-      void copyAfterCapture(blob).then((copied) => {
-        if (copied) {
-          notifySuccess('Screenshot captured and copied to clipboard.');
-        } else {
-          notifySuccess('Screenshot captured.');
-          notifyError('Could not copy to clipboard.');
-        }
-      });
+    setCaptureMode('source');
+    setPhase('capturing');
+    setPreviewDataUrl(null);
+    setPreviewBlob(null);
+
+    try {
+      const blob = usesOsPicker
+        ? await captureFromSystemPicker()
+        : await captureFromSource(selectedSource!);
+      await finishCapture(blob);
     } catch {
       setPhase('idle');
     }
@@ -162,20 +176,14 @@ export function ScreenCaptureMain({}: ToolComponentProps<Props>): JSX.Element {
     }
   };
 
-  const captureDisabled =
-    activeTab === 'region'
-      ? false
-      : usesOsPicker
-        ? activeTab !== 'screen'
-        : !selectedSource || loading;
+  const captureDisabled = usesOsPicker ? false : !selectedSource || loading;
 
-  const idleDescription =
-    usesOsPicker && activeTab === 'screen'
-      ? 'Click Capture to choose a screen or window in the system dialog.'
-      : undefined;
+  const idleDescription = usesOsPicker
+    ? 'Click Capture to choose a screen or window in the system dialog.'
+    : undefined;
 
   const capturingMessage =
-    activeTab === 'region'
+    captureMode === 'region'
       ? 'Capturing selected region…'
       : usesOsPicker
         ? 'Choose what to share in the system dialog…'
@@ -189,112 +197,115 @@ export function ScreenCaptureMain({}: ToolComponentProps<Props>): JSX.Element {
     >
       {phase !== 'capturing' && (
         <header className="shrink-0 border-b border-border-dark px-6 py-4">
-          <div className="flex items-start justify-between gap-4">
-            {phase === 'idle' ? (
-              usesOsPicker ? (
-                <Tabs.List className="flex items-center gap-1">
-                  <Tabs.Tab value="screen" className={headerTabClass(activeTab === 'screen')}>
-                    Screen
-                  </Tabs.Tab>
-                  <Tabs.Tab value="region" className={headerTabClass(activeTab === 'region')}>
-                    Region
-                  </Tabs.Tab>
-                </Tabs.List>
-              ) : (
-                <Tabs.List className="flex items-center gap-1">
-                  <Tabs.Tab value="screen" className={headerTabClass(activeTab === 'screen')}>
-                    Entire Screen{screens.length > 0 ? ` (${screens.length})` : ''}
-                  </Tabs.Tab>
-                  <Tabs.Tab value="window" className={headerTabClass(activeTab === 'window')}>
-                    Window{windows.length > 0 ? ` (${windows.length})` : ''}
-                  </Tabs.Tab>
-                  <Tabs.Tab value="region" className={headerTabClass(activeTab === 'region')}>
-                    Region
-                  </Tabs.Tab>
-                </Tabs.List>
-              )
-            ) : (
+          {phase === 'idle' ? (
+            usesOsPicker ? (
               <div>
-                <h1 className="text-base font-medium">Preview</h1>
+                <h1 className="text-base font-medium">Screen Capture</h1>
                 <p className="mt-0.5 text-xs text-text-dim">
-                  Save your screenshot or capture again.
+                  Capture a full screen or window, or drag a region.
                 </p>
               </div>
-            )}
-
-            {phase === 'idle' && (
-              <Button
-                variant="primary"
-                size="sm"
-                disabled={captureDisabled}
-                onClick={() => void runCapture()}
-              >
-                <Camera size={14} />
-                Capture
-              </Button>
-            )}
-          </div>
+            ) : (
+              <Tabs.List className="flex items-center gap-1">
+                <Tabs.Tab value="screen" className={headerTabClass(activeTab === 'screen')}>
+                  Entire Screen{screens.length > 0 ? ` (${screens.length})` : ''}
+                </Tabs.Tab>
+                <Tabs.Tab value="window" className={headerTabClass(activeTab === 'window')}>
+                  Window{windows.length > 0 ? ` (${windows.length})` : ''}
+                </Tabs.Tab>
+              </Tabs.List>
+            )
+          ) : (
+            <div>
+              <h1 className="text-base font-medium">Preview</h1>
+              <p className="mt-0.5 text-xs text-text-dim">Save your screenshot or capture again.</p>
+            </div>
+          )}
         </header>
       )}
 
-      <div className="flex min-h-0 flex-1 flex-col gap-2 p-6">
-        <ScreenRecordingPermissionBanner />
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+        <div
+          className={cn(
+            'flex min-h-0 flex-1 flex-col gap-2',
+            phase === 'result' ? 'px-6 py-6' : 'p-6 pb-4',
+            phase === 'idle' && 'overflow-y-auto'
+          )}
+        >
+          <ScreenRecordingPermissionBanner />
 
-        {phase === 'idle' && usesOsPicker && activeTab === 'screen' && idleDescription && (
-          <p className="text-sm text-text-dim">{idleDescription}</p>
-        )}
+          {phase === 'idle' && usesOsPicker && idleDescription && (
+            <p className="text-sm text-text-dim">{idleDescription}</p>
+          )}
 
-        {phase === 'idle' && activeTab === 'region' && (
-          <p className="text-sm text-text-dim">Drag to select any area on your screen.</p>
-        )}
-
-        {phase === 'idle' && !usesOsPicker && activeTab !== 'region' && (
-          <div className="w-full min-w-0">
-            {loading ? (
-              <p className="text-sm text-text-dim">Loading sources…</p>
-            ) : (
-              <SourcePickerPanels
-                activeTab={activeTab}
-                screens={screens}
-                windows={windows}
-                selectedSource={selectedSource}
-                onSelectSource={setSelectedSource}
-              />
-            )}
-          </div>
-        )}
-
-        {phase === 'capturing' && (
-          <div className="flex flex-1 items-center justify-center">
-            <p className="text-sm text-text-dim">{capturingMessage}</p>
-          </div>
-        )}
-
-        {phase === 'result' && previewDataUrl && (
-          <div className="flex min-h-0 flex-1 flex-col gap-4">
-            <img
-              src={previewDataUrl}
-              alt="Captured screenshot"
-              className="min-h-0 flex-1 object-contain"
-            />
-
-            <div className="flex shrink-0 flex-wrap items-center justify-center gap-2">
-              <Button variant="secondary" onClick={() => void handleCopy()}>
-                <ClipboardCopy size={14} />
-                Copy to clipboard
-              </Button>
-              <Button variant="secondary" onClick={() => void handleSave()}>
-                <Download size={14} />
-                Save to file
-              </Button>
-              <Button variant="primary" onClick={handleCaptureAgain}>
-                <Camera size={14} />
-                Capture again
-              </Button>
+          {phase === 'idle' && !usesOsPicker && (
+            <div className="w-full min-w-0">
+              {loading ? (
+                <p className="text-sm text-text-dim">Loading sources…</p>
+              ) : (
+                <SourcePickerPanels
+                  activeTab={activeTab}
+                  screens={screens}
+                  windows={windows}
+                  selectedSource={selectedSource}
+                  onSelectSource={setSelectedSource}
+                />
+              )}
             </div>
-          </div>
-        )}
+          )}
+
+          {phase === 'capturing' && (
+            <div className="flex min-h-[12rem] flex-1 items-center justify-center">
+              <p className="text-sm text-text-dim">{capturingMessage}</p>
+            </div>
+          )}
+
+          {phase === 'result' && previewDataUrl && (
+            <div className="flex min-h-0 flex-1 items-center justify-center overflow-hidden">
+              <img
+                src={previewDataUrl}
+                alt="Captured screenshot"
+                className="max-h-full max-w-full object-contain"
+              />
+            </div>
+          )}
+        </div>
       </div>
+
+      {phase === 'result' && (
+        <footer className="flex shrink-0 flex-wrap items-center justify-end gap-2 border-t border-border-dark bg-surface px-6 py-4">
+          <Button variant="secondary" size="sm" onClick={() => void handleCopy()}>
+            <ClipboardCopy size={14} />
+            Copy to clipboard
+          </Button>
+          <Button variant="secondary" size="sm" onClick={() => void handleSave()}>
+            <Download size={14} />
+            Save to file
+          </Button>
+          <Button variant="primary" size="sm" onClick={handleCaptureAgain}>
+            <Camera size={14} />
+            Capture again
+          </Button>
+        </footer>
+      )}
+
+      {phase === 'idle' && (
+        <footer className="flex shrink-0 items-center justify-end gap-2 border-t border-border-dark bg-surface px-6 py-4">
+          <Button variant="secondary" size="sm" onClick={() => void runRegionCapture()}>
+            <Scan size={14} />
+            Capture region
+          </Button>
+          <Button
+            variant="primary"
+            size="sm"
+            disabled={captureDisabled}
+            onClick={() => void runCapture()}
+          >
+            <Camera size={14} />
+            Capture
+          </Button>
+        </footer>
+      )}
     </Tabs.Root>
   );
 }
