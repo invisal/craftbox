@@ -1,6 +1,11 @@
 # Screen Capture
 
-Take a single PNG screenshot of a screen or window via an **in-app source picker** (`desktopCapturer` thumbnails). Preview the result, copy to clipboard, or save through a native file dialog. Integrated as a CraftBox tool tab — same shared main window as everything else.
+Take a single PNG screenshot of a screen or window. Preview the result, copy to clipboard, or save through a native file dialog. Integrated as a CraftBox tool tab — same shared main window as everything else.
+
+**Source selection is platform-dependent:**
+
+- **macOS / Windows / Linux X11:** in-app thumbnail grid (`desktopCapturer.getSources`)
+- **Linux Wayland (PipeWire):** OS portal picker via `getDisplayMedia` — PipeWire cannot enumerate all sources for a custom grid
 
 ## How it's mounted into CraftBox
 
@@ -34,13 +39,15 @@ README.md                      This file
 
 ## UI flow (`index.tsx`)
 
-| Phase       | Header                                                | Body                                        |
-| ----------- | ----------------------------------------------------- | ------------------------------------------- |
-| `idle`      | Entire Screen / Window tabs + **Capture** (top-right) | Permission banner + thumbnail grid          |
-| `capturing` | Hidden                                                | “Capturing…” spinner                        |
-| `result`    | **Preview** title + description                       | Preview image + Copy / Save / Capture again |
+When `window.api.usesOsCapturePicker` is true (Linux Wayland), the thumbnail grid is skipped.
 
-**Capture again** resets to `idle` with the source grid — it does **not** immediately re-capture. The user picks a source and clicks **Capture** again.
+| Phase       | Header (in-app picker)                    | Header (OS picker / Wayland) | Body                                        |
+| ----------- | ----------------------------------------- | ---------------------------- | ------------------------------------------- |
+| `idle`      | Entire Screen / Window tabs + **Capture** | Title + hint + **Capture**   | Permission banner + thumbnail grid / empty  |
+| `capturing` | Hidden                                    | Hidden                       | “Capturing…” / “Choose what to share…”      |
+| `result`    | **Preview** title + description           | same                         | Preview image + Copy / Save / Capture again |
+
+**Capture again** resets to `idle` with the source grid on macOS/Windows/X11 — it does **not** immediately re-capture. On **Linux Wayland**, **Capture again** reopens the OS portal picker immediately (still uses the button click as the user gesture).
 
 On success, a **native OS notification** is shown (see below). Permission issues are surfaced only via `ScreenRecordingPermissionBanner` — no inline error text.
 
@@ -53,9 +60,22 @@ On success, a **native OS notification** is shown (see below). Permission issues
 
 Thumbnails come from `main/capture/screen-source-provider.ts` (`desktopCapturer.getSources`).
 
+## Source loading (`lib/use-capture-sources.ts`)
+
+Skipped when `usesOsCapturePicker` is true. Otherwise:
+
+1. `window.screenRecorder.recording.getCaptureSources()` on mount
+2. Split into `screens` and `windows` by `source.type`
+3. Default tab: **Entire Screen** when displays exist, otherwise **Window**
+4. Auto-select the first source on the active tab
+
+Thumbnails come from `main/capture/screen-source-provider.ts` (`desktopCapturer.getSources`).
+
 ## Capture pipeline (`lib/capture-frame.ts`)
 
-Same capture primitive as Screen Recorder — **`getUserMedia` + `chromeMediaSourceId`**, not `getDisplayMedia`:
+Two paths, selected by `window.api.usesOsCapturePicker`:
+
+### In-app picker (macOS / Windows / Linux X11) — `captureFromSource`
 
 1. User picks a source in the in-app grid
 2. If `source.type === 'screen'` → hide CraftBox so it is not in the shot
@@ -70,6 +90,23 @@ User selects thumbnail in SourcePicker
     ↓
 captureFromSource(source)
     ↓ hide (screen only) → getUserMedia → grabPngFromStream → restore
+PNG Blob
+```
+
+### OS picker (Linux Wayland) — `captureFromSystemPicker`
+
+1. User clicks **Capture**
+2. `getDisplayMedia()` — PipeWire portal shows all screens/windows
+3. Main process `display-media-handler.ts` passes a placeholder source on Wayland so the portal owns selection
+4. If the chosen source is a full display (`displaySurface === 'monitor'`, or near-full-size heuristic when PipeWire omits it) → hide CraftBox, 400 ms compositor settle, then grab
+5. Grab **one frame** via shared `grabPngFromStream`, restore window if hidden
+
+```
+User clicks Capture
+    ↓
+captureFromSystemPicker()
+    ↓ getDisplayMedia (portal picker)
+    ↓ hide + settle (monitor only) → grabPngFromStream → restore
 PNG Blob
 ```
 
@@ -115,9 +152,10 @@ Reuses the **`window.screenRecorder`** preload namespace (same as Screen Recorde
 
 App-wide notifications (not under `screenRecorder`):
 
-| `window.api.*`     | Handler / module                                          |
-| ------------------ | --------------------------------------------------------- |
-| `showNotification` | `main/notification-handlers.ts` → Electron `Notification` |
+| `window.api.*`        | Handler / module                                          |
+| --------------------- | --------------------------------------------------------- |
+| `usesOsCapturePicker` | `@shared/uses-os-capture-picker.ts` (preload)             |
+| `showNotification`    | `main/notification-handlers.ts` → Electron `Notification` |
 
 Renderer helper: `src/renderer/src/lib/notify.ts` — `notifySuccess()` / `notifyError()` with title **CraftBox**.
 
@@ -130,6 +168,7 @@ Registered once in `src/main/index.ts`:
 | Module                                | Scope                                      | Screen Capture usage                             |
 | ------------------------------------- | ------------------------------------------ | ------------------------------------------------ |
 | `security/content-security-policy.ts` | Whole app CSP                              | `img-src` includes `data:` for picker thumbnails |
+| `security/display-media-handler.ts`   | `getDisplayMedia` on Linux Wayland         | Routes capture to PipeWire portal picker         |
 | `ipc/window-handlers.ts`              | All tools using title bar / hide / restore | Hide/restore for full-screen capture             |
 | `capture/screen-source-provider.ts`   | Shared with Screen Recorder source picker  | Lists screens/windows for the thumbnail grid     |
 
@@ -137,26 +176,25 @@ Screen Capture and Screen Recorder share the same **`getUserMedia` + `chromeMedi
 
 ## Differences from Screen Recorder
 
-|                  | Screen Capture                       | Screen Recorder               |
-| ---------------- | ------------------------------------ | ----------------------------- |
-| Source selection | In-app `desktopCapturer` grid        | In-app `desktopCapturer` grid |
-| Output           | Single PNG                           | Video (`MediaRecorder`)       |
-| Hide window      | Yes, on `source.type === 'screen'`   | No                            |
-| Cursor in shot   | Whatever the OS includes — no toggle | N/A (video stream)            |
+|                  | Screen Capture                                           | Screen Recorder               |
+| ---------------- | -------------------------------------------------------- | ----------------------------- |
+| Source selection | In-app grid (most platforms); OS picker on Linux Wayland | In-app `desktopCapturer` grid |
+| Output           | Single PNG                                               | Video (`MediaRecorder`)       |
+| Hide window      | Yes, on `source.type === 'screen'`                       | No                            |
+| Cursor in shot   | Whatever the OS includes — no toggle                     | N/A (video stream)            |
 
 ## Intentionally not implemented / removed
 
-Do not re-add without re-validating on all target platforms:
-
-- **`getDisplayMedia` + OS system picker** — removed; replaced by in-app picker for consistent cross-platform UX (`display-media-handler.ts` deleted)
-- **Main-process `screenshot:capture` PNG path** — removed; renderer grab from `getUserMedia` stream is sufficient
-- **`cursor: 'never'` on `getDisplayMedia`** — N/A after picker removal
+- **Main-process `screenshot:capture` PNG path** — removed; renderer grab from media stream is sufficient
+- **`cursor: 'never'` on `getDisplayMedia`** — N/A
 - **Custom in-app toast** — replaced by native OS notifications
 
 ## Platform notes
 
 - **macOS:** `app.hide()` / `app.show()` for full-screen capture; 300 ms post-hide settle before grab
+- **Linux Wayland:** `usesOsCapturePicker` — no in-app grid; `getDisplayMedia` + `display-media-handler.ts` for portal picker
 - **Linux GNOME / Wayland:** clipboard after capture needs main-process write + focus wait; restore uses `setAlwaysOnTop` focus pin
+- **Linux X11:** in-app thumbnail grid works like macOS/Windows
 - **`waitForVideoFrame`** uses video events only — no arbitrary timeout wrappers on the grab itself
 
 ## Type-checking

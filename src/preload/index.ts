@@ -5,10 +5,12 @@ import { screenRecorderApi } from './screen-recorder/api';
 import { kuberneterApi } from './kuberneter/api';
 import { postmanApi } from './http-client/api';
 import { fileExplorerApi } from './file-explorer/api';
+import { usesOsCapturePicker } from '@shared/uses-os-capture-picker';
 
 // Custom APIs for renderer
 const api = {
   platform: process.platform,
+  usesOsCapturePicker: usesOsCapturePicker(),
   minimize: () => ipcRenderer.send('window-minimize'),
   maximize: () => ipcRenderer.send('window-maximize'),
   close: () => ipcRenderer.send('window-close'),

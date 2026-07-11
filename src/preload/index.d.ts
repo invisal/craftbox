@@ -20,6 +20,8 @@ declare global {
     fileExplorer: FileExplorerApi;
     api: {
       platform: string;
+      /** Linux Wayland — PipeWire portal picker instead of in-app source grid. */
+      usesOsCapturePicker: boolean;
       minimize: () => void;
       maximize: () => void;
       close: () => void;

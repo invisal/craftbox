@@ -11,9 +11,35 @@ interface DesktopVideoConstraint {
 
 // ponytail: macOS compositor may need a beat after hide before the frame is clean.
 const HIDE_SETTLE_MS_DARWIN = 300;
+// ponytail: GNOME/Wayland compositor beat after hide on full-screen portal capture.
+const HIDE_SETTLE_MS_LINUX = 400;
 
 function hideSettleMs(): number {
   return window.api?.platform === 'darwin' ? HIDE_SETTLE_MS_DARWIN : 0;
+}
+
+function monitorHideSettleMs(): number {
+  if (window.api?.platform === 'darwin') return HIDE_SETTLE_MS_DARWIN;
+  if (window.api?.platform === 'linux') return HIDE_SETTLE_MS_LINUX;
+  return 0;
+}
+
+function isMonitorCapture(stream: MediaStream): boolean {
+  const track = stream.getVideoTracks()[0];
+  if (!track) return false;
+
+  const settings = track.getSettings() as MediaTrackSettings & { displaySurface?: string };
+  if (settings.displaySurface === 'monitor') return true;
+  if (settings.displaySurface === 'window' || settings.displaySurface === 'application') {
+    return false;
+  }
+
+  // ponytail: PipeWire sometimes omits displaySurface — treat near-full-display as monitor.
+  const scale = window.devicePixelRatio || 1;
+  const screenW = Math.round(window.screen.width * scale);
+  const screenH = Math.round(window.screen.height * scale);
+  const { width = 0, height = 0 } = settings;
+  return width >= screenW * 0.9 && height >= screenH * 0.9;
 }
 
 function delay(ms: number): Promise<void> {
@@ -135,6 +161,40 @@ export async function captureFromSource(source: CaptureSource): Promise<Blob> {
 
   try {
     const stream = await getDesktopVideoStream(source);
+    return await grabPngFromStream(stream);
+  } finally {
+    if (shouldHideApp) await showApp();
+  }
+}
+
+async function openDisplayMediaStream(): Promise<MediaStream> {
+  try {
+    return await navigator.mediaDevices.getDisplayMedia({
+      audio: false,
+      video: {
+        width: { ideal: window.screen.width * (window.devicePixelRatio || 1) },
+        height: { ideal: window.screen.height * (window.devicePixelRatio || 1) }
+      }
+    });
+  } catch (err) {
+    if (err instanceof DOMException && err.name === 'NotAllowedError') {
+      throw new Error('Capture cancelled.');
+    }
+    throw err;
+  }
+}
+
+/** Opens the OS capture picker (PipeWire portal on Linux Wayland), then grabs one PNG frame. */
+export async function captureFromSystemPicker(): Promise<Blob> {
+  const stream = await openDisplayMediaStream();
+  const shouldHideApp = isMonitorCapture(stream);
+
+  if (shouldHideApp) {
+    await hideApp();
+    await delay(monitorHideSettleMs());
+  }
+
+  try {
     return await grabPngFromStream(stream);
   } finally {
     if (shouldHideApp) await showApp();

@@ -16,16 +16,20 @@ interface UseCaptureSourcesResult {
 }
 
 export function useCaptureSources(
-  onSelectSource: (source: CaptureSource | null) => void
+  onSelectSource: (source: CaptureSource | null) => void,
+  options?: { enabled?: boolean }
 ): UseCaptureSourcesResult {
+  const enabled = options?.enabled ?? true;
   const [sources, setSources] = useState<CaptureSource[]>([]);
-  const [loading, setLoading] = useState(() => Boolean(window.screenRecorder));
+  const [loading, setLoading] = useState(() => enabled && Boolean(window.screenRecorder));
   const [activeTab, setActiveTab] = useState<SourceTab>('screen');
 
   const screens = useMemo(() => sources.filter((source) => source.type === 'screen'), [sources]);
   const windows = useMemo(() => sources.filter((source) => source.type === 'window'), [sources]);
 
   useEffect(() => {
+    if (!enabled) return;
+
     if (!window.screenRecorder) {
       console.error(PRELOAD_MISSING_ERROR);
       return;
@@ -49,7 +53,7 @@ export function useCaptureSources(
       })
       .finally(() => setLoading(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [enabled]);
 
   return { sources, screens, windows, activeTab, setActiveTab, loading };
 }

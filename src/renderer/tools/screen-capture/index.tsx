@@ -10,7 +10,12 @@ import type { CaptureSource } from '@screen-recorder/types/recording';
 import { ScreenRecordingPermissionBanner } from '@screen-recorder/features/recording/components/ScreenRecordingPermissionBanner';
 import { SourcePickerPanels } from './components/SourcePicker';
 import { useCaptureSources, type SourceTab } from './lib/use-capture-sources';
-import { blobToDataUrl, captureFromSource, screenshotFileName } from './lib/capture-frame';
+import {
+  blobToDataUrl,
+  captureFromSource,
+  captureFromSystemPicker,
+  screenshotFileName
+} from './lib/capture-frame';
 
 interface Props {}
 
@@ -56,13 +61,16 @@ async function copyAfterCapture(blob: Blob): Promise<boolean> {
 
 // eslint-disable-next-line no-empty-pattern
 export function ScreenCaptureMain({}: ToolComponentProps<Props>): JSX.Element {
+  const usesOsPicker = window.api?.usesOsCapturePicker ?? false;
   const [phase, setPhase] = useState<Phase>('idle');
   const [selectedSource, setSelectedSource] = useState<CaptureSource | null>(null);
   const [previewDataUrl, setPreviewDataUrl] = useState<string | null>(null);
   const [previewBlob, setPreviewBlob] = useState<Blob | null>(null);
 
-  const { screens, windows, activeTab, setActiveTab, loading } =
-    useCaptureSources(setSelectedSource);
+  const { screens, windows, activeTab, setActiveTab, loading } = useCaptureSources(
+    setSelectedSource,
+    { enabled: !usesOsPicker }
+  );
 
   const handleTabChange = (value: string): void => {
     const tab = value as SourceTab;
@@ -78,14 +86,16 @@ export function ScreenCaptureMain({}: ToolComponentProps<Props>): JSX.Element {
   };
 
   const runCapture = async (): Promise<void> => {
-    if (!selectedSource) return;
+    if (!usesOsPicker && !selectedSource) return;
 
     setPhase('capturing');
     setPreviewDataUrl(null);
     setPreviewBlob(null);
 
     try {
-      const blob = await captureFromSource(selectedSource);
+      const blob = usesOsPicker
+        ? await captureFromSystemPicker()
+        : await captureFromSource(selectedSource!);
       const dataUrl = await blobToDataUrl(blob);
       setPreviewBlob(blob);
       setPreviewDataUrl(dataUrl);
@@ -107,6 +117,11 @@ export function ScreenCaptureMain({}: ToolComponentProps<Props>): JSX.Element {
   };
 
   const handleCaptureAgain = (): void => {
+    if (usesOsPicker) {
+      void runCapture();
+      return;
+    }
+
     setPhase('idle');
     setPreviewDataUrl(null);
     setPreviewBlob(null);
@@ -138,6 +153,16 @@ export function ScreenCaptureMain({}: ToolComponentProps<Props>): JSX.Element {
     }
   };
 
+  const captureDisabled = usesOsPicker ? false : !selectedSource || loading;
+
+  const idleDescription = usesOsPicker
+    ? 'Click Capture to choose a screen or window in the system dialog.'
+    : undefined;
+
+  const capturingMessage = usesOsPicker
+    ? 'Choose what to share in the system dialog…'
+    : 'Capturing…';
+
   return (
     <Tabs.Root
       value={activeTab}
@@ -148,14 +173,21 @@ export function ScreenCaptureMain({}: ToolComponentProps<Props>): JSX.Element {
         <header className="shrink-0 border-b border-border-dark px-6 py-4">
           <div className="flex items-start justify-between gap-4">
             {phase === 'idle' ? (
-              <Tabs.List className="flex items-center gap-1">
-                <Tabs.Tab value="screen" className={headerTabClass(activeTab === 'screen')}>
-                  Entire Screen{screens.length > 0 ? ` (${screens.length})` : ''}
-                </Tabs.Tab>
-                <Tabs.Tab value="window" className={headerTabClass(activeTab === 'window')}>
-                  Window{windows.length > 0 ? ` (${windows.length})` : ''}
-                </Tabs.Tab>
-              </Tabs.List>
+              usesOsPicker ? (
+                <div>
+                  <h1 className="text-base font-medium">Screen Capture</h1>
+                  <p className="mt-0.5 text-xs text-text-dim">{idleDescription}</p>
+                </div>
+              ) : (
+                <Tabs.List className="flex items-center gap-1">
+                  <Tabs.Tab value="screen" className={headerTabClass(activeTab === 'screen')}>
+                    Entire Screen{screens.length > 0 ? ` (${screens.length})` : ''}
+                  </Tabs.Tab>
+                  <Tabs.Tab value="window" className={headerTabClass(activeTab === 'window')}>
+                    Window{windows.length > 0 ? ` (${windows.length})` : ''}
+                  </Tabs.Tab>
+                </Tabs.List>
+              )
             ) : (
               <div>
                 <h1 className="text-base font-medium">Preview</h1>
@@ -169,7 +201,7 @@ export function ScreenCaptureMain({}: ToolComponentProps<Props>): JSX.Element {
               <Button
                 variant="primary"
                 size="sm"
-                disabled={!selectedSource || loading}
+                disabled={captureDisabled}
                 onClick={() => void runCapture()}
               >
                 <Camera size={14} />
@@ -183,7 +215,7 @@ export function ScreenCaptureMain({}: ToolComponentProps<Props>): JSX.Element {
       <div className="flex min-h-0 flex-1 flex-col gap-2 p-6">
         <ScreenRecordingPermissionBanner />
 
-        {phase === 'idle' && (
+        {phase === 'idle' && !usesOsPicker && (
           <div className="w-full min-w-0">
             {loading ? (
               <p className="text-sm text-text-dim">Loading sources…</p>
@@ -201,7 +233,7 @@ export function ScreenCaptureMain({}: ToolComponentProps<Props>): JSX.Element {
 
         {phase === 'capturing' && (
           <div className="flex flex-1 items-center justify-center">
-            <p className="text-sm text-text-dim">Capturing…</p>
+            <p className="text-sm text-text-dim">{capturingMessage}</p>
           </div>
         )}
 
