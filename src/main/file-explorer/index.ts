@@ -310,4 +310,23 @@ export function registerFileExplorerHandlers(): void {
       }
     }
   );
+
+  ipcMain.handle(
+    'file-explorer:create-folder',
+    async (
+      _,
+      destDir: string,
+      name: string
+    ): Promise<{ success: true; path: string } | { error: 'exists' } | { error: string }> => {
+      const fullPath = path.join(destDir, name);
+      try {
+        await fs.promises.mkdir(fullPath);
+        return { success: true, path: fullPath };
+      } catch (err) {
+        if ((err as NodeJS.ErrnoException).code === 'EEXIST') return { error: 'exists' };
+        const message = err instanceof Error ? err.message : String(err);
+        return { error: message };
+      }
+    }
+  );
 }

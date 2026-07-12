@@ -52,6 +52,10 @@ export interface FileExplorerApi {
     destDir: string,
     name: string
   ) => Promise<{ success: true; path: string } | { error: 'exists' } | { error: string }>;
+  createFolder: (
+    destDir: string,
+    name: string
+  ) => Promise<{ success: true; path: string } | { error: 'exists' } | { error: string }>;
 }
 
 export const fileExplorerApi: FileExplorerApi = {
@@ -70,5 +74,6 @@ export const fileExplorerApi: FileExplorerApi = {
   writeClipboardFiles: (paths, mode) =>
     ipcRenderer.invoke('file-explorer:clipboard-write', paths, mode),
   readClipboardFiles: () => ipcRenderer.invoke('file-explorer:clipboard-read'),
-  createFile: (destDir, name) => ipcRenderer.invoke('file-explorer:create-file', destDir, name)
+  createFile: (destDir, name) => ipcRenderer.invoke('file-explorer:create-file', destDir, name),
+  createFolder: (destDir, name) => ipcRenderer.invoke('file-explorer:create-folder', destDir, name)
 };

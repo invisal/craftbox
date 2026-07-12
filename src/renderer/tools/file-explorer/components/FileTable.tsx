@@ -6,6 +6,7 @@ import {
   SortingState,
   ColumnSizingState
 } from '@tanstack/react-table';
+import { FileText, FolderPlus } from 'lucide-react';
 import { ListView } from '@renderer/components/ui/ListView';
 import { ContextMenu } from '@renderer/components/ui/ContextMenu';
 import { Dialog } from '@renderer/components/ui/Dialog';
@@ -15,6 +16,7 @@ import { columns, compareEntries, extensionKey, FileEntry, FileRow } from './col
 import { useFileExplorerStore } from '../store/fileExplorer.store';
 
 const DEFAULT_NEW_TEXT_FILE_NAME = 'New Text Document.txt';
+const DEFAULT_NEW_FOLDER_NAME = 'New Folder';
 
 // Extensions that open straight into a viewer app and pose no meaningful
 // "run something unexpected" risk, so they skip the confirmation prompt.
@@ -37,6 +39,10 @@ export function FileTable({ entries, currentPath, onNavigate, onSelectionChange 
   const [newFileName, setNewFileName] = useState(DEFAULT_NEW_TEXT_FILE_NAME);
   const [newFileError, setNewFileError] = useState<string | null>(null);
   const newFileInputRef = useRef<HTMLInputElement>(null);
+  const [newFolderDialogOpen, setNewFolderDialogOpen] = useState(false);
+  const [newFolderName, setNewFolderName] = useState(DEFAULT_NEW_FOLDER_NAME);
+  const [newFolderError, setNewFolderError] = useState<string | null>(null);
+  const newFolderInputRef = useRef<HTMLInputElement>(null);
   const clipboard = useFileExplorerStore((s) => s.clipboard);
   const setClipboard = useFileExplorerStore((s) => s.setClipboard);
   const bumpRefresh = useFileExplorerStore((s) => s.bumpRefresh);
@@ -93,6 +99,14 @@ export function FileTable({ entries, currentPath, onNavigate, onSelectionChange 
     // Only re-run when the dialog opens, not on every keystroke of newFileName.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [newFileDialogOpen]);
+
+  useEffect(() => {
+    if (!newFolderDialogOpen) return;
+    const input = newFolderInputRef.current;
+    if (!input) return;
+    input.focus();
+    input.select();
+  }, [newFolderDialogOpen]);
 
   const rows: FileRow[] = useMemo(
     () =>
@@ -198,13 +212,49 @@ export function FileTable({ entries, currentPath, onNavigate, onSelectionChange 
     bumpRefresh();
   };
 
-  // Shared between the row and background context menus -- more entries
-  // (e.g. "Folder") can be added here later.
+  const openNewFolderDialog = () => {
+    setNewFolderName(DEFAULT_NEW_FOLDER_NAME);
+    setNewFolderError(null);
+    setNewFolderDialogOpen(true);
+  };
+
+  const confirmCreateFolder = async () => {
+    const name = newFolderName.trim();
+    if (!name) {
+      setNewFolderError('Enter a folder name.');
+      return;
+    }
+
+    const result = await window.fileExplorer.createFolder(currentPath, name);
+    if ('error' in result) {
+      setNewFolderError(
+        result.error === 'exists' ? 'A folder with this name already exists.' : result.error
+      );
+      return;
+    }
+
+    pendingSelectionRef.current = result.path;
+    setNewFolderDialogOpen(false);
+    bumpRefresh();
+  };
+
+  // Shared between the row and background context menus.
   const newSubmenu = (
     <ContextMenu.SubmenuRoot>
       <ContextMenu.SubmenuTrigger>New</ContextMenu.SubmenuTrigger>
       <ContextMenu.Content>
-        <ContextMenu.Item onClick={openNewFileDialog}>Text File</ContextMenu.Item>
+        <ContextMenu.Item onClick={openNewFolderDialog}>
+          <span className="flex items-center gap-2">
+            <FolderPlus size={14} className="text-text-dim" />
+            Folder
+          </span>
+        </ContextMenu.Item>
+        <ContextMenu.Item onClick={openNewFileDialog}>
+          <span className="flex items-center gap-2">
+            <FileText size={14} className="text-text-dim" />
+            Text File
+          </span>
+        </ContextMenu.Item>
       </ContextMenu.Content>
     </ContextMenu.SubmenuRoot>
   );
@@ -319,6 +369,39 @@ export function FileTable({ entries, currentPath, onNavigate, onSelectionChange 
               Cancel
             </Button>
             <Button variant="primary" size="sm" onClick={confirmCreateFile}>
+              Create
+            </Button>
+          </div>
+        </Dialog.Content>
+      </Dialog.Root>
+      <Dialog.Root
+        open={newFolderDialogOpen}
+        onOpenChange={(open) => !open && setNewFolderDialogOpen(false)}
+      >
+        <Dialog.Content className="max-w-sm">
+          <Dialog.Title>New Folder</Dialog.Title>
+          <Dialog.Description>Enter a name for the new folder.</Dialog.Description>
+          <Input
+            ref={newFolderInputRef}
+            className="mt-3"
+            value={newFolderName}
+            onChange={(e) => {
+              setNewFolderName(e.target.value);
+              setNewFolderError(null);
+            }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                confirmCreateFolder();
+              }
+            }}
+          />
+          {newFolderError && <p className="mt-1.5 text-xs text-red-400">{newFolderError}</p>}
+          <div className="mt-4 flex justify-end gap-2">
+            <Button variant="secondary" size="sm" onClick={() => setNewFolderDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button variant="primary" size="sm" onClick={confirmCreateFolder}>
               Create
             </Button>
           </div>
