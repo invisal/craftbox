@@ -3,6 +3,7 @@ import { useWorkspaceResources } from './useWorkspaceResources';
 import { ClusterOverview } from './cluster-overview/ClusterOverview';
 import { Pods } from './pods/Pods';
 import { Deployments } from './deployments/Deployments';
+import { DaemonSets } from './daemonsets/DaemonSets';
 import { ServicesTable } from './ServicesTable';
 import { ConfigMapsTable } from './ConfigMapsTable';
 import { Application } from './application/Application';
@@ -22,6 +23,7 @@ export const KuberneterWorkspace: React.FC<KuberneterWorkspaceProps> = ({ resour
     kuberneterSelectedNamespace,
     podsData,
     deploysData,
+    daemonSetsData,
     servicesData,
     configMapsData,
     applicationsData,
@@ -78,6 +80,13 @@ export const KuberneterWorkspace: React.FC<KuberneterWorkspaceProps> = ({ resour
           {resource === 'deployments' && (
             <Deployments
               deploysData={deploysData}
+              kuberneterSelectedNamespace={kuberneterSelectedNamespace}
+            />
+          )}
+
+          {resource === 'daemonsets' && (
+            <DaemonSets
+              daemonSetsData={daemonSetsData}
               kuberneterSelectedNamespace={kuberneterSelectedNamespace}
             />
           )}
