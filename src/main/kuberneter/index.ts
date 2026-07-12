@@ -160,7 +160,7 @@ export function registerKuberneterHandlers(): void {
 
         const stdout = await runKubectl(args, resolvedKubeconfig);
         const lines = stdout.trim().split('\n');
-        
+
         const items = lines
           .map((line) => {
             const trimmed = line.trim();
