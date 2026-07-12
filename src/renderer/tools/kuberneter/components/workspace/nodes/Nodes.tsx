@@ -95,7 +95,7 @@ export const Nodes: React.FC<NodesProps> = ({ nodesData }) => {
   }, [filteredData]);
 
   return (
-    <div className="flex-1 flex flex-col gap-3 min-h-0 select-none">
+    <div className="flex-1 flex flex-col gap-3 min-h-0 min-w-0 select-none">
       <NodesToolbar
         searchQuery={searchQuery}
         caseSensitive={caseSensitive}

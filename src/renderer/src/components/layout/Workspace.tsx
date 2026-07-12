@@ -45,7 +45,7 @@ export const Workspace: React.FC = () => {
       </div>
 
       {/* Editor Content Area */}
-      <div className="flex-1 overflow-auto p-4 flex flex-col min-h-0 bg-surface">
+      <div className="flex-1 overflow-hidden p-4 flex flex-col min-h-0 min-w-0 bg-surface">
         {activeTab.type === 'kuberneter' && (
           <KuberneterWorkspace
             resource={(activeTab.meta as { resource?: string })?.resource || 'overview'}

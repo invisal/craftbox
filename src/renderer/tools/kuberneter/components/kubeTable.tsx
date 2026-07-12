@@ -101,7 +101,11 @@ export function KubeTable<T>({
         className="text-left text-xs"
         style={
           resizable
-            ? { tableLayout: 'fixed', width: '100%' }
+            ? {
+                tableLayout: 'fixed',
+                width: Object.values(colWidths).reduce((a, b) => a + b, 0),
+                minWidth: '100%'
+              }
             : { width: '100%', borderCollapse: 'collapse' }
         }
       >
