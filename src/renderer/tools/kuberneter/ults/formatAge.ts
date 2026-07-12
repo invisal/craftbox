@@ -7,6 +7,11 @@ export function formatAge(creationTimestamp: string): string {
   const hours = Math.floor(mins / 60);
   const days = Math.floor(hours / 24);
 
+  if (days >= 365) {
+    const years = Math.floor(days / 365);
+    const remDays = days % 365;
+    return remDays > 0 ? `${years}y${remDays}d` : `${years}y`;
+  }
   if (days > 0) {
     const remHours = hours % 24;
     return remHours > 0 ? `${days}d${remHours}h` : `${days}d`;
