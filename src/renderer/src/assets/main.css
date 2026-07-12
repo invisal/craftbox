@@ -67,6 +67,11 @@
   --color-zinc-800: #e4e4e7;
   --color-zinc-900: #f4f4f5;
   --color-white: #18181b;
+  /* amber-* defaults are tuned for dark surfaces; flip to brown/orange tones
+     so warning banners and status accents stay legible on light backgrounds. */
+  --color-amber-200: #78350f;
+  --color-amber-400: #b45309;
+  --color-amber-500: #d97706;
 }
 
 /* Custom scrollbars matching the active theme */

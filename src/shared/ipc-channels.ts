@@ -15,17 +15,27 @@ export const IpcChannels = {
   ExportVideo: 'export:start',
   ExportProgress: 'export:progress',
   ShowSaveExportDialog: 'dialog:show-save-export',
+  SaveScreenshot: 'screenshot:save',
+  CopyScreenshot: 'screenshot:copy',
+  CaptureScreenshot: 'screenshot:capture',
+  SelectCaptureRegion: 'screenshot:select-region',
+  RegionSelectComplete: 'region-select:complete',
+  RegionSelectCancel: 'region-select:cancel',
   GetSettings: 'settings:get',
   SetSettings: 'settings:set',
   RegisterShortcut: 'shortcuts:register',
   UnregisterShortcut: 'shortcuts:unregister',
   WindowMinimize: 'window:minimize',
+  WindowHide: 'window:hide',
+  WindowRestore: 'window:restore',
   WindowToggleMaximize: 'window:toggle-maximize',
   WindowClose: 'window:close',
   WindowIsMaximized: 'window:is-maximized',
   WindowMaximizeChanged: 'window:maximize-changed',
   GetScreenRecordingStatus: 'permissions:get-screen-recording-status',
-  OpenScreenRecordingSettings: 'permissions:open-screen-recording-settings'
+  OpenScreenRecordingSettings: 'permissions:open-screen-recording-settings',
+  ShowNotification: 'notification:show',
+  PickOsCaptureSource: 'screenshot:pick-os-source'
 } as const;
 
 export type IpcChannel = (typeof IpcChannels)[keyof typeof IpcChannels];
