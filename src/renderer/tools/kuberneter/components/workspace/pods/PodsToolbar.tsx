@@ -45,7 +45,8 @@ export const PodsToolbar: React.FC<PodsToolbarProps> = ({
       >
         <Download className="size-3.5" />
         <span className="text-[11px] font-medium">
-          {selectedCount > 0 ? `${selectedCount} / ` : ''}{totalCount} Items
+          {selectedCount > 0 ? `${selectedCount} / ` : ''}
+          {totalCount} Items
         </span>
       </div>
     </div>

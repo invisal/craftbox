@@ -75,9 +75,7 @@ export const Pods: React.FC<PodsProps> = ({ podsData, kuberneterSelectedNamespac
 
   const handleDownloadCsv = () => {
     const dataToExport =
-      selectedIds.size > 0
-        ? filteredData.filter((d) => selectedIds.has(d.id))
-        : filteredData;
+      selectedIds.size > 0 ? filteredData.filter((d) => selectedIds.has(d.id)) : filteredData;
 
     if (dataToExport.length === 0) return;
 

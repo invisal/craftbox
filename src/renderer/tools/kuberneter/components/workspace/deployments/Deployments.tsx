@@ -75,21 +75,11 @@ export const Deployments: React.FC<DeploymentsProps> = ({
 
   const handleDownloadCsv = () => {
     const dataToExport =
-      selectedIds.size > 0
-        ? filteredData.filter((d) => selectedIds.has(d.id))
-        : filteredData;
+      selectedIds.size > 0 ? filteredData.filter((d) => selectedIds.has(d.id)) : filteredData;
 
     if (dataToExport.length === 0) return;
 
-    const headers = [
-      'Name',
-      'Warning',
-      'Namespace',
-      'Pods',
-      'Replicas',
-      'Age',
-      'Status'
-    ];
+    const headers = ['Name', 'Warning', 'Namespace', 'Pods', 'Replicas', 'Age', 'Status'];
     const csvRows = [headers.join(',')];
 
     dataToExport.forEach((d) => {
@@ -172,7 +162,8 @@ export const Deployments: React.FC<DeploymentsProps> = ({
             <div className="flex flex-col gap-0.5">
               <span className="text-[10px] text-zinc-555 uppercase">Replicas Details</span>
               <span className="font-mono text-zinc-300">
-                Pods: {selectedDeploy.ready} (Available: {selectedDeploy.available}, Up-to-Date: {selectedDeploy.upToDate})
+                Pods: {selectedDeploy.ready} (Available: {selectedDeploy.available}, Up-to-Date:{' '}
+                {selectedDeploy.upToDate})
               </span>
             </div>
             <div className="flex flex-col gap-0.5">

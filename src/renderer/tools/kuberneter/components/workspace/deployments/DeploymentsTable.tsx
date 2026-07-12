@@ -51,7 +51,10 @@ export const DeploymentsTable: React.FC<DeploymentsTableProps> = ({
         key: 'name',
         header: 'Name',
         render: (row) => (
-          <span className="font-mono text-zinc-300 font-semibold truncate hover:underline" title={row.name}>
+          <span
+            className="font-mono text-zinc-300 font-semibold truncate hover:underline"
+            title={row.name}
+          >
             {row.name}
           </span>
         ),
@@ -82,9 +85,7 @@ export const DeploymentsTable: React.FC<DeploymentsTableProps> = ({
         key: 'namespace',
         header: 'Namespace',
         render: (row) => (
-          <span className="font-mono text-accent hover:underline cursor-pointer">
-            {row.ns}
-          </span>
+          <span className="font-mono text-accent hover:underline cursor-pointer">{row.ns}</span>
         ),
         className: 'font-mono text-accent',
         initialWidth: 120
@@ -92,20 +93,14 @@ export const DeploymentsTable: React.FC<DeploymentsTableProps> = ({
       {
         key: 'pods',
         header: 'Pods',
-        render: (row) => (
-          <span className="font-mono text-[11px] text-zinc-300">
-            {row.ready}
-          </span>
-        ),
+        render: (row) => <span className="font-mono text-[11px] text-zinc-300">{row.ready}</span>,
         initialWidth: 100
       },
       {
         key: 'replicas',
         header: 'Replicas',
         render: (row) => (
-          <span className="font-mono text-[11px] text-zinc-400">
-            {row.replicas}
-          </span>
+          <span className="font-mono text-[11px] text-zinc-400">{row.replicas}</span>
         ),
         initialWidth: 100
       },
