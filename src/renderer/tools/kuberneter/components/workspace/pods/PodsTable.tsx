@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { KubeTable, Column } from '../../kubeTable';
-import { MoreVertical, AlertTriangle, AlertCircle } from 'lucide-react';
+import { MoreVertical, AlertTriangle } from 'lucide-react';
 import { cn } from 'cnfast';
 import { PodData } from '../../../types/PodData';
 
@@ -51,7 +51,10 @@ export const PodsTable: React.FC<PodsTableProps> = ({
         key: 'name',
         header: 'Name',
         render: (row) => (
-          <span className="font-mono text-zinc-300 font-semibold truncate hover:underline" title={row.name}>
+          <span
+            className="font-mono text-zinc-300 font-semibold truncate hover:underline"
+            title={row.name}
+          >
             {row.name}
           </span>
         ),
@@ -82,9 +85,7 @@ export const PodsTable: React.FC<PodsTableProps> = ({
         key: 'namespace',
         header: 'Namespace',
         render: (row) => (
-          <span className="font-mono text-accent hover:underline cursor-pointer">
-            {row.ns}
-          </span>
+          <span className="font-mono text-accent hover:underline cursor-pointer">{row.ns}</span>
         ),
         className: 'font-mono text-accent',
         initialWidth: 100
@@ -158,7 +159,10 @@ export const PodsTable: React.FC<PodsTableProps> = ({
         key: 'node',
         header: 'Node',
         render: (row) => (
-          <span className="font-mono text-accent hover:underline cursor-pointer text-[11px] truncate max-w-[120px]" title={row.node}>
+          <span
+            className="font-mono text-accent hover:underline cursor-pointer text-[11px] truncate max-w-[120px]"
+            title={row.node}
+          >
             {row.node || <span className="text-zinc-650">—</span>}
           </span>
         ),
@@ -184,11 +188,7 @@ export const PodsTable: React.FC<PodsTableProps> = ({
             <span
               className={cn(
                 'text-[11px] font-medium select-none',
-                isRunning
-                  ? 'text-emerald-400'
-                  : isPending
-                    ? 'text-amber-400'
-                    : 'text-red-400'
+                isRunning ? 'text-emerald-400' : isPending ? 'text-amber-400' : 'text-red-400'
               )}
             >
               {row.status}
@@ -236,15 +236,10 @@ export const PodsTable: React.FC<PodsTableProps> = ({
       data={filteredData}
       getRowKey={(row) => row.id}
       variant="modern"
-      className="flex-1 border-t border-border-dark/60"
+      className="flex-1"
       onRowClick={(row) => onSelectPod(row)}
       selectedRowKey={selectedPodId}
-      emptyState={
-        <div className="flex flex-col items-center justify-center text-zinc-550 gap-2 py-10 font-sans">
-          <AlertCircle className="size-8 text-zinc-650" />
-          <span className="text-xs">No pods match the search filters.</span>
-        </div>
-      }
+      emptyMessage="No pods match the search filters."
     />
   );
 };

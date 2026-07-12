@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { KubeTable, Column } from '../../kubeTable';
-import { MoreVertical, AlertTriangle, AlertCircle } from 'lucide-react';
+import { MoreVertical, AlertTriangle } from 'lucide-react';
 import { cn } from 'cnfast';
 import { DeployData } from '../../../types/DeployData';
 
@@ -166,15 +166,10 @@ export const DeploymentsTable: React.FC<DeploymentsTableProps> = ({
       data={filteredData}
       getRowKey={(row) => row.id}
       variant="modern"
-      className="flex-1 border-t border-border-dark/60"
+      className="flex-1"
       onRowClick={(row) => onSelectDeploy(row)}
       selectedRowKey={selectedDeployId}
-      emptyState={
-        <div className="flex flex-col items-center justify-center text-zinc-550 gap-2 py-10 font-sans">
-          <AlertCircle className="size-8 text-zinc-650" />
-          <span className="text-xs">No deployments match the search filters.</span>
-        </div>
-      }
+      emptyMessage="No deployments match the search filters."
     />
   );
 };

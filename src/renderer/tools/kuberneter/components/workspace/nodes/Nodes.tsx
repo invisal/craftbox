@@ -95,17 +95,19 @@ export const Nodes: React.FC<NodesProps> = ({ nodesData }) => {
   }, [filteredData]);
 
   return (
-    <div className="flex-1 flex flex-col gap-3 min-h-0 min-w-0 select-none">
-      <NodesToolbar
-        searchQuery={searchQuery}
-        caseSensitive={caseSensitive}
-        useRegex={useRegex}
-        totalCount={filteredData.length}
-        onSearchChange={setSearchQuery}
-        onCaseSensitiveToggle={() => setCaseSensitive((v) => !v)}
-        onRegexToggle={() => setUseRegex((v) => !v)}
-        onDownload={handleExportCSV}
-      />
+    <div className="flex-1 flex flex-col gap-3 min-h-0 min-w-0 select-none py-4">
+      <div className="px-4">
+        <NodesToolbar
+          searchQuery={searchQuery}
+          caseSensitive={caseSensitive}
+          useRegex={useRegex}
+          totalCount={filteredData.length}
+          onSearchChange={setSearchQuery}
+          onCaseSensitiveToggle={() => setCaseSensitive((v) => !v)}
+          onRegexToggle={() => setUseRegex((v) => !v)}
+          onDownload={handleExportCSV}
+        />
+      </div>
       <NodesTable
         filteredData={filteredData}
         selectedIds={selectedIds}
