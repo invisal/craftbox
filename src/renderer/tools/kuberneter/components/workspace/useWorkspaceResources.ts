@@ -10,6 +10,7 @@ import { NodeData } from '../../types/NodeData';
 import { DaemonSetData } from '../../types/DaemonSetData';
 import { StatefulSetData } from '../../types/StatefulSetData';
 import { ReplicaSetData } from '../../types/ReplicaSetData';
+import { JobData } from '../../types/JobData';
 import { K8sResource } from '../../types/K8sResource';
 import { TopNodeItem } from '../../types/TopNodeItem';
 import { formatAge } from '../../ults/formatAge';
@@ -37,6 +38,7 @@ export function useWorkspaceResources(resource: string) {
   const [daemonSetsData, setDaemonSetsData] = useState<DaemonSetData[]>([]);
   const [statefulSetsData, setStatefulSetsData] = useState<StatefulSetData[]>([]);
   const [replicaSetsData, setReplicaSetsData] = useState<ReplicaSetData[]>([]);
+  const [jobsData, setJobsData] = useState<JobData[]>([]);
   const [servicesData, setServicesData] = useState<ServiceData[]>([]);
   const [configMapsData, setConfigMapsData] = useState<ConfigMapData[]>([]);
   const [applicationsData, setApplicationsData] = useState<ApplicationData[]>([]);
@@ -61,6 +63,7 @@ export function useWorkspaceResources(resource: string) {
       else if (resource === 'daemonsets') queryResource = 'daemonsets';
       else if (resource === 'statefulsets') queryResource = 'statefulsets';
       else if (resource === 'replicasets') queryResource = 'replicasets';
+      else if (resource === 'jobs') queryResource = 'jobs';
       else if (resource === 'services') queryResource = 'services';
       else if (resource === 'configmaps') queryResource = 'configmaps';
       else if (resource === 'apps') queryResource = 'deployments,statefulsets,daemonsets';
@@ -316,6 +319,38 @@ export function useWorkspaceResources(resource: string) {
           };
         });
         setReplicaSetsData(transformed);
+      } else if (resource === 'jobs') {
+        const transformed = items.map((item) => {
+          const name = item.metadata?.name || '';
+          const ns = item.metadata?.namespace || '';
+          const desired = item.spec?.completions ?? 1;
+          const succeeded = item.status?.succeeded ?? 0;
+          const failed = item.status?.failed ?? 0;
+
+          // Derive conditions string from status.conditions
+          const conditions = item.status?.conditions || [];
+          const condStr =
+            conditions
+              .filter((c) => c.status === 'True')
+              .map((c) => c.type)
+              .join(', ') || (succeeded > 0 ? 'Complete' : failed > 0 ? 'Failed' : 'Running');
+
+          const hasWarning = failed > 0;
+
+          return {
+            id: `${ns}/${name}`,
+            name,
+            ns,
+            completions: `${succeeded}/${desired}`,
+            succeeded,
+            desired,
+            age: formatAge(item.metadata?.creationTimestamp || ''),
+            rawAge: new Date(item.metadata?.creationTimestamp || Date.now()).getTime().toString(),
+            conditions: condStr,
+            hasWarning
+          };
+        });
+        setJobsData(transformed);
       } else if (resource === 'services') {
         const transformed = items.map((item) => {
           const ports = item.spec?.ports?.map((p) => `${p.port}/${p.protocol}`).join(', ') || '';
@@ -533,6 +568,7 @@ export function useWorkspaceResources(resource: string) {
     daemonSetsData,
     statefulSetsData,
     replicaSetsData,
+    jobsData,
     servicesData,
     configMapsData,
     applicationsData,

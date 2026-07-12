@@ -19,6 +19,10 @@ export interface K8sResource {
     updatedNumberScheduled?: number;
     numberReady?: number;
     numberAvailable?: number;
+    succeeded?: number;
+    failed?: number;
+    active?: number;
+    completionTime?: string;
     conditions?: { type?: string; status?: string; message?: string }[];
     nodeInfo?: { kubeletVersion?: string };
     capacity?: { cpu?: string; memory?: string };
@@ -30,6 +34,8 @@ export interface K8sResource {
     ports?: { port?: number; protocol?: string }[];
     taints?: { key?: string; effect?: string }[];
     replicas?: number;
+    completions?: number;
+    parallelism?: number;
     strategy?: {
       type?: string;
     };
