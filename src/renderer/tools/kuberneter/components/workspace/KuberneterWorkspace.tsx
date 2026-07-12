@@ -6,6 +6,7 @@ import { DeploymentsTable } from './DeploymentsTable';
 import { ServicesTable } from './ServicesTable';
 import { ConfigMapsTable } from './ConfigMapsTable';
 import { Application } from './application/Application';
+import { Nodes } from './nodes/Nodes';
 import { KuberneterHomeView } from './kubernetes-home';
 import { AlertCircle, Loader2 } from 'lucide-react';
 
@@ -24,6 +25,7 @@ export const KuberneterWorkspace: React.FC<KuberneterWorkspaceProps> = ({ resour
     servicesData,
     configMapsData,
     applicationsData,
+    nodesData,
     isLoading,
     errorMsg
   } = useWorkspaceResources(resource);
@@ -103,6 +105,8 @@ export const KuberneterWorkspace: React.FC<KuberneterWorkspaceProps> = ({ resour
               kuberneterSelectedNamespace={kuberneterSelectedNamespace}
             />
           )}
+
+          {resource === 'nodes' && <Nodes nodesData={nodesData} />}
         </>
       )}
     </div>
