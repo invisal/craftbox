@@ -1,5 +1,6 @@
 import { desktopCapturer, screen, type BrowserWindow } from 'electron';
 import { hideCaptureWindow, restoreCaptureWindow } from '../windows/window-visibility';
+import { findDisplayForCapturerId } from './display-for-source';
 
 export interface ScreenshotCaptureRequest {
   sourceId: string;
@@ -14,7 +15,8 @@ function captureSizeForRequest(request: ScreenshotCaptureRequest): {
 } {
   const displays = screen.getAllDisplays();
   const display = request.displayId
-    ? displays.find((item) => String(item.id) === request.displayId)
+    ? (findDisplayForCapturerId(request.displayId) ??
+      displays.find((item) => String(item.id) === request.displayId))
     : screen.getPrimaryDisplay();
 
   const target = display ?? screen.getPrimaryDisplay();

@@ -6,8 +6,8 @@ interface DesktopVideoConstraint {
   mandatory: {
     chromeMediaSource: 'desktop';
     chromeMediaSourceId: string;
-    maxWidth: number;
-    maxHeight: number;
+    maxWidth?: number;
+    maxHeight?: number;
   };
 }
 
@@ -21,7 +21,7 @@ function isMonitorCapture(stream: MediaStream): boolean {
     return false;
   }
 
-  // ponytail: PipeWire sometimes omits displaySurface — treat near-full-display as monitor.
+  // PipeWire sometimes omits displaySurface — treat near-full-display as monitor.
   const scale = window.devicePixelRatio || 1;
   const screenW = Math.round(window.screen.width * scale);
   const screenH = Math.round(window.screen.height * scale);
@@ -82,7 +82,31 @@ function waitForVideoFrame(video: HTMLVideoElement): Promise<void> {
   });
 }
 
-async function grabPngFromStream(stream: MediaStream): Promise<Blob> {
+function waitForNextVideoFrame(video: HTMLVideoElement, staleOkMs?: number): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const timeout = window.setTimeout(() => {
+      if (staleOkMs !== undefined) resolve();
+      else reject(new Error('Capture video timed out'));
+    }, staleOkMs ?? 5000);
+
+    const done = (): void => {
+      window.clearTimeout(timeout);
+      resolve();
+    };
+
+    if (typeof video.requestVideoFrameCallback === 'function') {
+      video.requestVideoFrameCallback(() => done());
+      return;
+    }
+
+    video.addEventListener('playing', done, { once: true });
+  });
+}
+
+async function grabPngFromStream(
+  stream: MediaStream,
+  options?: { skipFrames?: number; staleFrameMs?: number }
+): Promise<Blob> {
   const track = stream.getVideoTracks()[0];
   if (!track) throw new Error('No video track in capture stream.');
   if (track.readyState === 'ended') throw new Error('Capture cancelled.');
@@ -103,6 +127,12 @@ async function grabPngFromStream(stream: MediaStream): Promise<Blob> {
   try {
     await video.play();
     await waitForVideoFrame(video);
+
+    const skipFrames = options?.skipFrames ?? 0;
+    const staleFrameMs = options?.staleFrameMs;
+    for (let i = 0; i < skipFrames; i += 1) {
+      await waitForNextVideoFrame(video, staleFrameMs);
+    }
 
     const canvas = document.createElement('canvas');
     canvas.width = video.videoWidth;
@@ -130,20 +160,31 @@ function osPickerToCaptureSource(picked: OsPickerSource): CaptureSource {
     name: picked.type === 'screen' ? 'Screen' : 'Window',
     type: picked.type,
     thumbnailDataUrl: '',
-    displayId: picked.displayId
+    displayId: picked.displayId,
+    displayBounds: picked.displayBounds
   };
 }
 
-async function getDesktopVideoStream(source: CaptureSource): Promise<MediaStream> {
+async function getDesktopVideoStream(
+  source: CaptureSource,
+  options?: { nativeResolution?: boolean }
+): Promise<MediaStream> {
+  const mandatory: DesktopVideoConstraint['mandatory'] = {
+    chromeMediaSource: 'desktop',
+    chromeMediaSourceId: source.id
+  };
+
+  if (!options?.nativeResolution) {
+    const bounds = source.displayBounds;
+    const scale = window.devicePixelRatio || 1;
+    mandatory.maxWidth = Math.round((bounds?.width ?? window.screen.width) * scale);
+    mandatory.maxHeight = Math.round((bounds?.height ?? window.screen.height) * scale);
+  }
+
   const constraints: MediaStreamConstraints = {
     audio: false,
     video: {
-      mandatory: {
-        chromeMediaSource: 'desktop',
-        chromeMediaSourceId: source.id,
-        maxWidth: window.screen.width * (window.devicePixelRatio || 1),
-        maxHeight: window.screen.height * (window.devicePixelRatio || 1)
-      }
+      mandatory
     } as unknown as DesktopVideoConstraint as never
   };
 
@@ -216,18 +257,53 @@ export async function captureFromSystemPicker(): Promise<Blob> {
   }
 }
 
+function regionSelectionForCrop(
+  selection: CaptureRegionSelection,
+  picked?: Pick<OsPickerSource, 'displayBounds' | 'scaleFactor'>
+): CaptureRegionSelection {
+  if (!picked?.displayBounds) return selection;
+  return {
+    ...selection,
+    displayBounds: picked.displayBounds,
+    scaleFactor: picked.scaleFactor ?? selection.scaleFactor
+  };
+}
+
+function scaleMatchesFrame(
+  displayBounds: ScreenRect,
+  scaleFactor: number,
+  frameWidth: number,
+  frameHeight: number
+): boolean {
+  const expectedW = Math.round(displayBounds.width * scaleFactor);
+  const expectedH = Math.round(displayBounds.height * scaleFactor);
+  return Math.abs(frameWidth - expectedW) <= 2 && Math.abs(frameHeight - expectedH) <= 2;
+}
+
 function screenRectToPixelCrop(
   selection: CaptureRegionSelection,
   frameWidth: number,
   frameHeight: number
 ): ScreenRect {
-  const { rect, displayBounds } = selection;
+  const { rect, displayBounds, scaleFactor = 1 } = selection;
+  const relativeX = rect.x - displayBounds.x;
+  const relativeY = rect.y - displayBounds.y;
+
+  if (scaleFactor !== 1 && scaleMatchesFrame(displayBounds, scaleFactor, frameWidth, frameHeight)) {
+    return {
+      x: Math.round(relativeX * scaleFactor),
+      y: Math.round(relativeY * scaleFactor),
+      width: Math.round(rect.width * scaleFactor),
+      height: Math.round(rect.height * scaleFactor)
+    };
+  }
+
   const scaleX = frameWidth / displayBounds.width;
   const scaleY = frameHeight / displayBounds.height;
 
   return {
-    x: Math.round((rect.x - displayBounds.x) * scaleX),
-    y: Math.round((rect.y - displayBounds.y) * scaleY),
+    x: Math.round(relativeX * scaleX),
+    y: Math.round(relativeY * scaleY),
     width: Math.round(rect.width * scaleX),
     height: Math.round(rect.height * scaleY)
   };
@@ -291,65 +367,59 @@ export async function selectAndCaptureRegion(
   usesOsPicker: boolean,
   onStep?: (step: RegionCaptureStep) => void
 ): Promise<Blob | null> {
+  let picked: OsPickerSource | null = null;
   let portalStream: MediaStream | null = null;
-
-  if (usesOsPicker) {
-    onStep?.('picker');
-    try {
-      const picked = await pickOsCaptureSource(true);
-      if (!picked) return null;
-      if (picked.type !== 'screen') {
-        throw new Error('Region capture requires a monitor. Choose a screen, not a window or tab.');
-      }
-      portalStream = await getDesktopVideoStream(osPickerToCaptureSource(picked));
-    } catch (err) {
-      if (err instanceof Error && err.message.includes('monitor')) throw err;
-      return null;
-    }
-  }
 
   const stopPortalStream = (): void => {
     portalStream?.getTracks().forEach((track) => track.stop());
     portalStream = null;
   };
 
-  onStep?.('region');
-  await hideMainWindow();
-
-  let selection: CaptureRegionSelection | null = null;
-  try {
-    selection = (await window.screenRecorder?.screenshot.selectRegion()) ?? null;
-  } finally {
-    await showApp({ focus: false });
-  }
-
-  if (!selection) {
-    stopPortalStream();
-    return null;
-  }
-
   try {
     if (usesOsPicker) {
-      onStep?.('processing');
-      const fullBlob = await grabPngFromStream(portalStream!);
-      const cropped = await cropPngBlob(fullBlob, selection);
-      await showApp({ focus: true });
-      return cropped;
+      onStep?.('picker');
+      picked = await pickOsCaptureSource(true);
+      if (!picked) return null;
+      if (picked.type !== 'screen') {
+        throw new Error('Region capture requires a monitor. Choose a screen, not a window or tab.');
+      }
+
+      portalStream = await getDesktopVideoStream(osPickerToCaptureSource(picked), {
+        nativeResolution: true
+      });
     }
+
+    onStep?.('region');
+    await hideMainWindow();
+
+    const selection = (await window.screenRecorder?.screenshot.selectRegion()) ?? null;
+    if (!selection) return null;
+
+    if (usesOsPicker) {
+      onStep?.('processing');
+      const fullBlob = await grabPngFromStream(portalStream!, {
+        skipFrames: 1,
+        staleFrameMs: 150
+      });
+      stopPortalStream();
+      await showApp({ focus: true });
+      return await cropPngBlob(fullBlob, regionSelectionForCrop(selection, picked ?? undefined));
+    }
+
+    await showApp({ focus: false });
 
     const source = findScreenSourceForRegion(sources, selection);
     if (!source) return null;
 
     onStep?.('processing');
     const fullBlob = await captureFromSource(source, { hideApp: false });
-    const cropped = await cropPngBlob(fullBlob, selection);
-    await showApp({ focus: true });
-    return cropped;
-  } catch {
-    await showApp({ focus: true });
+    return await cropPngBlob(fullBlob, selection);
+  } catch (err) {
+    if (err instanceof Error && err.message.includes('monitor')) throw err;
     return null;
   } finally {
     stopPortalStream();
+    await showApp({ focus: true });
   }
 }
 

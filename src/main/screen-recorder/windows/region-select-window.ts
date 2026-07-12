@@ -46,10 +46,19 @@ let selectionFinished = false;
 function finishSelection(value: CaptureRegionSelection | null): void {
   if (selectionFinished) return;
   selectionFinished = true;
-  regionWindow?.close();
+
+  const win = regionWindow;
   regionWindow = null;
-  resolveSelection?.(value);
+  const resolve = resolveSelection;
   resolveSelection = null;
+
+  if (!win) {
+    resolve?.(value);
+    return;
+  }
+
+  win.once('closed', () => resolve?.(value));
+  win.close();
 }
 
 function onRegionComplete(_event: Electron.IpcMainEvent, rect: ScreenRect): void {
@@ -66,7 +75,8 @@ function onRegionComplete(_event: Electron.IpcMainEvent, rect: ScreenRect): void
       y: display.bounds.y,
       width: display.bounds.width,
       height: display.bounds.height
-    }
+    },
+    scaleFactor: display.scaleFactor
   });
 }
 
@@ -114,7 +124,7 @@ export function selectCaptureRegion(): Promise<CaptureRegionSelection | null> {
     regionWindow.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
     regionWindow.once('ready-to-show', () => regionWindow?.show());
     regionWindow.on('closed', () => {
-      if (resolveSelection) finishSelection(null);
+      if (!selectionFinished) finishSelection(null);
     });
 
     loadRegionSelectPage(regionWindow, bounds);

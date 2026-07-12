@@ -9,4 +9,6 @@ export interface ScreenRect {
 export interface CaptureRegionSelection {
   rect: ScreenRect;
   displayBounds: ScreenRect;
+  /** Electron display scale factor (DIP → physical pixels). */
+  scaleFactor?: number;
 }

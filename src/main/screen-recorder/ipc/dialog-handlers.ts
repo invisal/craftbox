@@ -44,7 +44,6 @@ export function registerDialogHandlers(): void {
   ipcMain.handle(
     IpcChannels.PickOsCaptureSource,
     async (_event, options?: { monitorOnly?: boolean }): Promise<OsPickerSource | null> => {
-      // Screen Capture region on Linux Wayland only (no-op elsewhere).
       return pickOsCaptureSource(options?.monitorOnly ?? false);
     }
   );

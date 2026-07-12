@@ -1,6 +1,7 @@
 import { desktopCapturer } from 'electron';
 import type { OsPickerSource } from '@shared/os-picker-source';
 import { usesOsCapturePicker } from '@shared/uses-os-capture-picker';
+import { findDisplayForCapturerId } from './display-for-source';
 
 /** Opens the PipeWire portal once and returns the source the user picked (Linux Wayland only). */
 export async function pickOsCaptureSource(monitorOnly: boolean): Promise<OsPickerSource | null> {
@@ -15,9 +16,14 @@ export async function pickOsCaptureSource(monitorOnly: boolean): Promise<OsPicke
   const source = sources[0];
   if (!source) return null;
 
+  const displayId = source.display_id ? String(source.display_id) : undefined;
+  const display = findDisplayForCapturerId(displayId);
+
   return {
     id: source.id,
     type: source.id.startsWith('screen') ? 'screen' : 'window',
-    displayId: source.display_id ? String(source.display_id) : undefined
+    displayId: display ? String(display.id) : displayId,
+    displayBounds: display?.bounds,
+    scaleFactor: display?.scaleFactor
   };
 }
