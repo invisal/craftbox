@@ -4,6 +4,12 @@ import { join } from 'path';
 import { IpcChannels } from '@shared/ipc-channels';
 import type { ExportFormat } from '@screen-recorder/types/export';
 import { copyScreenshotToClipboard } from '../clipboard/copy-screenshot-to-clipboard';
+import {
+  captureScreenPngWithHide,
+  type ScreenshotCaptureRequest
+} from '../capture/screenshot-capture';
+import { pickOsCaptureSource } from '../capture/pick-os-capture-source';
+import type { OsPickerSource } from '@shared/os-picker-source';
 
 export function registerDialogHandlers(): void {
   ipcMain.handle(
@@ -22,12 +28,30 @@ export function registerDialogHandlers(): void {
   );
 
   ipcMain.handle(IpcChannels.CopyScreenshot, async (event, data: ArrayBuffer): Promise<void> => {
+    // Screen Capture tool only.
     await copyScreenshotToClipboard(event.sender, data);
   });
 
   ipcMain.handle(
+    IpcChannels.CaptureScreenshot,
+    async (event, request: ScreenshotCaptureRequest): Promise<Buffer> => {
+      // Screen Capture tool only — atomic hide/grab/restore for full-display stills.
+      const win = BrowserWindow.fromWebContents(event.sender);
+      return captureScreenPngWithHide(win, request);
+    }
+  );
+
+  ipcMain.handle(
+    IpcChannels.PickOsCaptureSource,
+    async (_event, options?: { monitorOnly?: boolean }): Promise<OsPickerSource | null> => {
+      return pickOsCaptureSource(options?.monitorOnly ?? false);
+    }
+  );
+
+  ipcMain.handle(
     IpcChannels.SaveScreenshot,
     async (event, data: ArrayBuffer, defaultFileName: string): Promise<string | null> => {
+      // Screen Capture tool only.
       const win = BrowserWindow.fromWebContents(event.sender);
       const options = {
         defaultPath: join(app.getPath('pictures'), defaultFileName),

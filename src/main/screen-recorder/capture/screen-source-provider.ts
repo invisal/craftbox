@@ -1,5 +1,6 @@
 import { desktopCapturer, screen } from 'electron';
 import type { CaptureSource } from '@screen-recorder/types/recording';
+import { findDisplayForCapturerId } from './display-for-source';
 
 export async function listCaptureSources(): Promise<CaptureSource[]> {
   const sources = await desktopCapturer.getSources({
@@ -28,7 +29,7 @@ export async function listCaptureSources(): Promise<CaptureSource[]> {
     }
 
     const display =
-      displays.find((d) => source.display_id && String(d.id) === source.display_id) ??
+      findDisplayForCapturerId(source.display_id ? String(source.display_id) : undefined) ??
       displays[fallbackIndex];
     fallbackIndex += 1;
 
