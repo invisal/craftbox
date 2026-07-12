@@ -146,11 +146,6 @@ export function ScreenCaptureMain({}: ToolComponentProps<Props>): JSX.Element {
   };
 
   const handleCaptureAgain = (): void => {
-    if (usesOsPicker) {
-      void runCapture();
-      return;
-    }
-
     setPhase('idle');
     setPreviewDataUrl(null);
     setPreviewBlob(null);

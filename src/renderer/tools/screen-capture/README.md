@@ -56,7 +56,7 @@ When `window.api.usesOsCapturePicker` is true (Linux Wayland), the thumbnail gri
 | `capturing` | Hidden                          | Hidden                       | “Capturing…” / region / portal message                                               |
 | `result`    | **Preview** title + description | same                         | Preview scales to fit; footer pinned bottom-right: Copy / Save / Capture again       |
 
-**Capture again** resets to `idle` with the source grid on macOS/Windows/X11 — it does **not** immediately re-capture. On **Linux Wayland**, **Capture again** reopens the OS portal picker immediately (still uses the button click as the user gesture).
+**Capture again** resets to `idle` — it does **not** immediately re-capture. On macOS/Windows/X11 that shows the source grid; on Linux Wayland it returns to the idle screen with **Capture** / **Capture region** in the footer.
 
 On success, a **native OS notification** is shown (see below). Permission issues are surfaced only via `ScreenRecordingPermissionBanner` — no inline error text.
 
