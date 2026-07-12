@@ -8,6 +8,7 @@ import { ConfigMapData } from '../../types/ConfigMapData';
 import { ApplicationData } from '../../types/ApplicationData';
 import { NodeData } from '../../types/NodeData';
 import { DaemonSetData } from '../../types/DaemonSetData';
+import { StatefulSetData } from '../../types/StatefulSetData';
 import { K8sResource } from '../../types/K8sResource';
 import { TopNodeItem } from '../../types/TopNodeItem';
 import { formatAge } from '../../ults/formatAge';
@@ -33,6 +34,7 @@ export function useWorkspaceResources(resource: string) {
   const [podsData, setPodsData] = useState<PodData[]>([]);
   const [deploysData, setDeploysData] = useState<DeployData[]>([]);
   const [daemonSetsData, setDaemonSetsData] = useState<DaemonSetData[]>([]);
+  const [statefulSetsData, setStatefulSetsData] = useState<StatefulSetData[]>([]);
   const [servicesData, setServicesData] = useState<ServiceData[]>([]);
   const [configMapsData, setConfigMapsData] = useState<ConfigMapData[]>([]);
   const [applicationsData, setApplicationsData] = useState<ApplicationData[]>([]);
@@ -55,6 +57,7 @@ export function useWorkspaceResources(resource: string) {
       if (resource === 'pods') queryResource = 'pods';
       else if (resource === 'deployments') queryResource = 'deployments';
       else if (resource === 'daemonsets') queryResource = 'daemonsets';
+      else if (resource === 'statefulsets') queryResource = 'statefulsets';
       else if (resource === 'services') queryResource = 'services';
       else if (resource === 'configmaps') queryResource = 'configmaps';
       else if (resource === 'apps') queryResource = 'deployments,statefulsets,daemonsets';
@@ -268,6 +271,26 @@ export function useWorkspaceResources(resource: string) {
           };
         });
         setDaemonSetsData(transformed);
+      } else if (resource === 'statefulsets') {
+        const transformed = items.map((item) => {
+          const name = item.metadata?.name || '';
+          const ns = item.metadata?.namespace || '';
+          const replicas = item.spec?.replicas ?? 0;
+          const readyReplicas = item.status?.readyReplicas ?? 0;
+          const hasWarning = replicas > 0 && readyReplicas < replicas;
+
+          return {
+            id: `${ns}/${name}`,
+            name,
+            ns,
+            ready: `${readyReplicas}/${replicas}`,
+            replicas,
+            age: formatAge(item.metadata?.creationTimestamp || ''),
+            rawAge: new Date(item.metadata?.creationTimestamp || Date.now()).getTime().toString(),
+            hasWarning
+          };
+        });
+        setStatefulSetsData(transformed);
       } else if (resource === 'services') {
         const transformed = items.map((item) => {
           const ports = item.spec?.ports?.map((p) => `${p.port}/${p.protocol}`).join(', ') || '';
@@ -483,6 +506,7 @@ export function useWorkspaceResources(resource: string) {
     podsData,
     deploysData,
     daemonSetsData,
+    statefulSetsData,
     servicesData,
     configMapsData,
     applicationsData,
