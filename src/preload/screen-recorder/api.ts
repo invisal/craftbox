@@ -58,6 +58,8 @@ export const screenRecorderApi = {
   },
   window: {
     minimize: (): Promise<void> => ipcRenderer.invoke(IpcChannels.WindowMinimize),
+    hide: (): Promise<void> => ipcRenderer.invoke(IpcChannels.WindowHide),
+    restore: (): Promise<void> => ipcRenderer.invoke(IpcChannels.WindowRestore),
     toggleMaximize: (): Promise<void> => ipcRenderer.invoke(IpcChannels.WindowToggleMaximize),
     close: (): Promise<void> => ipcRenderer.invoke(IpcChannels.WindowClose),
     isMaximized: (): Promise<boolean> => ipcRenderer.invoke(IpcChannels.WindowIsMaximized),
@@ -76,6 +78,12 @@ export const screenRecorderApi = {
   dialog: {
     showSaveExportPath: (defaultFileName: string, format: ExportFormat): Promise<string | null> =>
       ipcRenderer.invoke(IpcChannels.ShowSaveExportDialog, defaultFileName, format)
+  },
+  screenshot: {
+    copy: (data: ArrayBuffer): Promise<void> =>
+      ipcRenderer.invoke(IpcChannels.CopyScreenshot, data),
+    save: (data: ArrayBuffer, defaultFileName: string): Promise<string | null> =>
+      ipcRenderer.invoke(IpcChannels.SaveScreenshot, data, defaultFileName)
   }
 };
 

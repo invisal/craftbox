@@ -15,8 +15,10 @@ import { registerEnvironmentHandlers } from './http-client/ipc/environments';
 import { registerWorkspaceHandlers } from './http-client/ipc/workspaces';
 import { registerIpcHandlers as registerScreenRecorderHandlers } from './screen-recorder/ipc/register-handlers';
 import { applyContentSecurityPolicy } from './screen-recorder/security/content-security-policy';
+import { registerDisplayMediaHandler } from './screen-recorder/security/display-media-handler';
 import { registerKuberneterHandlers } from './kuberneter';
 import { registerFileExplorerHandlers } from './file-explorer';
+import { registerNotificationHandlers } from './notification-handlers';
 
 function createWindow(): void {
   // Create the browser window.
@@ -63,6 +65,7 @@ app.whenReady().then(() => {
   // (Vite HMR needs 'unsafe-eval' + a websocket connect-src) and production,
   // and needs media-src blob: for ScreenRecorder's recording preview.
   applyContentSecurityPolicy();
+  registerDisplayMediaHandler();
 
   // Default open or close DevTools by F12 in development
   // and ignore CommandOrControl + R in production.
@@ -168,6 +171,7 @@ app.whenReady().then(() => {
   // controls, screen-recording permissions, and export-path dialogs for the
   // ScreenRecorder tool (src/main/screen-recorder/ipc/*-handlers.ts).
   registerScreenRecorderHandlers();
+  registerNotificationHandlers();
 
   // Kuberneter contexts selection and live resources query handlers
   registerKuberneterHandlers();
