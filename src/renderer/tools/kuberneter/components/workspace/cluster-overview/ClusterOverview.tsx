@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useLayoutStore } from '../../../../../src/store/layout.store';
+import { useKuberneterStore } from '../../../store/kuberneter.store';
 import { MetricGauge } from './MetricGauge';
 import { HistoryChart } from './HistoryChart';
 import { WarningsFeed } from './WarningsFeed';
@@ -125,18 +126,24 @@ interface EventResource {
 
 export const ClusterOverview: React.FC = () => {
   const activeInstanceId = useLayoutStore((s) => s.activeInstanceId);
-  const kuberneterSelectedCluster = useLayoutStore(
+  const kuberneterSelectedCluster = useKuberneterStore(
     (s) => s.kuberneterInstanceCluster[activeInstanceId] || ''
   );
-  const kuberneterSelectedNamespace = useLayoutStore(
+  const kuberneterSelectedNamespace = useKuberneterStore(
     (s) => s.kuberneterInstanceNamespace[activeInstanceId] || 'All Namespaces'
   );
-  const activeConfigPath = useLayoutStore(
+  const activeConfigPath = useKuberneterStore(
     (s) => s.kuberneterInstanceConfigPath[activeInstanceId] || 'default'
   );
 
+  const refreshInterval = useKuberneterStore(
+    (s) => s.kuberneterInstanceRefreshInterval[activeInstanceId] || '60s'
+  );
+  const setKuberneterInstanceRefreshInterval = useKuberneterStore(
+    (s) => s.setKuberneterInstanceRefreshInterval
+  );
+
   // User control states
-  const [refreshInterval, setRefreshInterval] = useState('5s');
   const [timeRange, setTimeRange] = useState('1h');
   const [isRefreshing, setIsRefreshing] = useState(false);
 
@@ -447,7 +454,7 @@ export const ClusterOverview: React.FC = () => {
         timeRange={timeRange}
         setTimeRange={setTimeRange}
         refreshInterval={refreshInterval}
-        setRefreshInterval={setRefreshInterval}
+        setRefreshInterval={(val) => setKuberneterInstanceRefreshInterval(activeInstanceId, val)}
         isRefreshing={isRefreshing}
         onSync={() => fetchData(true)}
       />
