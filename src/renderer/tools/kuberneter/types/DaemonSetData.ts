@@ -1,14 +1,14 @@
-export interface DeployData {
+export interface DaemonSetData {
   id: string;
   name: string;
   ns: string;
-  ready: string;
+  desired: number;
+  current: number;
+  ready: number;
   upToDate: number;
   available: number;
+  nodeSelector: string;
   age: string;
   rawAge: string;
-  replicas: number;
-  status: string;
   hasWarning: boolean;
-  strategy: string;
 }

@@ -90,6 +90,25 @@
   background: var(--color-scrollbar-thumb-hover);
 }
 
+/* Table-specific scrollbars: smaller, transparent by default, visible on hover */
+.kube-table-container::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+.kube-table-container::-webkit-scrollbar-track {
+  background: transparent;
+}
+.kube-table-container::-webkit-scrollbar-thumb {
+  background: var(--color-scrollbar-thumb);
+  border-radius: 3px;
+}
+.kube-table-container::-webkit-scrollbar-thumb:hover {
+  background: var(--color-scrollbar-thumb-hover);
+}
+.kube-table-container::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
 /* Global overrides for full-screen desktop application */
 html,
 body,

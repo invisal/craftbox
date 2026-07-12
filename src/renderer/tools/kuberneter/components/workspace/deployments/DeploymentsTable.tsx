@@ -1,23 +1,27 @@
 import React, { useMemo } from 'react';
 import { KubeTable, Column } from '../../kubeTable';
-import { MoreVertical } from 'lucide-react';
+import { MoreVertical, AlertTriangle } from 'lucide-react';
 import { cn } from 'cnfast';
-import { ApplicationData } from '../../../types/ApplicationData';
+import { DeployData } from '../../../types/DeployData';
 
-interface ApplicationsTableProps {
-  filteredData: ApplicationData[];
+interface DeploymentsTableProps {
+  filteredData: DeployData[];
   selectedIds: Set<string>;
   onSelectAll: (checked: boolean) => void;
   onSelectRow: (id: string, checked: boolean) => void;
+  onSelectDeploy: (deploy: DeployData) => void;
+  selectedDeployId?: string;
 }
 
-export const ApplicationsTable: React.FC<ApplicationsTableProps> = ({
+export const DeploymentsTable: React.FC<DeploymentsTableProps> = ({
   filteredData,
   selectedIds,
   onSelectAll,
-  onSelectRow
+  onSelectRow,
+  onSelectDeploy,
+  selectedDeployId
 }) => {
-  const columns = useMemo<Column<ApplicationData>[]>(
+  const columns = useMemo<Column<DeployData>[]>(
     () => [
       {
         key: 'select',
@@ -44,59 +48,68 @@ export const ApplicationsTable: React.FC<ApplicationsTableProps> = ({
         resizable: false
       },
       {
-        key: 'instance',
-        header: 'Instance',
+        key: 'name',
+        header: 'Name',
         render: (row) => (
-          <span className="font-mono text-zinc-300 font-semibold">{row.instance}</span>
+          <span
+            className="font-mono text-zinc-300 font-semibold truncate hover:underline"
+            title={row.name}
+          >
+            {row.name}
+          </span>
         ),
-        className: 'font-mono text-zinc-300',
-        initialWidth: 180
+        className: 'font-mono text-zinc-300 max-w-[240px] truncate',
+        initialWidth: 240
       },
       {
-        key: 'application',
-        header: 'Application',
-        render: (row) => <span className="font-sans text-zinc-200">{row.application}</span>,
-        className: 'text-zinc-200',
-        initialWidth: 160
+        key: 'warning',
+        header: (
+          <div className="flex justify-center">
+            <AlertTriangle className="size-3.5 text-zinc-500" />
+          </div>
+        ),
+        render: (row) => (
+          <div
+            className="flex justify-center"
+            title={row.hasWarning ? `Deployment has unready replicas` : undefined}
+          >
+            {row.hasWarning && <AlertTriangle className="size-3.5 text-amber-500 animate-pulse" />}
+          </div>
+        ),
+        headerClassName: 'w-10 text-center',
+        className: 'w-10 text-center',
+        initialWidth: 40,
+        resizable: false
       },
       {
         key: 'namespace',
         header: 'Namespace',
         render: (row) => (
-          <span className="font-mono text-[10px] text-zinc-550">{row.namespace}</span>
+          <span className="font-mono text-accent hover:underline cursor-pointer">{row.ns}</span>
         ),
-        className: 'font-mono text-zinc-550',
-        initialWidth: 160
+        className: 'font-mono text-accent',
+        initialWidth: 120
       },
       {
-        key: 'managedBy',
-        header: 'Managed By',
-        render: (row) =>
-          row.managedBy ? (
-            <span className="text-zinc-400 text-[11px]">{row.managedBy}</span>
-          ) : (
-            <span className="text-zinc-600">—</span>
-          ),
-        className: 'text-xs',
+        key: 'pods',
+        header: 'Pods',
+        render: (row) => <span className="font-mono text-[11px] text-zinc-300">{row.ready}</span>,
         initialWidth: 100
       },
       {
-        key: 'version',
-        header: 'Version',
+        key: 'replicas',
+        header: 'Replicas',
         render: (row) => (
-          <span className="font-mono text-zinc-400">
-            {row.version || <span className="text-zinc-600">—</span>}
-          </span>
+          <span className="font-mono text-[11px] text-zinc-400">{row.replicas}</span>
         ),
-        className: 'font-mono text-zinc-400',
-        initialWidth: 80
+        initialWidth: 100
       },
       {
         key: 'age',
         header: 'Age',
         render: (row) => <span className="text-zinc-500 font-mono text-[11px]">{row.age}</span>,
         className: 'text-zinc-500',
-        initialWidth: 70
+        initialWidth: 100
       },
       {
         key: 'status',
@@ -114,8 +127,7 @@ export const ApplicationsTable: React.FC<ApplicationsTableProps> = ({
             </span>
           );
         },
-        className: 'text-xs',
-        initialWidth: 80
+        initialWidth: 120
       },
       {
         key: 'actions',
@@ -150,7 +162,9 @@ export const ApplicationsTable: React.FC<ApplicationsTableProps> = ({
       getRowKey={(row) => row.id}
       variant="modern"
       className="flex-1"
-      emptyMessage="No applications match the search filters."
+      onRowClick={(row) => onSelectDeploy(row)}
+      selectedRowKey={selectedDeployId}
+      emptyMessage="No deployments match the search filters."
     />
   );
 };
