@@ -15,7 +15,8 @@ import {
   captureFromSource,
   captureFromSystemPicker,
   selectAndCaptureRegion,
-  screenshotFileName
+  screenshotFileName,
+  type RegionCaptureStep
 } from './lib/capture-frame';
 
 interface Props {}
@@ -66,6 +67,7 @@ export function ScreenCaptureMain({}: ToolComponentProps<Props>): JSX.Element {
   const usesOsPicker = window.api?.usesOsCapturePicker ?? false;
   const [phase, setPhase] = useState<Phase>('idle');
   const [captureMode, setCaptureMode] = useState<CaptureMode>('source');
+  const [captureStep, setCaptureStep] = useState<RegionCaptureStep>('picker');
   const [selectedSource, setSelectedSource] = useState<CaptureSource | null>(null);
   const [previewDataUrl, setPreviewDataUrl] = useState<string | null>(null);
   const [previewBlob, setPreviewBlob] = useState<Blob | null>(null);
@@ -110,14 +112,22 @@ export function ScreenCaptureMain({}: ToolComponentProps<Props>): JSX.Element {
 
   const runRegionCapture = async (): Promise<void> => {
     setCaptureMode('region');
+    setCaptureStep('picker');
     setPhase('capturing');
     setPreviewDataUrl(null);
     setPreviewBlob(null);
 
     try {
-      await finishCapture(await selectAndCaptureRegion(sources, usesOsPicker));
-    } catch {
+      const blob = await selectAndCaptureRegion(sources, usesOsPicker, (step) => {
+        setCaptureStep(step);
+        setPhase('capturing');
+      });
+      await finishCapture(blob);
+    } catch (err) {
       setPhase('idle');
+      if (err instanceof Error && err.message.includes('monitor')) {
+        notifyError(err.message);
+      }
     }
   };
 
@@ -126,6 +136,7 @@ export function ScreenCaptureMain({}: ToolComponentProps<Props>): JSX.Element {
 
     setSelectedSource(source);
     setCaptureMode('source');
+    setCaptureStep('picker');
     setPhase('capturing');
     setPreviewDataUrl(null);
     setPreviewBlob(null);
@@ -184,11 +195,17 @@ export function ScreenCaptureMain({}: ToolComponentProps<Props>): JSX.Element {
     : undefined;
 
   const capturingMessage =
-    captureMode === 'region'
-      ? 'Capturing selected region…'
-      : usesOsPicker
-        ? 'Choose what to share in the system dialog…'
-        : 'Capturing…';
+    captureMode === 'region' && captureStep === 'processing'
+      ? 'Cropping screenshot…'
+      : captureMode === 'region' && captureStep === 'region'
+        ? 'Drag a region on screen…'
+        : captureMode === 'region' && usesOsPicker
+          ? 'Choose a monitor in the system dialog…'
+          : captureMode === 'region'
+            ? 'Capturing selected region…'
+            : usesOsPicker
+              ? 'Choose what to share in the system dialog…'
+              : 'Capturing…';
 
   return (
     <Tabs.Root

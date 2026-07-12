@@ -8,6 +8,8 @@ import {
   captureScreenPngWithHide,
   type ScreenshotCaptureRequest
 } from '../capture/screenshot-capture';
+import { pickOsCaptureSource } from '../capture/pick-os-capture-source';
+import type { OsPickerSource } from '@shared/os-picker-source';
 
 export function registerDialogHandlers(): void {
   ipcMain.handle(
@@ -34,6 +36,13 @@ export function registerDialogHandlers(): void {
     async (event, request: ScreenshotCaptureRequest): Promise<Buffer> => {
       const win = BrowserWindow.fromWebContents(event.sender);
       return captureScreenPngWithHide(win, request);
+    }
+  );
+
+  ipcMain.handle(
+    IpcChannels.PickOsCaptureSource,
+    async (_event, options?: { monitorOnly?: boolean }): Promise<OsPickerSource | null> => {
+      return pickOsCaptureSource(options?.monitorOnly ?? false);
     }
   );
 

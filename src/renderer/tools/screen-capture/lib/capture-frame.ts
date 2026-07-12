@@ -1,5 +1,6 @@
 import type { CaptureSource } from '@screen-recorder/types/recording';
 import type { CaptureRegionSelection, ScreenRect } from '@shared/capture-region';
+import type { OsPickerSource } from '@shared/os-picker-source';
 
 interface DesktopVideoConstraint {
   mandatory: {
@@ -119,6 +120,20 @@ async function grabPngFromStream(stream: MediaStream): Promise<Blob> {
   }
 }
 
+async function pickOsCaptureSource(monitorOnly: boolean): Promise<OsPickerSource | null> {
+  return window.screenRecorder!.screenshot.pickOsSource({ monitorOnly });
+}
+
+function osPickerToCaptureSource(picked: OsPickerSource): CaptureSource {
+  return {
+    id: picked.id,
+    name: picked.type === 'screen' ? 'Screen' : 'Window',
+    type: picked.type,
+    thumbnailDataUrl: '',
+    displayId: picked.displayId
+  };
+}
+
 async function getDesktopVideoStream(source: CaptureSource): Promise<MediaStream> {
   const constraints: MediaStreamConstraints = {
     audio: false,
@@ -154,7 +169,7 @@ export async function captureFromSource(
 ): Promise<Blob> {
   const shouldHideApp = options?.hideApp ?? source.type === 'screen';
 
-  // Full-display capture uses main-process desktopCapturer (all platforms).
+  // Full-display capture uses main-process desktopCapturer (macOS/Windows/X11).
   // Atomic hide → grab → restore avoids macOS renderer suspension during IPC.
   if (source.type === 'screen') {
     return captureDisplayPng(source, { hideBeforeCapture: shouldHideApp });
@@ -197,7 +212,7 @@ export async function captureFromSystemPicker(): Promise<Blob> {
   try {
     return await grabPngFromStream(stream);
   } finally {
-    if (shouldHideApp) await showApp();
+    if (shouldHideApp) await showApp({ focus: true });
   }
 }
 
@@ -268,26 +283,55 @@ export function findScreenSourceForRegion(
   return matched ?? screens[0] ?? null;
 }
 
+export type RegionCaptureStep = 'picker' | 'region' | 'processing';
+
 /** Drag a screen region, capture the matching display, and return a cropped PNG. */
 export async function selectAndCaptureRegion(
   sources: CaptureSource[],
-  usesOsPicker: boolean
+  usesOsPicker: boolean,
+  onStep?: (step: RegionCaptureStep) => void
 ): Promise<Blob | null> {
+  let portalStream: MediaStream | null = null;
+
+  if (usesOsPicker) {
+    onStep?.('picker');
+    try {
+      const picked = await pickOsCaptureSource(true);
+      if (!picked) return null;
+      if (picked.type !== 'screen') {
+        throw new Error('Region capture requires a monitor. Choose a screen, not a window or tab.');
+      }
+      portalStream = await getDesktopVideoStream(osPickerToCaptureSource(picked));
+    } catch (err) {
+      if (err instanceof Error && err.message.includes('monitor')) throw err;
+      return null;
+    }
+  }
+
+  const stopPortalStream = (): void => {
+    portalStream?.getTracks().forEach((track) => track.stop());
+    portalStream = null;
+  };
+
+  onStep?.('region');
   await hideMainWindow();
 
   let selection: CaptureRegionSelection | null = null;
   try {
     selection = (await window.screenRecorder?.screenshot.selectRegion()) ?? null;
   } finally {
-    // Restore main window after overlay closes (unfocused so the next grab is reliable).
     await showApp({ focus: false });
   }
 
-  if (!selection) return null;
+  if (!selection) {
+    stopPortalStream();
+    return null;
+  }
 
   try {
     if (usesOsPicker) {
-      const fullBlob = await captureFromSystemPicker();
+      onStep?.('processing');
+      const fullBlob = await grabPngFromStream(portalStream!);
       const cropped = await cropPngBlob(fullBlob, selection);
       await showApp({ focus: true });
       return cropped;
@@ -296,6 +340,7 @@ export async function selectAndCaptureRegion(
     const source = findScreenSourceForRegion(sources, selection);
     if (!source) return null;
 
+    onStep?.('processing');
     const fullBlob = await captureFromSource(source, { hideApp: false });
     const cropped = await cropPngBlob(fullBlob, selection);
     await showApp({ focus: true });
@@ -303,6 +348,8 @@ export async function selectAndCaptureRegion(
   } catch {
     await showApp({ focus: true });
     return null;
+  } finally {
+    stopPortalStream();
   }
 }
 

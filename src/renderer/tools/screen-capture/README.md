@@ -5,7 +5,7 @@ Take a single PNG screenshot of a screen, window, or screen region. Preview the 
 **Source selection is platform-dependent:**
 
 - **macOS / Windows / Linux X11:** in-app thumbnail grid (`desktopCapturer.getSources`)
-- **Linux Wayland (PipeWire):** OS portal picker via `getDisplayMedia` — PipeWire cannot enumerate all sources for a custom grid
+- **Linux Wayland (PipeWire):** OS portal picker via main-process `desktopCapturer.getSources`
 
 ## How it's mounted into CraftBox
 
@@ -41,10 +41,12 @@ region-select.html / .ts       Fullscreen drag-to-select overlay (separate rende
 Shared with main/preload (not under this directory):
 
 - `src/shared/uses-os-capture-picker.ts` — Wayland detection (`window.api.usesOsCapturePicker`)
+- `src/shared/os-picker-source.ts` — shape returned by `screenshot.pickOsSource`
+- `src/main/screen-recorder/capture/pick-os-capture-source.ts` — Wayland region portal (main-process `getSources`)
 - `src/main/screen-recorder/capture/screenshot-capture.ts` — main-process full-display PNG grab
 - `src/main/screen-recorder/windows/window-visibility.ts` — hide/restore helpers (shared with window IPC)
 - `src/main/screen-recorder/windows/region-select-window.ts` — transparent overlay spanning all displays
-- `src/main/screen-recorder/security/display-media-handler.ts` — portal routing for `getDisplayMedia`
+- `src/main/screen-recorder/security/display-media-handler.ts` — routes Wayland `getDisplayMedia` to PipeWire portal
 
 ## UI flow (`index.tsx`)
 
@@ -71,21 +73,36 @@ Skipped when `window.api.usesOsCapturePicker` is true (Linux Wayland). Otherwise
 
 Thumbnails come from `main/screen-recorder/capture/screen-source-provider.ts` (`desktopCapturer.getSources`).
 
+## Cross-platform summary
+
+| Action              | macOS / Windows / Linux X11                           | Linux Wayland (PipeWire)                                   |
+| ------------------- | ----------------------------------------------------- | ---------------------------------------------------------- |
+| **Capture**         | In-app grid → main-process PNG (screen hides app)     | `getDisplayMedia` portal → hide if monitor → stream grab   |
+| **Capture region**  | Overlay → main-process PNG + crop (app stays visible) | `pickOsSource` portal first → overlay → stream grab + crop |
+| Source grid         | Yes (`getCaptureSources`)                             | No — OS portal instead                                     |
+| Hide on full screen | Yes (atomic main-process IPC)                         | Yes (renderer hide before stream grab)                     |
+
+Wayland uses **two different portal paths on purpose**:
+
+- **Full capture** — renderer `getDisplayMedia()` with `display-media-handler.ts` placeholder + `useSystemPicker: true`. Do not call `desktopCapturer.getSources` in the handler; it breaks the live PipeWire stream.
+- **Region capture** — main-process `screenshot.pickOsSource({ monitorOnly: true })` blocks on the portal, then renderer `getUserMedia` with the picked source id. Separate from `getDisplayMedia`.
+
 ## Region capture (`selectAndCaptureRegion`)
 
 **Capture region** and **Capture** sit together in a footer pinned to the bottom-right of the app (scroll the source grid above).
 
-1. Hide the main CraftBox window only (`window.hide({ mainOnly: true })`) so the overlay can show on macOS
-2. `window.screenRecorder.screenshot.selectRegion()` — transparent overlay spanning the virtual desktop
-3. User drags a rect (Esc cancels) — `region-select.ts` maps client coords to screen space via `ox`/`oy` query params
-4. Restore main window unfocused, capture the matching display, crop in `capture-frame.ts`, then focus for preview
+1. **Linux Wayland:** main-process portal (`screenshot.pickOsSource`, monitors only) — blocks until you pick a screen, then steps 2–5 below
+2. Hide the main CraftBox window only (`window.hide({ mainOnly: true })`) so the overlay can show on macOS
+3. `window.screenRecorder.screenshot.selectRegion()` — transparent overlay spanning the virtual desktop
+4. User drags a rect (Esc cancels) — `region-select.ts` maps client coords to screen space via `ox`/`oy` query params
+5. Restore main window unfocused, grab from the primed PipeWire stream, crop in `capture-frame.ts`, then focus for preview
 
-| Platform      | Region overlay | Capture backend after selection                                                              |
-| ------------- | -------------- | -------------------------------------------------------------------------------------------- |
-| macOS         | Yes            | Main-process `desktopCapturer` full frame + crop (`hideApp: false` — window stays visible)   |
-| Windows       | Yes            | Main-process `desktopCapturer` full frame + crop                                             |
-| Linux X11     | Yes            | Main-process `desktopCapturer` full frame + crop                                             |
-| Linux Wayland | Yes            | `getDisplayMedia` portal + crop — ponytail: may re-prompt portal; multi-monitor less precise |
+| Platform      | Region overlay | Capture backend after selection                                                                 |
+| ------------- | -------------- | ----------------------------------------------------------------------------------------------- |
+| macOS         | Yes            | Main-process `desktopCapturer` full frame + crop (`hideApp: false` — window stays visible)      |
+| Windows       | Yes            | Main-process `desktopCapturer` full frame + crop                                                |
+| Linux X11     | Yes            | Main-process `desktopCapturer` full frame + crop                                                |
+| Linux Wayland | Yes            | Portal before overlay, then grab from open stream + crop — ponytail: multi-monitor less precise |
 
 ## Capture pipeline (`lib/capture-frame.ts`)
 
@@ -117,17 +134,17 @@ PNG Blob
 ### OS picker (Linux Wayland) — `captureFromSystemPicker`
 
 1. User clicks **Capture**
-2. `getDisplayMedia()` — PipeWire portal shows all screens/windows
-3. Main process `display-media-handler.ts` passes a placeholder source on Wayland so the portal owns selection
-4. If `displaySurface === 'monitor'` (or near-full-frame heuristic when PipeWire omits it) → hide CraftBox, grab one frame from the stream, restore
-5. Window/application captures skip hide/show
+2. Renderer `getDisplayMedia()` — PipeWire portal (handler in `display-media-handler.ts` uses placeholder source + `useSystemPicker: true`)
+3. `isMonitorCapture(stream)` — hide CraftBox only for full-display monitor picks
+4. `grabPngFromStream` on the live portal stream, then restore
 
 ```
 User clicks Capture
     ↓
 captureFromSystemPicker()
-    ↓ getDisplayMedia (portal picker)
-    ↓ hide (monitor only) → grabPngFromStream → restore
+    ↓ getDisplayMedia (PipeWire portal)
+    ↓ monitor: hide → grabPngFromStream → restore
+    ↓ window: grabPngFromStream (no hide)
 PNG Blob
 ```
 
@@ -152,15 +169,16 @@ Main-process copy: `src/main/screen-recorder/clipboard/copy-screenshot-to-clipbo
 
 Reuses the **`window.screenRecorder`** preload namespace (same as Screen Recorder) even though this is a separate tool tab.
 
-| `window.screenRecorder.*`     | Handler / module                                                       | Used by Screen Capture |
-| ----------------------------- | ---------------------------------------------------------------------- | ---------------------- |
-| `recording.getCaptureSources` | `ipc/recording-handlers.ts` → `capture/screen-source-provider.ts`      | Yes — thumbnail picker |
-| `screenshot.capture`          | `ipc/dialog-handlers.ts` → `capture/screenshot-capture.ts`             | Yes — full-display PNG |
-| `screenshot.selectRegion`     | `ipc/region-handlers.ts` → `windows/region-select-window.ts`           | Yes — region overlay   |
-| `window.hide` / `restore`     | `ipc/window-handlers.ts` → `windows/window-visibility.ts`              | Yes — region + legacy  |
-| `screenshot.copy`             | `ipc/dialog-handlers.ts` → `clipboard/copy-screenshot-to-clipboard.ts` | Yes                    |
-| `screenshot.save`             | `ipc/dialog-handlers.ts` (native save dialog → Pictures)               | Yes                    |
-| `recording.start` / `stop`    | Screen Recorder pipeline                                               | **No**                 |
+| `window.screenRecorder.*`     | Handler / module                                                       | Used by Screen Capture      |
+| ----------------------------- | ---------------------------------------------------------------------- | --------------------------- |
+| `recording.getCaptureSources` | `ipc/recording-handlers.ts` → `capture/screen-source-provider.ts`      | Yes — thumbnail picker      |
+| `screenshot.capture`          | `ipc/dialog-handlers.ts` → `capture/screenshot-capture.ts`             | Yes — full-display PNG      |
+| `screenshot.pickOsSource`     | `ipc/dialog-handlers.ts` → `capture/pick-os-capture-source.ts`         | Yes — Wayland region portal |
+| `screenshot.selectRegion`     | `ipc/region-handlers.ts` → `windows/region-select-window.ts`           | Yes — region overlay        |
+| `window.hide` / `restore`     | `ipc/window-handlers.ts` → `windows/window-visibility.ts`              | Yes — region + legacy       |
+| `screenshot.copy`             | `ipc/dialog-handlers.ts` → `clipboard/copy-screenshot-to-clipboard.ts` | Yes                         |
+| `screenshot.save`             | `ipc/dialog-handlers.ts` (native save dialog → Pictures)               | Yes                         |
+| `recording.start` / `stop`    | Screen Recorder pipeline                                               | **No**                      |
 
 App-wide notifications (not under `screenRecorder`):
 
@@ -171,18 +189,19 @@ App-wide notifications (not under `screenRecorder`):
 
 Renderer helper: `src/renderer/src/lib/notify.ts` — `notifySuccess()` / `notifyError()` with title **CraftBox**.
 
-IPC channels (`src/shared/ipc-channels.ts`): `capture:get-sources`, `screenshot:capture`, `screenshot:copy`, `screenshot:save`, `screenshot:select-region`, `region-select:complete`, `region-select:cancel`, `notification:show`, `window:hide`, `window:restore`.
+IPC channels (`src/shared/ipc-channels.ts`): `capture:get-sources`, `screenshot:capture`, `screenshot:pick-os-source`, `screenshot:copy`, `screenshot:save`, `screenshot:select-region`, `region-select:complete`, `region-select:cancel`, `notification:show`, `window:hide`, `window:restore`.
 
 ## Shared global hooks (affects other tools)
 
 Registered once in `src/main/index.ts`:
 
-| Module                                                | Scope                                      | Screen Capture usage                             |
-| ----------------------------------------------------- | ------------------------------------------ | ------------------------------------------------ |
-| `screen-recorder/security/content-security-policy.ts` | Whole app CSP                              | `img-src` includes `data:` for picker thumbnails |
-| `screen-recorder/security/display-media-handler.ts`   | `getDisplayMedia` on Linux Wayland         | Routes capture to PipeWire portal picker         |
-| `screen-recorder/ipc/window-handlers.ts`              | All tools using title bar / hide / restore | Hide/restore for region + title bar              |
-| `screen-recorder/capture/screen-source-provider.ts`   | Shared with Screen Recorder source picker  | Lists screens/windows for the thumbnail grid     |
+| Module                                                | Scope                          | Screen Capture usage                                             |
+| ----------------------------------------------------- | ------------------------------ | ---------------------------------------------------------------- |
+| `screen-recorder/security/content-security-policy.ts` | Whole app CSP                  | `img-src` includes `data:` for picker thumbnails                 |
+| `screen-recorder/security/display-media-handler.ts`   | `getDisplayMedia`              | Wayland only — placeholder source + `useSystemPicker: true`      |
+| `screen-recorder/ipc/window-handlers.ts`              | All tools using hide / restore | Hide/restore for region overlay + full-display capture           |
+| `screen-recorder/capture/screen-source-provider.ts`   | Shared with Screen Recorder    | Lists screens/windows for the in-app thumbnail grid              |
+| `screen-recorder/capture/pick-os-capture-source.ts`   | Wayland region portal          | `screenshot.pickOsSource` — monitors only, before region overlay |
 
 Screen Capture and Screen Recorder share **`getCaptureSources`** and hide/restore IPC. Screen Capture uses **main-process `desktopCapturer`** for full-display stills; **renderer `getUserMedia`** for window stills and Wayland portal streams. Screen Recorder video capture stays renderer-only (`capture-engine.ts`).
 
@@ -201,14 +220,15 @@ Screen Capture and Screen Recorder share **`getCaptureSources`** and hide/restor
 
 - **Custom in-app toast** — replaced by native OS notifications
 - **Fixed-delay settle after hide** — removed; hide/show sync on IPC `'hide'`/`'show'` events and video element events only
-- **Renderer-only full-display capture** — replaced by main-process `screenshot:capture` (macOS renderer suspension + focus issues)
+- **Renderer-only full-display capture** — replaced by main-process `screenshot:capture` on in-app picker platforms (macOS renderer suspension + focus issues)
+- **`displayMedia.setPickerKind` / `consumePickerSource` IPC** — removed; region portal uses `screenshot.pickOsSource` instead
 
 ## Platform notes
 
-- **macOS:** full-display capture uses atomic main-process IPC with `mainOnly` hide
-- **Windows:** full-display capture uses `win.hide()` inside atomic main-process IPC
+- **macOS:** full-display in-app capture uses atomic main-process IPC with `mainOnly` hide; region overlay uses `hide({ mainOnly: true })` so the overlay can appear above other apps
+- **Windows:** full-display capture uses `win.hide()` inside atomic main-process IPC; region keeps the app visible during grab (`hideApp: false`)
 - **Linux X11:** same in-app grid + main-process full-display capture as Windows
-- **Linux Wayland:** `usesOsCapturePicker` — no in-app grid; `getDisplayMedia` + `display-media-handler.ts` for portal picker; clipboard needs main-process write + focus wait on non-macOS
+- **Linux Wayland:** no in-app grid; full capture via `getDisplayMedia` + `display-media-handler.ts`; region via `screenshot.pickOsSource` then stream grab; clipboard needs main-process write + focus wait on non-macOS
 - **`region-select.ts`** is a separate renderer entry — included in `tsconfig.web.json`; imports preload types for `window.screenRecorder`
 - **`waitForVideoFrame`** (Wayland/window path) uses video element events only (`loadeddata`, `playing`, `resize`)
 

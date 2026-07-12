@@ -97,7 +97,11 @@ export const screenRecorderApi = {
     save: (data: ArrayBuffer, defaultFileName: string): Promise<string | null> =>
       ipcRenderer.invoke(IpcChannels.SaveScreenshot, data, defaultFileName),
     selectRegion: (): Promise<import('@shared/capture-region').CaptureRegionSelection | null> =>
-      ipcRenderer.invoke(IpcChannels.SelectCaptureRegion)
+      ipcRenderer.invoke(IpcChannels.SelectCaptureRegion),
+    pickOsSource: (options?: {
+      monitorOnly?: boolean;
+    }): Promise<import('@shared/os-picker-source').OsPickerSource | null> =>
+      ipcRenderer.invoke(IpcChannels.PickOsCaptureSource, options)
   },
   regionSelect: {
     complete: (rect: ScreenRect): void => ipcRenderer.send(IpcChannels.RegionSelectComplete, rect),

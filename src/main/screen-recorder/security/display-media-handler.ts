@@ -1,7 +1,7 @@
 import { desktopCapturer, session } from 'electron';
 import { usesOsCapturePicker } from '@shared/uses-os-capture-picker';
 
-/** Routes getDisplayMedia to the OS picker (PipeWire portal on Wayland). */
+/** Routes getDisplayMedia to the OS picker (PipeWire portal on Linux Wayland). */
 export function registerDisplayMediaHandler(): void {
   session.defaultSession.setDisplayMediaRequestHandler(
     async (_request, callback) => {

@@ -34,7 +34,8 @@ export const IpcChannels = {
   WindowMaximizeChanged: 'window:maximize-changed',
   GetScreenRecordingStatus: 'permissions:get-screen-recording-status',
   OpenScreenRecordingSettings: 'permissions:open-screen-recording-settings',
-  ShowNotification: 'notification:show'
+  ShowNotification: 'notification:show',
+  PickOsCaptureSource: 'screenshot:pick-os-source'
 } as const;
 
 export type IpcChannel = (typeof IpcChannels)[keyof typeof IpcChannels];
