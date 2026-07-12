@@ -12,6 +12,7 @@ import { TopNodeItem } from '../../types/TopNodeItem';
 import { formatAge } from '../../ults/formatAge';
 import { formatAgeLong } from '../../ults/formatAgeLong';
 import { parseK8sCapacity, formatCapacity } from '../../ults/formatCapacity';
+import { PodResource, ContainerStatus } from '../../types/PodResource';
 
 export function useWorkspaceResources(resource: string) {
   const activeInstanceId = useLayoutStore((s) => s.activeInstanceId);
@@ -84,21 +85,112 @@ export function useWorkspaceResources(resource: string) {
         }
       }
 
+      let topPodsItems: { namespace: string; name: string; cpu: string; memory: string }[] = [];
+      if (resource === 'pods') {
+        try {
+          const topPodsRes = await window.kuberneter.getTopPods(
+            configPathArg,
+            kuberneterSelectedCluster,
+            kuberneterSelectedNamespace
+          );
+          if (topPodsRes && topPodsRes.items) {
+            topPodsItems = topPodsRes.items;
+          }
+        } catch (e) {
+          console.warn('Failed to fetch top pods', e);
+        }
+      }
+
       const items = (res.items as K8sResource[]) || [];
 
       if (resource === 'pods') {
         const transformed = items.map((item) => {
-          const containerStatuses = item.status?.containerStatuses || [];
-          const restarts = containerStatuses.reduce(
+          const podItem = item as unknown as PodResource;
+          const name = podItem.metadata?.name || '';
+          const ns = podItem.metadata?.namespace || '';
+
+          const initContainerStatuses = podItem.status?.initContainerStatuses || [];
+          const containerStatuses = podItem.status?.containerStatuses || [];
+          const restarts = [...initContainerStatuses, ...containerStatuses].reduce(
             (acc: number, c) => acc + (c.restartCount || 0),
             0
           );
+
+          const podMetric = topPodsItems.find((p) => p.name === name && p.namespace === ns);
+
+          let cpuDisplay = 'N/A';
+          if (podMetric && podMetric.cpu) {
+            const rawCpu = podMetric.cpu.trim();
+            if (rawCpu.endsWith('m')) {
+              const millicores = parseInt(rawCpu.slice(0, -1), 10);
+              cpuDisplay = (millicores / 1000).toFixed(3);
+            } else {
+              const cores = parseFloat(rawCpu);
+              cpuDisplay = isNaN(cores) ? 'N/A' : cores.toFixed(3);
+            }
+          }
+
+          let memDisplay = 'N/A';
+          if (podMetric && podMetric.memory) {
+            const rawMem = podMetric.memory.trim();
+            if (rawMem.match(/[KMG]i$/)) {
+              memDisplay = rawMem + 'B';
+            } else {
+              memDisplay = rawMem;
+            }
+          }
+
+          const containers = containerStatuses.map((c: ContainerStatus) => ({
+            name: c.name,
+            ready: !!c.ready
+          }));
+
+          const ownerRefs = podItem.metadata?.ownerReferences || [];
+          const controlledBy = ownerRefs.length > 0 ? ownerRefs[0].kind : '';
+
+          const node = podItem.spec?.nodeName || '';
+          const qos = podItem.status?.qosClass || '';
+
+          const phase = podItem.status?.phase || 'Unknown';
+          let hasWarning = phase !== 'Running' && phase !== 'Succeeded';
+          if (!hasWarning) {
+            const allStatuses = [...initContainerStatuses, ...containerStatuses];
+            hasWarning = allStatuses.some((c: ContainerStatus) => {
+              const waiting = c.state?.waiting;
+              const terminated = c.state?.terminated;
+              if (waiting) {
+                const badReasons = [
+                  'CrashLoopBackOff',
+                  'ImagePullBackOff',
+                  'ErrImagePull',
+                  'CreateContainerConfigError',
+                  'CreateContainerError',
+                  'InvalidImageName'
+                ];
+                return waiting.reason && badReasons.includes(waiting.reason);
+              }
+              if (terminated) {
+                return terminated.exitCode !== 0;
+              }
+              return false;
+            });
+          }
+
           return {
-            name: item.metadata?.name || '',
-            ns: item.metadata?.namespace || '',
-            status: item.status?.phase || 'Unknown',
+            id: `${ns}/${name}`,
+            name,
+            ns,
+            status: phase,
             restarts,
-            age: formatAge(item.metadata?.creationTimestamp || '')
+            age: formatAge(item.metadata?.creationTimestamp || ''),
+            rawAge: new Date(item.metadata?.creationTimestamp || Date.now()).getTime().toString(),
+            cpu: cpuDisplay,
+            memory: memDisplay,
+            containers,
+            controlledBy,
+            node,
+            qos,
+            hasWarning
           };
         });
         setPodsData(transformed);
