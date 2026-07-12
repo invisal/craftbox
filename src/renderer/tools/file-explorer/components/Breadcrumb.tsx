@@ -11,36 +11,54 @@ interface BreadcrumbProps {
   onNavigate: (path: string) => void;
 }
 
-export function Breadcrumb({ currentPath, onNavigate }: BreadcrumbProps) {
+export function Breadcrumb(props: BreadcrumbProps) {
+  return (
+    <div className="flex items-center gap-1 p-1 px-1 bg-surface border-b border-border">
+      <BreadcrumbInner {...props} />
+    </div>
+  );
+}
+
+export function BreadcrumbInner({ currentPath, onNavigate }: BreadcrumbProps) {
   const segments = splitPathSegments(currentPath);
 
   return (
-    <div className="flex items-center gap-1 px-3 py-2 border-b border-border-dark bg-surface-2 text-xs overflow-x-auto shrink-0 select-none">
-      <BreadcrumbLocationPicker onNavigate={onNavigate} />
-      {segments.map((segment, i) => {
-        const isLast = i === segments.length - 1;
-        return (
-          <span key={segment.path} className="flex items-center gap-1 shrink-0">
-            {i > 0 && <BreadcrumbSegmentMenu path={segments[i - 1].path} onNavigate={onNavigate} />}
-            <button
-              onClick={() => onNavigate(segment.path)}
-              disabled={isLast}
-              className={cn(
-                'px-1.5 py-0.5 rounded max-w-48 truncate',
-                isLast
-                  ? 'text-text-base font-medium cursor-default'
-                  : 'text-text-dim cursor-pointer hover:bg-surface-4'
+    <>
+      <div>
+        <BreadcrumbLocationPicker onNavigate={onNavigate} />
+      </div>
+      <div
+        className={cn(
+          'flex flex-1 items-center px-1 h-8 text-xs overflow-x-auto shrink-0 select-none', // Layout
+          'bg-surface-2', // Background
+          'border border-border rounded', // Border
+          'shadow-[inset_0_1px_2px_rgba(0,0,0,0.12),inset_0_-1px_0_rgba(255,255,255,0.05)]' // 3D inset
+        )}
+      >
+        {segments.map((segment, i) => {
+          const isLast = i === segments.length - 1;
+          return (
+            <span key={segment.path} className="flex items-center gap-1 shrink-0">
+              {i > 0 && (
+                <BreadcrumbSegmentMenu path={segments[i - 1].path} onNavigate={onNavigate} />
               )}
-            >
-              {segment.label}
-            </button>
-          </span>
-        );
-      })}
-      {segments.length > 0 && (
-        <BreadcrumbSegmentMenu path={segments[segments.length - 1].path} onNavigate={onNavigate} />
-      )}
-    </div>
+              <button
+                onClick={() => onNavigate(segment.path)}
+                disabled={isLast}
+                className={cn(
+                  'px-2 h-6 rounded max-w-48 truncate text-xs border border-surface-2',
+                  isLast
+                    ? 'text-text-base font-medium cursor-default'
+                    : 'text-text-dim cursor-pointer hover:bg-surface hover:border-border'
+                )}
+              >
+                {segment.label}
+              </button>
+            </span>
+          );
+        })}
+      </div>
+    </>
   );
 }
 
@@ -54,11 +72,14 @@ function BreadcrumbLocationPicker({ onNavigate }: { onNavigate: (path: string) =
   return (
     <Menu.Root>
       <Menu.Trigger
-        className="flex items-center shrink-0 px-1.5 py-0.5 rounded text-text-dim hover:bg-surface-4 cursor-pointer"
         title="Locations"
-      >
-        <HardDrive size={14} />
-      </Menu.Trigger>
+        render={
+          <button className="h-8 w-8 flex items-center justify-center hover:bg-surface-2 rounded border border-transparent hover:border-border cursor-pointer">
+            <HardDrive size={14} />
+          </button>
+        }
+      />
+
       <Menu.Content align="start">
         {sections && sections.favorites.length > 0 && (
           <Menu.Group>
@@ -128,7 +149,7 @@ function BreadcrumbSegmentMenu({
 
   return (
     <Menu.Root onOpenChange={handleOpenChange}>
-      <Menu.Trigger className="flex items-center shrink-0 rounded hover:bg-surface-4 cursor-pointer">
+      <Menu.Trigger className="flex items-center h-6 w-4 justify-center shrink-0 rounded hover:bg-surface border border-transparent hover:border-border cursor-pointer">
         <ChevronRight size={12} className="text-zinc-600 shrink-0" />
       </Menu.Trigger>
       <Menu.Content align="start">
