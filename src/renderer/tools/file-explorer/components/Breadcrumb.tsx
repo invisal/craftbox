@@ -6,10 +6,19 @@ import { ContextMenu } from '@renderer/components/ui/ContextMenu';
 import { splitPathSegments } from '../lib/paths';
 import { getFavoriteIcon } from '../lib/sidebarIcons';
 import type { SidebarSections } from '../../../../preload/file-explorer/api';
+import type { Panel2Mode } from '../store/fileExplorer.store';
+
+interface BreadcrumbModeSwitch {
+  value: Panel2Mode;
+  onChange: (mode: Panel2Mode) => void;
+}
 
 interface BreadcrumbProps {
   currentPath: string;
   onNavigate: (path: string) => void;
+  modeSwitch?: BreadcrumbModeSwitch;
+  /** False when there's no folder to show a path for (e.g. panel 2 in preview mode). Defaults to true. */
+  showPath?: boolean;
 }
 
 export function Breadcrumb(props: BreadcrumbProps) {
@@ -20,70 +29,116 @@ export function Breadcrumb(props: BreadcrumbProps) {
   );
 }
 
-export function BreadcrumbInner({ currentPath, onNavigate }: BreadcrumbProps) {
+export function BreadcrumbInner({
+  currentPath,
+  onNavigate,
+  modeSwitch,
+  showPath = true
+}: BreadcrumbProps) {
   const segments = splitPathSegments(currentPath);
   const [isEditing, setIsEditing] = useState(false);
 
   return (
     <>
-      <div>
-        <BreadcrumbLocationPicker onNavigate={onNavigate} />
-      </div>
-      {isEditing ? (
-        <BreadcrumbPathInput
-          currentPath={currentPath}
-          onNavigate={onNavigate}
-          onDone={() => setIsEditing(false)}
-        />
-      ) : (
-        <div
-          onClick={(e) => {
-            if (e.target === e.currentTarget) setIsEditing(true);
-          }}
-          className={cn(
-            'flex flex-1 items-center px-1 h-8 text-xs overflow-x-auto shrink-0 select-none gap-2 px-3', // Layout
-            'bg-surface-2', // Background
-            'border border-border rounded', // Border
-            'shadow-[inset_0_1px_2px_rgba(0,0,0,0.12),inset_0_-1px_0_rgba(255,255,255,0.05)]' // 3D inset
+      {showPath && (
+        <>
+          <div>
+            <BreadcrumbLocationPicker onNavigate={onNavigate} />
+          </div>
+          {isEditing ? (
+            <BreadcrumbPathInput
+              currentPath={currentPath}
+              onNavigate={onNavigate}
+              onDone={() => setIsEditing(false)}
+            />
+          ) : (
+            <div
+              onClick={(e) => {
+                if (e.target === e.currentTarget) setIsEditing(true);
+              }}
+              className={cn(
+                'flex flex-1 items-center px-1 h-8 text-xs overflow-x-auto shrink-0 select-none gap-2 px-3', // Layout
+                'bg-surface-2', // Background
+                'border border-border rounded', // Border
+                'shadow-[inset_0_1px_2px_rgba(0,0,0,0.12),inset_0_-1px_0_rgba(255,255,255,0.05)]' // 3D inset
+              )}
+            >
+              {segments.map((segment, i) => {
+                const isLast = i === segments.length - 1;
+                return (
+                  <span key={segment.path} className="flex items-center gap-1 shrink-0">
+                    {i > 0 && (
+                      <BreadcrumbSegmentMenu path={segments[i - 1].path} onNavigate={onNavigate} />
+                    )}
+                    <ContextMenu.Root>
+                      <ContextMenu.Trigger
+                        render={
+                          <button
+                            onClick={() => !isLast && onNavigate(segment.path)}
+                            className={cn(
+                              'px-0 h-6 rounded max-w-48 truncate text-xs border border-surface-2 cursor-pointer', // Layout
+                              'text-text-dim hover:bg-surface hover:border-border hover:px-1.5 hover:-mx-1.5', // Color + hover
+                              'data-[popup-open]:bg-surface data-[popup-open]:border-border data-[popup-open]:px-1.5 data-[popup-open]:-mx-1.5' // Keep hover style while menu is open
+                            )}
+                          >
+                            {segment.label}
+                          </button>
+                        }
+                      />
+                      <ContextMenu.Content side="bottom" align="start">
+                        <ContextMenu.Item
+                          onClick={() => navigator.clipboard.writeText(segment.path)}
+                        >
+                          Copy address
+                        </ContextMenu.Item>
+                        <ContextMenu.Item
+                          onClick={() => navigator.clipboard.writeText(segment.label)}
+                        >
+                          Copy name
+                        </ContextMenu.Item>
+                      </ContextMenu.Content>
+                    </ContextMenu.Root>
+                  </span>
+                );
+              })}
+            </div>
           )}
-        >
-          {segments.map((segment, i) => {
-            const isLast = i === segments.length - 1;
-            return (
-              <span key={segment.path} className="flex items-center gap-1 shrink-0">
-                {i > 0 && (
-                  <BreadcrumbSegmentMenu path={segments[i - 1].path} onNavigate={onNavigate} />
-                )}
-                <ContextMenu.Root>
-                  <ContextMenu.Trigger
-                    render={
-                      <button
-                        onClick={() => !isLast && onNavigate(segment.path)}
-                        className={cn(
-                          'px-0 h-6 rounded max-w-48 truncate text-xs border border-surface-2 cursor-pointer', // Layout
-                          'text-text-dim hover:bg-surface hover:border-border hover:px-1.5 hover:-mx-1.5', // Color + hover
-                          'data-[popup-open]:bg-surface data-[popup-open]:border-border data-[popup-open]:px-1.5 data-[popup-open]:-mx-1.5' // Keep hover style while menu is open
-                        )}
-                      >
-                        {segment.label}
-                      </button>
-                    }
-                  />
-                  <ContextMenu.Content side="bottom" align="start">
-                    <ContextMenu.Item onClick={() => navigator.clipboard.writeText(segment.path)}>
-                      Copy address
-                    </ContextMenu.Item>
-                    <ContextMenu.Item onClick={() => navigator.clipboard.writeText(segment.label)}>
-                      Copy name
-                    </ContextMenu.Item>
-                  </ContextMenu.Content>
-                </ContextMenu.Root>
-              </span>
-            );
-          })}
-        </div>
+        </>
       )}
+      {!showPath && <div className="flex-1" />}
+      {modeSwitch && <BreadcrumbModeSwitch modeSwitch={modeSwitch} />}
     </>
+  );
+}
+
+function BreadcrumbModeSwitch({ modeSwitch }: { modeSwitch: BreadcrumbModeSwitch }) {
+  const { value, onChange } = modeSwitch;
+
+  return (
+    <div className="flex items-center gap-0.5 shrink-0 p-0.5 rounded border border-border bg-surface-2">
+      <button
+        onClick={() => onChange('table')}
+        className={cn(
+          'px-2 h-6 rounded text-xs cursor-pointer transition-colors', // Layout
+          value === 'table'
+            ? 'bg-surface-4 text-text-base'
+            : 'text-text-dim hover:bg-surface-3 hover:text-text-base'
+        )}
+      >
+        Explorer
+      </button>
+      <button
+        onClick={() => onChange('preview')}
+        className={cn(
+          'px-2 h-6 rounded text-xs cursor-pointer transition-colors', // Layout
+          value === 'preview'
+            ? 'bg-surface-4 text-text-base'
+            : 'text-text-dim hover:bg-surface-3 hover:text-text-base'
+        )}
+      >
+        Preview
+      </button>
+    </div>
   );
 }
 
