@@ -10,7 +10,7 @@ import { type JobData } from '../../../types/JobData';
 import { type CronJobData } from '../../../types/CronJobData';
 import { type EventData } from '../../../types/EventData';
 import { type K8sResource } from '../../../types/K8sResource';
-import { formatAge } from '../../../ults/formatAge';
+import { formatAge } from '../../../utils/formatAge';
 import { type PodResource, type ContainerStatus } from '../../../types/PodResource';
 
 // ─── parsers ────────────────────────────────────────────────────────────────

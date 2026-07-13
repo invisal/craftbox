@@ -179,7 +179,7 @@ export const DaemonSetsTable: React.FC<DaemonSetsTableProps> = ({
       columns={columns}
       data={filteredData}
       getRowKey={(row) => row.id}
-      variant="modern"
+      variant="standard"
       className="flex-1"
       onRowClick={(row) => onSelectDaemonSet(row)}
       selectedRowKey={selectedDaemonSetId}

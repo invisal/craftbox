@@ -3,6 +3,7 @@ import { useState, useMemo, useCallback } from 'react';
 import { type ApplicationData } from '../../../types/ApplicationData';
 import { ApplicationsToolbar } from './ApplicationsToolbar';
 import { ApplicationsTable } from './ApplicationsTable';
+import { KubeWorkspaceLayout } from '../KubeWorkspaceLayout';
 
 interface ApplicationProps {
   applicationsData: ApplicationData[];
@@ -74,8 +75,8 @@ export const Application: React.FC<ApplicationProps> = ({
   }, []);
 
   return (
-    <div className="flex-1 flex flex-col gap-3 min-h-0 select-none py-4">
-      <div className="px-4">
+    <KubeWorkspaceLayout
+      header={
         <ApplicationsToolbar
           searchQuery={searchQuery}
           caseSensitive={caseSensitive}
@@ -85,13 +86,14 @@ export const Application: React.FC<ApplicationProps> = ({
           onCaseSensitiveToggle={() => setCaseSensitive((v) => !v)}
           onRegexToggle={() => setUseRegex((v) => !v)}
         />
-      </div>
+      }
+    >
       <ApplicationsTable
         filteredData={filteredData}
         selectedIds={selectedIds}
         onSelectAll={handleSelectAll}
         onSelectRow={handleSelectRow}
       />
-    </div>
+    </KubeWorkspaceLayout>
   );
 };
