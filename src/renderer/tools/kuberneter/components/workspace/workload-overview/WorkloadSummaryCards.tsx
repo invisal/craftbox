@@ -166,7 +166,7 @@ export const WorkloadSummaryCards: React.FC<WorkloadSummaryCardsProps> = (props)
   const cards = buildCards(props);
 
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 gap-3">
+    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 gap-0 divide-x divide-border/40">
       {cards.map((card) => {
         const Icon = card.icon;
         const hasAnyIssues = card.warning > 0 || card.failed > 0;
@@ -178,7 +178,7 @@ export const WorkloadSummaryCards: React.FC<WorkloadSummaryCardsProps> = (props)
           <button
             key={card.id}
             onClick={() => onNavigate(card.id)}
-            className="group flex flex-col gap-2.5 p-3 rounded-lg bg-surface-2 border border-border-dark/60 hover:border-accent/40 hover:bg-surface-3 transition-all duration-200 cursor-pointer text-left"
+            className="group flex flex-col gap-2.5 p-3 hover:bg-surface-2/60 transition-all duration-200 cursor-pointer text-left first:rounded-l-lg last:rounded-r-lg"
           >
             {/* Header row */}
             <div className="flex items-center justify-between">

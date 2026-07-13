@@ -4,7 +4,9 @@ import { useKuberneterStore } from '../../../store/kuberneter.store';
 import { useWorkloadOverview } from './useWorkloadOverview';
 import { WorkloadSummaryCards } from './WorkloadSummaryCards';
 import { WorkloadEventsFeed } from './WorkloadEventsFeed';
-import { AlertCircle, Loader2, RefreshCw, LayoutDashboard } from 'lucide-react';
+import { AlertCircle, Loader2, RefreshCw } from 'lucide-react';
+import { Button } from '@renderer/components/ui/Button';
+import { cn } from 'cnfast';
 
 export const WorkloadOverview: React.FC = () => {
   const { activeInstanceId, openTab } = useLayoutStore();
@@ -72,53 +74,45 @@ export const WorkloadOverview: React.FC = () => {
   }
 
   return (
-    <div className="flex-1 flex flex-col gap-5 min-h-0 min-w-0 p-4 overflow-y-auto">
+    <div className="flex-1 flex flex-col min-h-0 overflow-hidden py-4">
       {/* Header */}
-      <div className="flex items-center justify-between shrink-0">
-        <div className="flex items-center gap-2">
-          <LayoutDashboard className="size-4 text-accent" />
-          <div>
-            <h2 className="text-sm font-bold text-white leading-tight">Workloads Overview</h2>
-            <p className="text-[10px] text-zinc-600 mt-0.5">
-              {ns === 'All Namespaces' ? 'All Namespaces' : `Namespace: ${ns}`}
-            </p>
+      <div className="px-4 flex items-center justify-between shrink-0 mb-4">
+        <div>
+          <h2 className="text-xs font-bold text-text-base uppercase tracking-wider font-sans pb-1.5 border-b border-border/40">
+            Workloads Overview
+          </h2>
+        </div>
+        <Button onClick={refresh} variant="outline" size="sm" className="gap-1.5 h-7 text-[10px]">
+          <RefreshCw className={cn('size-3 text-accent')} />
+          <span>Sync</span>
+        </Button>
+      </div>
+
+      {/* Scrollable content — flex-1 so it fills remaining height with no trailing gap */}
+      <div className="flex-1 flex flex-col overflow-y-auto overflow-x-hidden min-h-0">
+        {/* Resource Summary */}
+        <div className="shrink-0 px-4 mb-5">
+          <WorkloadSummaryCards
+            podsData={podsData}
+            deploysData={deploysData}
+            daemonSetsData={daemonSetsData}
+            statefulSetsData={statefulSetsData}
+            replicaSetsData={replicaSetsData}
+            jobsData={jobsData}
+            cronJobsData={cronJobsData}
+            onNavigate={navigateTo}
+          />
+        </div>
+
+        {/* Events Feed — shrink-0 so it takes only its content height; outer container scrolls */}
+        <div className="flex flex-col shrink-0">
+          <div className="px-4 shrink-0 mb-2">
+            <span className="text-xs font-bold text-text-base uppercase tracking-wider font-sans pb-1.5 border-b border-border/40 truncate shrink-0 block">
+              Kubernetes Events
+            </span>
           </div>
+          <WorkloadEventsFeed eventsData={eventsData} kuberneterSelectedNamespace={ns} />
         </div>
-        <button
-          onClick={refresh}
-          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded text-[11px] font-medium bg-surface-2 border border-border-dark/60 text-zinc-500 hover:text-zinc-300 hover:border-border-dark transition-all cursor-pointer"
-        >
-          <RefreshCw className="size-3" />
-          Refresh
-        </button>
-      </div>
-
-      {/* Summary Cards */}
-      <div className="shrink-0">
-        <div className="text-[9px] font-bold text-zinc-600 uppercase tracking-wider mb-2">
-          Resource Summary
-        </div>
-        <WorkloadSummaryCards
-          podsData={podsData}
-          deploysData={deploysData}
-          daemonSetsData={daemonSetsData}
-          statefulSetsData={statefulSetsData}
-          replicaSetsData={replicaSetsData}
-          jobsData={jobsData}
-          cronJobsData={cronJobsData}
-          onNavigate={navigateTo}
-        />
-      </div>
-
-      {/* Divider */}
-      <div className="border-t border-border-dark/40 shrink-0" />
-
-      {/* Events Feed */}
-      <div className="flex flex-col gap-2 flex-1 min-h-0">
-        <div className="text-[9px] font-bold text-zinc-600 uppercase tracking-wider shrink-0">
-          Kubernetes Events
-        </div>
-        <WorkloadEventsFeed eventsData={eventsData} kuberneterSelectedNamespace={ns} />
       </div>
     </div>
   );

@@ -166,9 +166,9 @@ export const WorkloadEventsFeed: React.FC<WorkloadEventsFeedProps> = ({
   );
 
   return (
-    <div className="flex flex-col gap-3 flex-1 min-h-0">
+    <div className="flex flex-col gap-3">
       {/* Toolbar */}
-      <div className="flex items-center justify-between gap-3 shrink-0">
+      <div className="flex items-center justify-between gap-3 shrink-0 px-4">
         <div className="flex items-center gap-2.5">
           <KubeSearchbox
             value={searchQuery}
@@ -179,10 +179,8 @@ export const WorkloadEventsFeed: React.FC<WorkloadEventsFeedProps> = ({
           {/* Warnings only toggle */}
           <button
             onClick={() => setWarningsOnly((v) => !v)}
-            className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded text-[11px] font-medium border transition-all cursor-pointer ${
-              warningsOnly
-                ? 'bg-amber-500/15 border-amber-500/30 text-amber-400'
-                : 'bg-surface-2 border-border-dark/60 text-zinc-500 hover:text-zinc-300 hover:border-border-dark'
+            className={`flex items-center gap-1.5 px-2 py-1 rounded text-[11px] font-medium transition-all cursor-pointer ${
+              warningsOnly ? 'text-amber-400 bg-amber-500/10' : 'text-zinc-500 hover:text-zinc-300'
             }`}
           >
             <AlertTriangle className="size-3" />
@@ -192,7 +190,7 @@ export const WorkloadEventsFeed: React.FC<WorkloadEventsFeedProps> = ({
         </div>
 
         <div
-          className="flex items-center gap-1.5 text-zinc-555 hover:text-zinc-350 transition-colors cursor-pointer select-none"
+          className="flex items-center gap-1.5 text-zinc-600 hover:text-zinc-400 transition-colors cursor-pointer select-none"
           onClick={handleDownloadCsv}
         >
           <Download className="size-3.5" />
@@ -206,7 +204,7 @@ export const WorkloadEventsFeed: React.FC<WorkloadEventsFeedProps> = ({
         data={filteredData}
         getRowKey={(row) => row.id}
         variant="modern"
-        className="flex-1"
+        className="flex-initial overflow-x-auto"
         emptyMessage={
           warningsOnly
             ? 'No warning events found.'

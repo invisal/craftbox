@@ -104,7 +104,7 @@ export function KubeTable<T>({
     <div
       className={cn(
         'overflow-auto flex-1 relative kube-table-container bg-transparent',
-        isModern && 'border border-border-dark',
+        isModern && 'border-t border-border-dark',
         className
       )}
     >
@@ -212,7 +212,7 @@ export function KubeTable<T>({
                     onRowClick && 'cursor-pointer',
                     isModern
                       ? cn(
-                          'hover:bg-surface-2/45 border-b border-border-dark/30',
+                          'hover:bg-surface-2/45 border-b border-border-dark/30 last:border-b-0',
                           isSelected && 'bg-surface-3/80 text-white font-medium'
                         )
                       : cn('hover:bg-border/20', isSelected && 'bg-border/30 text-zinc-150')
