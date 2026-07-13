@@ -14,9 +14,9 @@ import { type JobData } from '../../types/JobData';
 import { type CronJobData } from '../../types/CronJobData';
 import { type K8sResource } from '../../types/K8sResource';
 import { type TopNodeItem } from '../../types/TopNodeItem';
-import { formatAge } from '../../ults/formatAge';
-import { formatAgeLong } from '../../ults/formatAgeLong';
-import { parseK8sCapacity, formatCapacity } from '../../ults/formatCapacity';
+import { formatAge } from '../../utils/formatAge';
+import { formatAgeLong } from '../../utils/formatAgeLong';
+import { parseK8sCapacity, formatCapacity } from '../../utils/formatCapacity';
 import { type PodResource, type ContainerStatus } from '../../types/PodResource';
 
 export function useWorkspaceResources(resource: string) {
