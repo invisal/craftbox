@@ -1,4 +1,4 @@
-import React from 'react';
+import type React from 'react';
 
 interface KubeWorkspaceLayoutProps {
   /** Content rendered inside the fixed h-11 header bar */

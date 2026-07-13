@@ -1,5 +1,5 @@
-import React from 'react';
-import { DaemonSetData } from '../../../types/DaemonSetData';
+import type React from 'react';
+import { type DaemonSetData } from '../../../types/DaemonSetData';
 
 interface DaemonSetDetailProps {
   payload: DaemonSetData;

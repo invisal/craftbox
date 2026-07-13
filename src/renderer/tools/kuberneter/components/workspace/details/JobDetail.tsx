@@ -1,5 +1,5 @@
-import React from 'react';
-import { JobData } from '../../../types/JobData';
+import type React from 'react';
+import { type JobData } from '../../../types/JobData';
 
 interface JobDetailProps {
   payload: JobData;

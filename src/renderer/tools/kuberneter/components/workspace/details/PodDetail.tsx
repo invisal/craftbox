@@ -1,5 +1,5 @@
-import React from 'react';
-import { PodData } from '../../../types/PodData';
+import type React from 'react';
+import { type PodData } from '../../../types/PodData';
 
 interface PodDetailProps {
   payload: PodData;

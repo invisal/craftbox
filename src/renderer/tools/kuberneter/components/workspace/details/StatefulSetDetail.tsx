@@ -1,5 +1,5 @@
-import React from 'react';
-import { StatefulSetData } from '../../../types/StatefulSetData';
+import type React from 'react';
+import { type StatefulSetData } from '../../../types/StatefulSetData';
 
 interface StatefulSetDetailProps {
   payload: StatefulSetData;

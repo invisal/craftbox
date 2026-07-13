@@ -1,5 +1,5 @@
-import React from 'react';
-import { CronJobData } from '../../../types/CronJobData';
+import type React from 'react';
+import { type CronJobData } from '../../../types/CronJobData';
 
 interface CronJobDetailProps {
   payload: CronJobData;

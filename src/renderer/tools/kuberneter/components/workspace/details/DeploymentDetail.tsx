@@ -1,5 +1,5 @@
-import React from 'react';
-import { DeployData } from '../../../types/DeployData';
+import type React from 'react';
+import { type DeployData } from '../../../types/DeployData';
 
 interface DeploymentDetailProps {
   payload: DeployData;
