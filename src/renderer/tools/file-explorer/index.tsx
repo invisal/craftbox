@@ -1,24 +1,24 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ToolComponentProps } from '@renderer/components/providers/createTabProvider';
-import { Dialog } from '@renderer/components/ui/Dialog';
-import { Button } from '@renderer/components/ui/Button';
+import { type ToolComponentProps } from '@renderer/components/providers/createTabProvider';
 import { FileExplorerPanelBody } from './components/FileExplorerPanelBody';
 import {
   FilePreview,
-  PreviewEditorHandle,
-  PreviewUnavailableReason
+  type PreviewEditorHandle,
+  type PreviewUnavailableReason
 } from './components/FilePreview';
 import { FileExplorerSidebar } from './components/FileExplorerSidebar';
 import { Breadcrumb } from './components/Breadcrumb';
 import { ResizablePanel } from '@renderer/components/ui/ResizablePanel';
-import { FileEntry } from './components/columns';
+import { type FileEntry } from './components/columns';
 import {
   createFileExplorerStore,
   FileExplorerStoreContext,
-  PanelIndex,
-  PanelMode,
+  type PanelIndex,
+  type PanelMode,
   useFileExplorerStore
 } from './store/fileExplorer.store';
+import { Dialog } from '@renderer/components/ui/Dialog';
+import { Button } from '@renderer/components/ui/Button';
 
 interface Props {}
 

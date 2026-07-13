@@ -1,7 +1,7 @@
-import { ReactNode, forwardRef, useEffect, useImperativeHandle, useState } from 'react';
+import { forwardRef, type ReactNode, useEffect, useImperativeHandle, useState } from 'react';
 import { AlertCircle, FileText, Loader2, Save } from 'lucide-react';
-import { cn } from 'cnfast';
 import { formatBytes } from './columns';
+import cn from 'cnfast';
 
 type PreviewKind = 'text';
 

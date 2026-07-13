@@ -1,19 +1,23 @@
 import { useState, useEffect } from 'react';
 import { useLayoutStore } from '../../../../src/store/layout.store';
 import { useKuberneterStore } from '../../store/kuberneter.store';
-import { PodData } from '../../types/PodData';
-import { DeployData } from '../../types/DeployData';
-import { ServiceData } from '../../types/ServiceData';
-import { ConfigMapData } from '../../types/ConfigMapData';
-import { ApplicationData } from '../../types/ApplicationData';
-import { NodeData } from '../../types/NodeData';
-import { DaemonSetData } from '../../types/DaemonSetData';
-import { K8sResource } from '../../types/K8sResource';
-import { TopNodeItem } from '../../types/TopNodeItem';
-import { formatAge } from '../../ults/formatAge';
-import { formatAgeLong } from '../../ults/formatAgeLong';
-import { parseK8sCapacity, formatCapacity } from '../../ults/formatCapacity';
-import { PodResource, ContainerStatus } from '../../types/PodResource';
+import { type PodData } from '../../types/PodData';
+import { type DeployData } from '../../types/DeployData';
+import { type ServiceData } from '../../types/ServiceData';
+import { type ConfigMapData } from '../../types/ConfigMapData';
+import { type ApplicationData } from '../../types/ApplicationData';
+import { type NodeData } from '../../types/NodeData';
+import { type DaemonSetData } from '../../types/DaemonSetData';
+import { type StatefulSetData } from '../../types/StatefulSetData';
+import { type ReplicaSetData } from '../../types/ReplicaSetData';
+import { type JobData } from '../../types/JobData';
+import { type CronJobData } from '../../types/CronJobData';
+import { type K8sResource } from '../../types/K8sResource';
+import { type TopNodeItem } from '../../types/TopNodeItem';
+import { formatAge } from '../../utils/formatAge';
+import { formatAgeLong } from '../../utils/formatAgeLong';
+import { parseK8sCapacity, formatCapacity } from '../../utils/formatCapacity';
+import { type PodResource, type ContainerStatus } from '../../types/PodResource';
 
 export function useWorkspaceResources(resource: string) {
   const activeInstanceId = useLayoutStore((s) => s.activeInstanceId);
@@ -33,6 +37,10 @@ export function useWorkspaceResources(resource: string) {
   const [podsData, setPodsData] = useState<PodData[]>([]);
   const [deploysData, setDeploysData] = useState<DeployData[]>([]);
   const [daemonSetsData, setDaemonSetsData] = useState<DaemonSetData[]>([]);
+  const [statefulSetsData, setStatefulSetsData] = useState<StatefulSetData[]>([]);
+  const [replicaSetsData, setReplicaSetsData] = useState<ReplicaSetData[]>([]);
+  const [jobsData, setJobsData] = useState<JobData[]>([]);
+  const [cronJobsData, setCronJobsData] = useState<CronJobData[]>([]);
   const [servicesData, setServicesData] = useState<ServiceData[]>([]);
   const [configMapsData, setConfigMapsData] = useState<ConfigMapData[]>([]);
   const [applicationsData, setApplicationsData] = useState<ApplicationData[]>([]);
@@ -42,7 +50,8 @@ export function useWorkspaceResources(resource: string) {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const fetchResources = async (isBackground = false) => {
-    if (resource === 'home' || !kuberneterSelectedCluster) return;
+    if (resource === 'home' || resource === 'workloads-overview' || !kuberneterSelectedCluster)
+      return;
 
     if (!isBackground) {
       setIsLoading(true);
@@ -55,6 +64,10 @@ export function useWorkspaceResources(resource: string) {
       if (resource === 'pods') queryResource = 'pods';
       else if (resource === 'deployments') queryResource = 'deployments';
       else if (resource === 'daemonsets') queryResource = 'daemonsets';
+      else if (resource === 'statefulsets') queryResource = 'statefulsets';
+      else if (resource === 'replicasets') queryResource = 'replicasets';
+      else if (resource === 'jobs') queryResource = 'jobs';
+      else if (resource === 'cronjobs') queryResource = 'cronjobs';
       else if (resource === 'services') queryResource = 'services';
       else if (resource === 'configmaps') queryResource = 'configmaps';
       else if (resource === 'apps') queryResource = 'deployments,statefulsets,daemonsets';
@@ -268,6 +281,116 @@ export function useWorkspaceResources(resource: string) {
           };
         });
         setDaemonSetsData(transformed);
+      } else if (resource === 'statefulsets') {
+        const transformed = items.map((item) => {
+          const name = item.metadata?.name || '';
+          const ns = item.metadata?.namespace || '';
+          const replicas = item.spec?.replicas ?? 0;
+          const readyReplicas = item.status?.readyReplicas ?? 0;
+          const hasWarning = replicas > 0 && readyReplicas < replicas;
+
+          return {
+            id: `${ns}/${name}`,
+            name,
+            ns,
+            ready: `${readyReplicas}/${replicas}`,
+            replicas,
+            age: formatAge(item.metadata?.creationTimestamp || ''),
+            rawAge: new Date(item.metadata?.creationTimestamp || Date.now()).getTime().toString(),
+            hasWarning
+          };
+        });
+        setStatefulSetsData(transformed);
+      } else if (resource === 'replicasets') {
+        const transformed = items.map((item) => {
+          const name = item.metadata?.name || '';
+          const ns = item.metadata?.namespace || '';
+          const desired = item.spec?.replicas ?? 0;
+          const current = item.status?.replicas ?? 0;
+          const ready = item.status?.readyReplicas ?? 0;
+          const hasWarning = desired > 0 && ready < desired;
+
+          return {
+            id: `${ns}/${name}`,
+            name,
+            ns,
+            desired,
+            current,
+            ready,
+            age: formatAge(item.metadata?.creationTimestamp || ''),
+            rawAge: new Date(item.metadata?.creationTimestamp || Date.now()).getTime().toString(),
+            hasWarning
+          };
+        });
+        setReplicaSetsData(transformed);
+      } else if (resource === 'jobs') {
+        const transformed = items.map((item) => {
+          const name = item.metadata?.name || '';
+          const ns = item.metadata?.namespace || '';
+          const desired = item.spec?.completions ?? 1;
+          const succeeded = item.status?.succeeded ?? 0;
+          const failed = item.status?.failed ?? 0;
+
+          // Derive conditions string from status.conditions
+          const conditions = item.status?.conditions || [];
+          const condStr =
+            conditions
+              .filter((c) => c.status === 'True')
+              .map((c) => c.type)
+              .join(', ') || (succeeded > 0 ? 'Complete' : failed > 0 ? 'Failed' : 'Running');
+
+          const hasWarning = failed > 0;
+
+          return {
+            id: `${ns}/${name}`,
+            name,
+            ns,
+            completions: `${succeeded}/${desired}`,
+            succeeded,
+            desired,
+            age: formatAge(item.metadata?.creationTimestamp || ''),
+            rawAge: new Date(item.metadata?.creationTimestamp || Date.now()).getTime().toString(),
+            conditions: condStr,
+            hasWarning
+          };
+        });
+        setJobsData(transformed);
+      } else if (resource === 'cronjobs') {
+        const transformed = items.map((item) => {
+          const name = item.metadata?.name || '';
+          const ns = item.metadata?.namespace || '';
+          const schedule = item.spec?.schedule || '-';
+          const suspend = item.spec?.suspend ?? false;
+          const active = item.status?.active ?? 0;
+          const timeZone = item.spec?.timeZone || '-';
+
+          // Last schedule: age since lastScheduleTime
+          const lastScheduleTime = item.status?.lastScheduleTime;
+          const lastSchedule = lastScheduleTime ? formatAge(lastScheduleTime) : '-';
+
+          // Next execution: only computable if not suspended and we have the schedule
+          // We display N/A when suspended, otherwise leave as '-' (server-side calculation)
+          const nextExecution = suspend ? 'N/A' : '-';
+
+          // Warning: suspended with active jobs, or no schedule
+          const hasWarning = active > 0 && suspend;
+
+          return {
+            id: `${ns}/${name}`,
+            name,
+            ns,
+            schedule,
+            suspend,
+            active,
+            lastSchedule,
+            nextExecution,
+            timeZone,
+            age: formatAge(item.metadata?.creationTimestamp || ''),
+            rawAge: new Date(item.metadata?.creationTimestamp || Date.now()).getTime().toString(),
+            hasWarning
+          };
+        });
+        setCronJobsData(transformed);
       } else if (resource === 'services') {
         const transformed = items.map((item) => {
           const ports = item.spec?.ports?.map((p) => `${p.port}/${p.protocol}`).join(', ') || '';
@@ -447,8 +570,7 @@ export function useWorkspaceResources(resource: string) {
   };
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    fetchResources(false);
+    queueMicrotask(() => fetchResources(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [resource, kuberneterSelectedCluster, kuberneterSelectedNamespace, activeConfigPath]);
 
@@ -483,6 +605,10 @@ export function useWorkspaceResources(resource: string) {
     podsData,
     deploysData,
     daemonSetsData,
+    statefulSetsData,
+    replicaSetsData,
+    jobsData,
+    cronJobsData,
     servicesData,
     configMapsData,
     applicationsData,

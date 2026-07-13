@@ -1,9 +1,11 @@
-import React, { useState } from 'react';
+import type React from 'react';
+import { useState } from 'react';
 import { FileText, X, Home } from 'lucide-react';
 import { useLayoutStore, type Tab } from '../../store/layout.store';
 import { HomeTab } from './HomeTab';
 import { KuberneterWorkspace } from '../../../tools/kuberneter/components/workspace/KuberneterWorkspace';
 import { HttpClientWorkspace } from '../../../tools/http-client/HttpClientWorkspace';
+import { KubeDetailDrawer } from '../../../tools/kuberneter/components/workspace/details/KubeDetailDrawer';
 import { ScreenRecorderWorkspace } from './workspaces/ScreenRecorderWorkspace';
 
 export const Workspace: React.FC = () => {
@@ -44,14 +46,24 @@ export const Workspace: React.FC = () => {
         ))}
       </div>
 
-      {/* Editor Content Area */}
-      {activeTab.type === 'kuberneter' && (
-        <div className="flex-1 overflow-hidden flex flex-col min-h-0 min-w-0 bg-surface">
-          <KuberneterWorkspace
-            resource={(activeTab.meta as { resource?: string })?.resource || 'overview'}
-          />
-        </div>
-      )}
+      {/* Kuberneter tabs — all kept mounted, inactive ones hidden via CSS to preserve state */}
+      {filteredTabs
+        .filter((tab) => tab.type === 'kuberneter')
+        .map((tab) => {
+          const isActive = tab.id === activeTabId;
+          const resource = (tab.meta as { resource?: string })?.resource || 'overview';
+          return (
+            <div
+              key={tab.id}
+              className={`relative flex-1 overflow-hidden flex flex-col min-h-0 min-w-0 bg-surface${isActive ? '' : ' hidden'}`}
+            >
+              <KuberneterWorkspace resource={resource} />
+              <KubeDetailDrawer tabId={tab.id} />
+            </div>
+          );
+        })}
+
+      {/* Other tab types — only render the active one */}
       {(activeTab.type === 'postman' || activeTab.type === 'screenrecorder') && (
         <div className="flex-1 overflow-hidden p-4 flex flex-col min-h-0 min-w-0 bg-surface">
           {activeTab.type === 'postman' && <HttpClientWorkspace />}

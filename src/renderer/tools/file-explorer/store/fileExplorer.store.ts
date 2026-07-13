@@ -1,6 +1,6 @@
 import { createContext, useContext } from 'react';
-import { create, StoreApi, UseBoundStore } from 'zustand';
-import { FileEntry } from '../components/columns';
+import { create, type StoreApi, type UseBoundStore } from 'zustand';
+import { type FileEntry } from '../components/columns';
 
 export type PanelMode = 'explorer' | 'preview';
 export type PanelIndex = 0 | 1;

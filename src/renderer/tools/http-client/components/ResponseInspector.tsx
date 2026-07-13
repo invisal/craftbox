@@ -1,4 +1,5 @@
-import React, { useMemo, useState } from 'react';
+import type React from 'react';
+import { useMemo, useState } from 'react';
 import { Tabs } from '@base-ui/react/tabs';
 import { AlertCircle, RefreshCw } from 'lucide-react';
 import type { HttpResponsePayload } from '../../../../preload/http-client/types';
@@ -42,7 +43,7 @@ export const ResponseInspector: React.FC<ResponseInspectorProps> = ({ response, 
   );
 
   return (
-    <div className="flex-1 bg-sidebar-bg border border-border-dark rounded-lg overflow-hidden flex flex-col min-h-0">
+    <div className="h-full bg-sidebar-bg border border-border-dark rounded-lg overflow-hidden flex flex-col min-h-0">
       <div className="bg-editor-bg border-b border-border-dark px-3 py-2 flex items-center justify-between text-xs shrink-0 select-none">
         <span className="text-zinc-500 font-bold uppercase tracking-wider text-[10px]">
           Response

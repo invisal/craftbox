@@ -8,7 +8,8 @@ import type {
 import type { Project, CursorPathPoint } from '@screen-recorder/types/project';
 import type { ExportFormat, ExportOptions, ExportProgress } from '@screen-recorder/types/export';
 import type { ScreenRecordingStatus } from '@screen-recorder/types/permissions';
-import type { ScreenRect } from '@shared/capture-region';
+import type { ScreenRect, CaptureRegionSelection } from '@shared/capture-region';
+import type { OsPickerSource } from '@shared/os-picker-source';
 
 export const screenRecorderApi = {
   recording: {
@@ -82,6 +83,29 @@ export const screenRecorderApi = {
     showSaveExportPath: (defaultFileName: string, format: ExportFormat): Promise<string | null> =>
       ipcRenderer.invoke(IpcChannels.ShowSaveExportDialog, defaultFileName, format)
   },
+  simulator: {
+    /** Name of the currently booted iOS Simulator device, or null if none is booted / Xcode Command Line Tools aren't installed. */
+    getBootedName: (): Promise<string | null> => ipcRenderer.invoke(IpcChannels.GetBootedSimulator),
+    /** Fresh AppleScript-resolved bounds of the Simulator window right now, or null if none is booted / its window isn't open. */
+    refreshWindowBounds: (): Promise<CaptureSource['displayBounds'] | null> =>
+      ipcRenderer.invoke(IpcChannels.RefreshSimulatorWindowBounds)
+  },
+  tray: {
+    /** Creates the tray icon, if it doesn't already exist. */
+    register: (): Promise<void> => ipcRenderer.invoke(IpcChannels.TrayRegister),
+    /** Destroys the tray icon, if one exists. */
+    unregister: (): Promise<void> => ipcRenderer.invoke(IpcChannels.TrayUnregister),
+    onOpenRecordPicker: (callback: () => void): (() => void) => {
+      const listener = (): void => callback();
+      ipcRenderer.on(IpcChannels.TrayOpenRecordPicker, listener);
+      return () => ipcRenderer.removeListener(IpcChannels.TrayOpenRecordPicker, listener);
+    },
+    onSourceSelected: (callback: (source: CaptureSource) => void): (() => void) => {
+      const listener = (_event: unknown, source: CaptureSource): void => callback(source);
+      ipcRenderer.on(IpcChannels.TraySourceSelected, listener);
+      return () => ipcRenderer.removeListener(IpcChannels.TraySourceSelected, listener);
+    }
+  },
   screenshot: {
     capture: (
       sourceId: string,
@@ -96,14 +120,14 @@ export const screenRecorderApi = {
       ipcRenderer.invoke(IpcChannels.CopyScreenshot, data),
     save: (data: ArrayBuffer, defaultFileName: string): Promise<string | null> =>
       ipcRenderer.invoke(IpcChannels.SaveScreenshot, data, defaultFileName),
-    selectRegion: (): Promise<import('@shared/capture-region').CaptureRegionSelection | null> =>
+    selectRegion: (): Promise<CaptureRegionSelection | null> =>
       ipcRenderer.invoke(IpcChannels.SelectCaptureRegion),
-    pickOsSource: (options?: {
-      monitorOnly?: boolean;
-    }): Promise<import('@shared/os-picker-source').OsPickerSource | null> =>
+    pickOsSource: (options?: { monitorOnly?: boolean }): Promise<OsPickerSource | null> =>
       ipcRenderer.invoke(IpcChannels.PickOsCaptureSource, options)
   },
   regionSelect: {
+    getContentOrigin: (): Promise<ScreenRect | null> =>
+      ipcRenderer.invoke(IpcChannels.RegionSelectGetContentOrigin),
     complete: (rect: ScreenRect): void => ipcRenderer.send(IpcChannels.RegionSelectComplete, rect),
     cancel: (): void => ipcRenderer.send(IpcChannels.RegionSelectCancel)
   }
