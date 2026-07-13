@@ -348,7 +348,7 @@ export function useWorkloadOverview(): WorkloadSummary {
   };
 
   useEffect(() => {
-    fetchAll(false);
+    queueMicrotask(() => fetchAll(false));
     const ms = getIntervalMs(refreshInterval);
     const id = setInterval(() => fetchAll(true), ms);
     return () => clearInterval(id);

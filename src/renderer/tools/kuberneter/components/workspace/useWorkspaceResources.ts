@@ -570,8 +570,7 @@ export function useWorkspaceResources(resource: string) {
   };
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    fetchResources(false);
+    queueMicrotask(() => fetchResources(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [resource, kuberneterSelectedCluster, kuberneterSelectedNamespace, activeConfigPath]);
 
