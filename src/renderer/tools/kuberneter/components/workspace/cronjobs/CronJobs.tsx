@@ -128,8 +128,8 @@ export const CronJobs: React.FC<CronJobsProps> = ({
   };
 
   return (
-    <div className="flex-1 flex gap-4 min-h-0 min-w-0 py-4">
-      <div className="flex-1 flex flex-col gap-3 min-h-0 min-w-0 select-none">
+    <div className="flex-1 flex gap-4 min-h-0 min-w-0 py-2">
+      <div className="flex-1 flex flex-col gap-2 min-h-0 min-w-0 select-none">
         <div className="px-4">
           <CronJobsToolbar
             searchQuery={searchQuery}

@@ -109,32 +109,32 @@ export const KubeDetailDrawer: React.FC<KubeDetailDrawerProps> = ({ tabId }) => 
         className="absolute top-0 left-0 w-[4px] h-full cursor-col-resize hover:bg-accent/40 active:bg-accent transition-colors z-40"
       />
 
-      <div className="flex-1 p-4 flex flex-col gap-4 overflow-y-auto min-h-0">
-        <div className="flex items-center justify-between border-b border-border-dark pb-2 shrink-0">
-          <span className="text-xs font-bold text-white uppercase tracking-wider">
-            {titleNames[contentType] || 'Details'}
-          </span>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={handleMaximize}
-              title="Open in new tab"
-              className="text-zinc-400 hover:text-white cursor-pointer hover:bg-border-dark/40 p-1 rounded transition-colors border-none bg-transparent flex items-center justify-center"
-            >
-              <Maximize2 className="size-3.5" />
-            </button>
-            <button
-              onClick={handleClose}
-              title="Close drawer"
-              className="text-zinc-400 hover:text-white cursor-pointer hover:bg-border-dark/40 p-1 rounded transition-colors border-none bg-transparent flex items-center justify-center"
-            >
-              <X className="size-3.5" />
-            </button>
-          </div>
+      {/* Header — fixed height matches tab content header zone (py-2 + h-7 + gap-2 = 44px) */}
+      <div className="h-11 shrink-0 flex items-center justify-between px-4 border-b border-border-dark">
+        <span className="text-xs font-bold text-white uppercase tracking-wider">
+          {titleNames[contentType] || 'Details'}
+        </span>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handleMaximize}
+            title="Open in new tab"
+            className="text-zinc-400 hover:text-white cursor-pointer hover:bg-border-dark/40 p-1 rounded transition-colors border-none bg-transparent flex items-center justify-center"
+          >
+            <Maximize2 className="size-3.5" />
+          </button>
+          <button
+            onClick={handleClose}
+            title="Close drawer"
+            className="text-zinc-400 hover:text-white cursor-pointer hover:bg-border-dark/40 p-1 rounded transition-colors border-none bg-transparent flex items-center justify-center"
+          >
+            <X className="size-3.5" />
+          </button>
         </div>
+      </div>
 
-        <div className="flex-1 overflow-y-auto min-h-0 pr-1">
-          <DetailContent contentType={contentType} payload={payload} />
-        </div>
+      {/* Scrollable content */}
+      <div className="flex-1 overflow-y-auto min-h-0 p-4 pr-5">
+        <DetailContent contentType={contentType} payload={payload} />
       </div>
     </div>
   );
