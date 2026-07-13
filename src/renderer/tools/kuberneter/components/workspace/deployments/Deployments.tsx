@@ -1,5 +1,6 @@
-import React, { useState, useMemo, useCallback } from 'react';
-import { DeployData } from '../../../types/DeployData';
+import type React from 'react';
+import { useState, useMemo, useCallback } from 'react';
+import { type DeployData } from '../../../types/DeployData';
 import { DeploymentsToolbar } from './DeploymentsToolbar';
 import { DeploymentsTable } from './DeploymentsTable';
 import { useLayoutStore } from '../../../../../src/store/layout.store';
@@ -157,4 +158,3 @@ export const Deployments: React.FC<DeploymentsProps> = ({
     </KubeWorkspaceLayout>
   );
 };
-export default Deployments;

@@ -1,5 +1,6 @@
-import React, { useState, useMemo, useCallback } from 'react';
-import { PodData } from '../../../types/PodData';
+import type React from 'react';
+import { useState, useMemo, useCallback } from 'react';
+import { type PodData } from '../../../types/PodData';
 import { PodsToolbar } from './PodsToolbar';
 import { PodsTable } from './PodsTable';
 import { useLayoutStore } from '../../../../../src/store/layout.store';
@@ -173,4 +174,3 @@ export const Pods: React.FC<PodsProps> = ({ podsData, kuberneterSelectedNamespac
     </KubeWorkspaceLayout>
   );
 };
-export default Pods;
