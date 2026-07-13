@@ -19,6 +19,12 @@ export interface K8sResource {
     updatedNumberScheduled?: number;
     numberReady?: number;
     numberAvailable?: number;
+    succeeded?: number;
+    failed?: number;
+    active?: number;
+    completionTime?: string;
+    lastScheduleTime?: string;
+    lastSuccessfulTime?: string;
     conditions?: { type?: string; status?: string; message?: string }[];
     nodeInfo?: { kubeletVersion?: string };
     capacity?: { cpu?: string; memory?: string };
@@ -30,6 +36,11 @@ export interface K8sResource {
     ports?: { port?: number; protocol?: string }[];
     taints?: { key?: string; effect?: string }[];
     replicas?: number;
+    completions?: number;
+    parallelism?: number;
+    schedule?: string;
+    suspend?: boolean;
+    timeZone?: string;
     strategy?: {
       type?: string;
     };
@@ -40,4 +51,20 @@ export interface K8sResource {
     };
   };
   data?: Record<string, unknown>;
+  // Kubernetes Event fields (core/v1 Event)
+  type?: string;
+  message?: string;
+  reason?: string;
+  count?: number;
+  firstTimestamp?: string;
+  lastTimestamp?: string;
+  source?: {
+    component?: string;
+    host?: string;
+  };
+  involvedObject?: {
+    kind?: string;
+    name?: string;
+    namespace?: string;
+  };
 }

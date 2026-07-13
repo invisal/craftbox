@@ -4,6 +4,11 @@ import { ClusterOverview } from './cluster-overview/ClusterOverview';
 import { Pods } from './pods/Pods';
 import { Deployments } from './deployments/Deployments';
 import { DaemonSets } from './daemonsets/DaemonSets';
+import { StatefulSets } from './statefulsets/StatefulSets';
+import { ReplicaSets } from './replicasets/ReplicaSets';
+import { Jobs } from './jobs/Jobs';
+import { CronJobs } from './cronjobs/CronJobs';
+import { WorkloadOverview } from './workload-overview/WorkloadOverview';
 import { ServicesTable } from './ServicesTable';
 import { ConfigMapsTable } from './ConfigMapsTable';
 import { Application } from './application/Application';
@@ -24,6 +29,10 @@ export const KuberneterWorkspace: React.FC<KuberneterWorkspaceProps> = ({ resour
     podsData,
     deploysData,
     daemonSetsData,
+    statefulSetsData,
+    replicaSetsData,
+    jobsData,
+    cronJobsData,
     servicesData,
     configMapsData,
     applicationsData,
@@ -73,6 +82,8 @@ export const KuberneterWorkspace: React.FC<KuberneterWorkspaceProps> = ({ resour
 
           {resource === 'overview' && <ClusterOverview />}
 
+          {resource === 'workloads-overview' && <WorkloadOverview />}
+
           {resource === 'pods' && (
             <Pods podsData={podsData} kuberneterSelectedNamespace={kuberneterSelectedNamespace} />
           )}
@@ -87,6 +98,31 @@ export const KuberneterWorkspace: React.FC<KuberneterWorkspaceProps> = ({ resour
           {resource === 'daemonsets' && (
             <DaemonSets
               daemonSetsData={daemonSetsData}
+              kuberneterSelectedNamespace={kuberneterSelectedNamespace}
+            />
+          )}
+
+          {resource === 'statefulsets' && (
+            <StatefulSets
+              statefulSetsData={statefulSetsData}
+              kuberneterSelectedNamespace={kuberneterSelectedNamespace}
+            />
+          )}
+
+          {resource === 'replicasets' && (
+            <ReplicaSets
+              replicaSetsData={replicaSetsData}
+              kuberneterSelectedNamespace={kuberneterSelectedNamespace}
+            />
+          )}
+
+          {resource === 'jobs' && (
+            <Jobs jobsData={jobsData} kuberneterSelectedNamespace={kuberneterSelectedNamespace} />
+          )}
+
+          {resource === 'cronjobs' && (
+            <CronJobs
+              cronJobsData={cronJobsData}
               kuberneterSelectedNamespace={kuberneterSelectedNamespace}
             />
           )}

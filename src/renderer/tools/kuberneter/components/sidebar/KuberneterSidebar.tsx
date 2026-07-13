@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useLayoutStore } from '../../../../src/store/layout.store';
 import { useKuberneterStore } from '../../store/kuberneter.store';
 import { KubeSearchbox } from '../KubeSearchbox';
@@ -45,7 +45,7 @@ function highlightText(text: string, search: string): React.ReactNode {
 }
 
 export const KuberneterSidebar: React.FC = () => {
-  const { openTab, activeInstanceId } = useLayoutStore();
+  const { openTab, openTabs, activeTabId, activeInstanceId } = useLayoutStore();
   const { kuberneterInstanceCluster, kuberneterInstanceResource, setKuberneterInstanceResource } =
     useKuberneterStore();
 
@@ -64,12 +64,60 @@ export const KuberneterSidebar: React.FC = () => {
     crds: false
   });
 
+  // Sync sidebar selection when active tab changes
+  useEffect(() => {
+    const activeTab = openTabs.find((t) => t.id === activeTabId);
+    if (!activeTab || activeTab.instanceId !== activeInstanceId) return;
+    const tabResource = (activeTab.meta as { resource?: string })?.resource;
+    if (!tabResource || tabResource === activeResource) return;
+    setKuberneterInstanceResource(activeInstanceId, tabResource);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTabId]);
+
   const toggleGroup = (groupId: string) => {
     setExpandedGroups((prev) => ({
       ...prev,
       [groupId]: !prev[groupId]
     }));
   };
+
+  // Static map: which group owns each sub-resource
+  const resourceGroupMap: Record<string, string> = {
+    'workloads-overview': 'workloads',
+    pods: 'workloads',
+    deployments: 'workloads',
+    daemonsets: 'workloads',
+    statefulsets: 'workloads',
+    replicasets: 'workloads',
+    jobs: 'workloads',
+    cronjobs: 'workloads',
+    configmaps: 'config',
+    secrets: 'config',
+    resourcequotas: 'config',
+    limitranges: 'config',
+    hpas: 'config',
+    pdbs: 'config',
+    services: 'network',
+    endpoints: 'network',
+    ingresses: 'network',
+    networkpolicies: 'network',
+    portforwarding: 'network',
+    pvcs: 'storage',
+    pvs: 'storage',
+    storageclasses: 'storage',
+    serviceaccounts: 'accessControl',
+    clusterroles: 'accessControl',
+    roles: 'accessControl',
+    bindings: 'accessControl',
+    'helm-charts': 'helm',
+    'helm-releases': 'helm'
+  };
+
+  // Derive expanded groups: merge user-toggled state with the group that contains the active resource
+  const activeGroupId = resourceGroupMap[activeResource];
+  const effectiveExpandedGroups = activeGroupId
+    ? { ...expandedGroups, [activeGroupId]: true }
+    : expandedGroups;
 
   const handleSelectResource = (resourceId: string, label: string) => {
     setKuberneterInstanceResource(activeInstanceId, resourceId);
@@ -216,7 +264,7 @@ export const KuberneterSidebar: React.FC = () => {
 
             const isExpanded = searchTerm
               ? matchingSubs.length > 0 || isMatch(cat.label)
-              : expandedGroups[cat.id];
+              : effectiveExpandedGroups[cat.id];
 
             if (!hasSubs) {
               const isActive = activeResource === cat.id;
