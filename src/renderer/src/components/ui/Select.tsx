@@ -6,10 +6,18 @@ import { Button } from './Button';
 
 export function SelectTrigger({
   children,
+  variant,
+  size,
   ...props
-}: ComponentProps<typeof SelectPrimitive.Trigger>) {
+}: ComponentProps<typeof SelectPrimitive.Trigger> & {
+  variant?: 'primary' | 'secondary' | 'destructive' | 'ghost' | 'outline';
+  size?: 'lg' | 'md' | 'sm';
+}) {
   return (
-    <SelectPrimitive.Trigger render={<Button type="button" />} {...props}>
+    <SelectPrimitive.Trigger
+      render={<Button type="button" variant={variant} size={size} />}
+      {...props}
+    >
       {children}
       <SelectPrimitive.Icon className="flex items-center text-text-dim">
         <ChevronDown className="size-3.5" />
