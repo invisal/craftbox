@@ -1,4 +1,3 @@
-import React, { useRef, useState } from 'react';
 import { Circle, Square } from 'lucide-react';
 import { useAppStore } from '../app/app-store';
 import { useRecordingStore } from '../features/recording/store/recording-store';
@@ -16,6 +15,7 @@ import {
 import { generateAutoZoomKeyframes } from '../features/zoom/engine/auto-zoom-engine';
 import { useZoomStore } from '../features/zoom/store/zoom-store';
 import { Button } from '@renderer/components/ui/Button';
+import { useRef, useState } from 'react';
 
 export const ScreenRecorderSidebar: React.FC = () => {
   const selectedSource = useRecordingStore((state) => state.selectedSource);
