@@ -1,6 +1,6 @@
 import type { JSX } from 'react';
 import { useRef } from 'react';
-import { ArrowUpRight, Target, Trash2, ZoomIn } from 'lucide-react';
+import { Mouse, Target, Trash2, ZoomIn } from 'lucide-react';
 import { useTimelineStore, PRIMARY_VIDEO_TRACK_ID } from '../../timeline/store/timeline-store';
 import {
   getSegmentOutputDurationMs,
@@ -95,7 +95,7 @@ export function ZoomTrack(): JSX.Element | null {
                 kf.position === 'auto-cursor' ? 'follows cursor' : 'fixed point'
               } -- drag to move, edges to trim`}
               className={cn(
-                'group absolute flex cursor-grab items-center gap-1 overflow-hidden rounded-full border border-emerald-400/50 bg-emerald-600/30 px-2 text-emerald-100 hover:bg-emerald-600/45 active:cursor-grabbing',
+                'group absolute flex cursor-grab items-center justify-center gap-1 overflow-hidden rounded-md border border-emerald-400/50 bg-emerald-600/30 px-2 text-emerald-100 hover:bg-emerald-600/45 active:cursor-grabbing',
                 selectedKeyframeId === kf.id && 'ring-2 ring-white/70'
               )}
               style={{
@@ -107,11 +107,12 @@ export function ZoomTrack(): JSX.Element | null {
             >
               <ZoomIn size={10} className="shrink-0" />
               <span className="truncate text-[10px] font-medium">{kf.depth.toFixed(1)}×</span>
-              {kf.position === 'auto-cursor' ? (
-                <ArrowUpRight size={9} className="shrink-0 text-emerald-200/70" />
-              ) : (
-                <Target size={9} className="shrink-0 text-emerald-200/70" />
-              )}
+              <span className="flex shrink-0 items-center gap-0.5 text-emerald-200/70">
+                {kf.position === 'auto-cursor' ? <Mouse size={10} /> : <Target size={9} />}
+                <span className="text-[9px] font-medium">
+                  {kf.position === 'auto-cursor' ? 'Auto' : 'Manual'}
+                </span>
+              </span>
 
               <button
                 onClick={(e) => {
@@ -119,7 +120,7 @@ export function ZoomTrack(): JSX.Element | null {
                   removeKeyframe(kf.id);
                 }}
                 title="Delete keyframe"
-                className="absolute right-1 top-1/2 hidden h-5 w-5 -translate-y-1/2 items-center justify-center rounded-full bg-black/70 text-white/70 hover:text-red-400 group-hover:flex"
+                className="absolute right-3 top-1/2 hidden h-5 w-5 -translate-y-1/2 items-center justify-center rounded-full bg-black/70 text-white/70 hover:text-red-400 group-hover:flex"
               >
                 <Trash2 size={11} />
               </button>
@@ -135,7 +136,7 @@ export function ZoomTrack(): JSX.Element | null {
                     });
                   })(e);
                 }}
-                className="absolute inset-y-0 left-0 w-1.5 cursor-ew-resize opacity-0 hover:bg-white/25 group-hover:opacity-100"
+                className="absolute inset-y-0 left-0 w-1.5 cursor-ew-resize bg-white/15 hover:bg-white/30"
               />
               <div
                 onPointerDown={(e) => {
@@ -146,7 +147,7 @@ export function ZoomTrack(): JSX.Element | null {
                     });
                   })(e);
                 }}
-                className="absolute inset-y-0 right-0 w-1.5 cursor-ew-resize opacity-0 hover:bg-white/25 group-hover:opacity-100"
+                className="absolute inset-y-0 right-0 w-1.5 cursor-ew-resize bg-white/15 hover:bg-white/30"
               />
             </div>
           );

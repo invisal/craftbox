@@ -39,15 +39,6 @@ export interface ResolvedZoom {
 }
 
 /**
- * Fixed ease-in/ease-out time either side of a keyframe -- the zoom spends
- * whatever's left of `durationMs` actually held at full depth on the focal
- * point, rather than an instantaneous peak. Short keyframes (< 2x this)
- * scale the ramps down instead of overlapping, degrading to a plain
- * ease-in-then-out with no hold.
- */
-const HOLD_TRANSITION_MS = 800;
-
-/**
  * `'auto-cursor'` keyframes track the *real* recorded cursor path (sampled
  * at `atMs`, same smoothing already applied by the caller) rather than a
  * fixed point -- this is what makes auto-zoom actually follow the mouse
@@ -66,7 +57,11 @@ export function resolveZoom(
   const active = keyframes.find((k) => atMs >= k.atMs && atMs <= k.atMs + k.durationMs);
   if (!active) return identity;
 
-  const rampMs = Math.min(HOLD_TRANSITION_MS, active.durationMs / 2);
+  // Per-keyframe: how long the ease-in/ease-out either side of the hold
+  // takes (see ZoomKeyframeEditor's "Hold transition" slider). Keyframes
+  // shorter than 2x this scale the ramps down instead of overlapping,
+  // degrading to a plain ease-in-then-out with no hold.
+  const rampMs = Math.min(active.holdTransitionMs, active.durationMs / 2);
   const elapsed = atMs - active.atMs;
   const remaining = active.durationMs - elapsed;
   const envelope =

@@ -468,7 +468,6 @@ export class FrameCompositor {
     // export resolution.
     const referenceScale = outputWidth / REFERENCE_CANVAS_WIDTH;
     const cornerRadiusPx = project.background.cornerRadius * referenceScale;
-    drawContentShadow(ctx, innerRect, cornerRadiusPx, project.background.shadow, referenceScale);
 
     const { depth, focal, shift } = resolveZoom(
       atMs,
@@ -490,6 +489,21 @@ export class FrameCompositor {
     ctx.translate(focalPx.x, focalPx.y);
     ctx.scale(depth, depth);
     ctx.translate(-focalPx.x, -focalPx.y);
+
+    // Drawn *inside* the zoom transform, using the same (un-zoomed) innerRect
+    // coordinates as the clip/video below -- so the shadow rides along with
+    // the zoom exactly like the video does (matching the live preview, where
+    // box-shadow lives on the same element that's `transform: scale()`'d --
+    // see PreviewStage.tsx's videoWrapperRef). It also has to stay congruent
+    // with the video for a less obvious reason: `drawContentShadow`'s fill is
+    // solid opaque black, not just a blurred penumbra, so anywhere it isn't
+    // exactly covered by the video drawn right after it shows through as a
+    // black patch. Drawing it at a *fixed* rest position (the previous
+    // behavior) broke that guarantee the moment `shift` panned the video
+    // toward the frame center for an off-center focal point, since the
+    // shadow no longer moved to match -- exposing solid black at whichever
+    // edge the video shifted away from.
+    drawContentShadow(ctx, innerRect, cornerRadiusPx, project.background.shadow, referenceScale);
 
     // Clip to the content's rounded-rect *after* the zoom transform above,
     // using the same (un-zoomed) innerRect coordinates -- the clip path
