@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useState } from 'react';
+import React, { useRef, useEffect } from 'react';
 import { Maximize2, X } from 'lucide-react';
 import { useLayoutStore } from '../../../../../src/store/layout.store';
 import { useKuberneterStore } from '../../../store/kuberneter.store';
@@ -13,7 +13,6 @@ export const KubeDetailDrawer: React.FC<KubeDetailDrawerProps> = ({ tabId }) => 
   const drawerState = useKuberneterStore((s) => s.kuberneterTabDrawers[tabId]);
   const setDrawerState = useKuberneterStore((s) => s.setKuberneterTabDrawerState);
 
-  const [isAnimating, setIsAnimating] = useState(true);
   const drawerRef = useRef<HTMLDivElement>(null);
   const width = drawerState?.width ?? 320;
   const widthRef = useRef(width);
@@ -102,10 +101,7 @@ export const KubeDetailDrawer: React.FC<KubeDetailDrawerProps> = ({ tabId }) => 
     <div
       ref={drawerRef}
       style={{ width: `${width}px` }}
-      onAnimationEnd={() => setIsAnimating(false)}
-      className={`absolute top-0 right-0 z-30 bg-sidebar-bg border-l border-border-dark flex flex-col h-full select-none shadow-2xl ${
-        isAnimating ? 'animate-in slide-in-from-right duration-200' : ''
-      }`}
+      className="absolute top-0 right-0 z-30 bg-sidebar-bg border-l border-border-dark flex flex-col h-full select-none shadow-2xl"
     >
       {/* Resize Handle on the left side of the drawer */}
       <div
