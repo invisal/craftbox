@@ -11,6 +11,7 @@ import { SecretDetail } from './SecretDetail';
 import { ResourceQuotaDetail } from './ResourceQuotaDetail';
 import { LimitRangeDetail } from './LimitRangeDetail';
 import { HorizontalPodAutoscalerDetail } from './HorizontalPodAutoscalerDetail';
+import { PodDisruptionBudgetDetail } from './PodDisruptionBudgetDetail';
 
 import { type PodData } from '../../../types/PodData';
 import { type DeployData } from '../../../types/DeployData';
@@ -24,6 +25,7 @@ import { type SecretData } from '../../../types/SecretData';
 import { type ResourceQuotaData } from '../../../types/ResourceQuotaData';
 import { type LimitRangeData } from '../../../types/LimitRangeData';
 import { type HorizontalPodAutoscalerData } from '../../../types/HorizontalPodAutoscalerData';
+import { type PodDisruptionBudgetData } from '../../../types/PodDisruptionBudgetData';
 
 interface DetailContentProps {
   contentType: string;
@@ -65,6 +67,10 @@ export const DetailContent: React.FC<DetailContentProps> = ({
           payload={payload as HorizontalPodAutoscalerData}
           isTab={isTab}
         />
+      );
+    case 'poddisruptionbudget':
+      return (
+        <PodDisruptionBudgetDetail payload={payload as PodDisruptionBudgetData} isTab={isTab} />
       );
     default:
       return (

@@ -15,6 +15,7 @@ import { Secrets } from './secrets/Secrets';
 import { ResourceQuotas } from './resourcequotas/ResourceQuotas';
 import { LimitRanges } from './limitranges/LimitRanges';
 import { HorizontalPodAutoscalers } from './hpas/HorizontalPodAutoscalers';
+import { PodDisruptionBudgets } from './pdbs/PodDisruptionBudgets';
 import { Application } from './application/Application';
 import { Nodes } from './nodes/Nodes';
 import { KuberneterHomeView } from './kubernetes-home';
@@ -48,6 +49,7 @@ export const KuberneterWorkspace: React.FC<KuberneterWorkspaceProps> = ({ resour
     resourceQuotasData,
     limitRangesData,
     hpasData,
+    pdbsData,
     applicationsData,
     nodesData,
     isLoading,
@@ -188,6 +190,13 @@ export const KuberneterWorkspace: React.FC<KuberneterWorkspaceProps> = ({ resour
           {resource === 'hpas' && (
             <HorizontalPodAutoscalers
               hpasData={hpasData}
+              kuberneterSelectedNamespace={kuberneterSelectedNamespace}
+            />
+          )}
+
+          {resource === 'pdbs' && (
+            <PodDisruptionBudgets
+              pdbsData={pdbsData}
               kuberneterSelectedNamespace={kuberneterSelectedNamespace}
             />
           )}

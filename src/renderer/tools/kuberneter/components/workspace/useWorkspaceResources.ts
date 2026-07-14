@@ -12,6 +12,7 @@ import {
   type HorizontalPodAutoscalerData,
   type HpaMetric
 } from '../../types/HorizontalPodAutoscalerData';
+import { type PodDisruptionBudgetData } from '../../types/PodDisruptionBudgetData';
 import { type ApplicationData } from '../../types/ApplicationData';
 import { type NodeData } from '../../types/NodeData';
 import { type DaemonSetData } from '../../types/DaemonSetData';
@@ -54,6 +55,7 @@ export function useWorkspaceResources(resource: string) {
   const [resourceQuotasData, setResourceQuotasData] = useState<ResourceQuotaData[]>([]);
   const [limitRangesData, setLimitRangesData] = useState<LimitRangeData[]>([]);
   const [hpasData, setHpasData] = useState<HorizontalPodAutoscalerData[]>([]);
+  const [pdbsData, setPdbsData] = useState<PodDisruptionBudgetData[]>([]);
   const [applicationsData, setApplicationsData] = useState<ApplicationData[]>([]);
   const [nodesData, setNodesData] = useState<NodeData[]>([]);
 
@@ -85,6 +87,7 @@ export function useWorkspaceResources(resource: string) {
       else if (resource === 'resourcequotas') queryResource = 'resourcequotas';
       else if (resource === 'limitranges') queryResource = 'limitranges';
       else if (resource === 'hpas') queryResource = 'horizontalpodautoscalers';
+      else if (resource === 'pdbs') queryResource = 'poddisruptionbudgets';
       else if (resource === 'apps') queryResource = 'deployments,statefulsets,daemonsets';
       else if (resource === 'nodes') queryResource = 'nodes';
       else return;
@@ -688,6 +691,60 @@ export function useWorkspaceResources(resource: string) {
           };
         });
         setHpasData(transformed);
+      } else if (resource === 'pdbs') {
+        const transformed = items.map((item) => {
+          const pdbItem = item as unknown as {
+            metadata?: K8sResource['metadata'];
+            spec?: {
+              minAvailable?: number | string;
+              maxUnavailable?: number | string;
+              selector?: {
+                matchLabels?: Record<string, string>;
+              };
+            };
+            status?: {
+              currentHealthy?: number;
+              desiredHealthy?: number;
+            };
+          };
+
+          const name = pdbItem.metadata?.name || '';
+          const ns = pdbItem.metadata?.namespace || '';
+
+          const minAvailable =
+            pdbItem.spec?.minAvailable !== undefined ? String(pdbItem.spec.minAvailable) : 'N/A';
+          const maxUnavailable =
+            pdbItem.spec?.maxUnavailable !== undefined
+              ? String(pdbItem.spec.maxUnavailable)
+              : 'N/A';
+
+          const matchLabels = pdbItem.spec?.selector?.matchLabels || {};
+          const selector =
+            Object.entries(matchLabels)
+              .map(([k, v]) => `${k}=${v}`)
+              .join(', ') || '';
+
+          const currentHealthy = pdbItem.status?.currentHealthy ?? 0;
+          const desiredHealthy = pdbItem.status?.desiredHealthy ?? 0;
+
+          const creationTimestamp = pdbItem.metadata?.creationTimestamp || '';
+
+          return {
+            id: `${ns}/${name}`,
+            name,
+            ns,
+            labels: pdbItem.metadata?.labels,
+            annotations: pdbItem.metadata?.annotations,
+            age: formatAge(creationTimestamp),
+            createdTime: creationTimestamp ? new Date(creationTimestamp).toLocaleString() : '',
+            selector,
+            minAvailable,
+            maxUnavailable,
+            currentHealthy,
+            desiredHealthy
+          };
+        });
+        setPdbsData(transformed);
       } else if (resource === 'apps') {
         const transformed = items
           .map((item) => {
@@ -888,6 +945,7 @@ export function useWorkspaceResources(resource: string) {
     resourceQuotasData,
     limitRangesData,
     hpasData,
+    pdbsData,
     applicationsData,
     nodesData,
     isLoading,
