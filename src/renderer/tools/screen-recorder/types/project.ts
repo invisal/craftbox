@@ -1,4 +1,4 @@
-import type { TimelineTrack, ZoomKeyframe } from './timeline';
+import type { CropRect, TimelineTrack, ZoomKeyframe } from './timeline';
 import type { WebcamOptions } from './recording';
 import type { CursorPathPoint } from '@shared/cursor-path';
 
@@ -75,6 +75,26 @@ export interface ImageAnnotation extends AnnotationBase {
 
 export type Annotation = TextAnnotation | ArrowAnnotation | ImageAnnotation;
 
+export interface BlurMaskRegion {
+  id: string;
+  atMs: number;
+  durationMs: number;
+  kind: 'blur' | 'mask';
+  shape: 'rectangle' | 'ellipse';
+  /**
+   * Normalized (0-1) rect relative to the *original, uncropped* source
+   * recording's native pixel dimensions -- same convention as `CropRect`.
+   * Mapped naively onto `innerRect` at export time (not re-projected into
+   * per-segment crop-local space), matching how cursor/zoom data is already
+   * handled -- see frame-compositor.ts's `drawBlurMasks`.
+   */
+  rect: CropRect;
+  /** 0-20 blur intensity, same raw (unscaled) shrink-factor convention as `BackgroundSettings.blur` -- used when kind === 'blur'. */
+  intensity: number;
+  /** Solid fill color -- used when kind === 'mask'. */
+  color: string;
+}
+
 export interface Project {
   id: string;
   name: string;
@@ -93,5 +113,6 @@ export interface Project {
   clickPath: CursorPathPoint[];
   captions: CaptionSettings;
   annotations: Annotation[];
+  blurMasks: BlurMaskRegion[];
   motionBlur: boolean;
 }

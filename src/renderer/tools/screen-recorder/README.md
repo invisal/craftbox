@@ -27,7 +27,7 @@ AppShell
 
 There's no router. `app/app-store.ts` (`useAppStore`, a zustand store) holds a single `route: ScreenRecorderRoute` field; `ScreenRecorderApp` and `ScreenRecorderSidebar` both read/write it directly. It also holds `isRecording`, `lastRecording` (preview URL + on-disk path + size + timestamp of the most recent recording), and `projectName`.
 
-Everything else is its own independent zustand store under `features/*/store/`, each scoped to one concern (`recording-store`, `background-store`, `cursor-store`, `webcam-store`, `captions-store`, `zoom-store`, `crop-store`, `annotations-store`, `timeline-store`, `export-store`, `shortcuts-store`). Feature panels read/write their store directly — nothing is prop-drilled from `EditorPage` down.
+Everything else is its own independent zustand store under `features/*/store/`, each scoped to one concern (`recording-store`, `background-store`, `cursor-store`, `webcam-store`, `captions-store`, `zoom-store`, `crop-store`, `annotations-store`, `blur-mask-store`, `timeline-store`, `export-store`, `shortcuts-store`). Feature panels read/write their store directly — nothing is prop-drilled from `EditorPage` down.
 
 ## Directory layout
 
@@ -43,12 +43,13 @@ workspace/                 One folder per ScreenRecorderRoute page:
   presets/                    export preset picker, jumps into the editor
   editor/                     EditorPage + PreviewStage + EditorTransportBar +
                                EditorToolRail/EditorToolPanel (the tool-panel switcher for
-                               Background/Cursor/Webcam/Captions/Annotations/Zoom/Clip/Export)
+                               Background/Cursor/Webcam/Captions/Annotations/Blur-Mask/Zoom/Clip/Export)
   settings/                   shortcut rebinding (ShortcutRecorder)
   recording-hud/               unwired — see "Known gaps"
 features/                  One folder per concern, each typically store/ + components/
                             (+ engine/ or lib/ for pure logic): recording, background,
-                            cursor, webcam, captions, zoom, crop, annotations, timeline, export
+                            cursor, webcam, captions, zoom, crop, annotations, blur-mask,
+                            timeline, export
 types/                     Shared type definitions (project/recording/export/timeline/
                             permissions/shortcuts) — also imported by main/preload via the
                             `@screen-recorder/*` alias
@@ -78,7 +79,7 @@ CSP is set dynamically per-response from `main/screen-recorder/security/content-
 
 ## Editor tool panel
 
-`EditorToolRail` (icon rail) + `EditorToolPanel` (the panel body) is a single mutually-exclusive switcher over `EditorTool = 'background' | 'cursor' | 'webcam' | 'captions' | 'annotations' | 'zoom' | 'clip' | 'export'`. Every panel is self-contained — no props from `EditorPage`, each reads its own feature store directly — **except** it's still worth checking `ExportSidePanel` if you're touching this, since it's the newest addition and pulls from `app-store`/`timeline-store` directly rather than the feature's own store (there is no dedicated UI store for export beyond `export-store`'s format/codec/quality fields).
+`EditorToolRail` (icon rail) + `EditorToolPanel` (the panel body) is a single mutually-exclusive switcher over `EditorTool = 'background' | 'cursor' | 'webcam' | 'captions' | 'annotations' | 'blur-mask' | 'zoom' | 'clip' | 'export'`. Every panel is self-contained — no props from `EditorPage`, each reads its own feature store directly — **except** it's still worth checking `ExportSidePanel` if you're touching this, since it's the newest addition and pulls from `app-store`/`timeline-store` directly rather than the feature's own store (there is no dedicated UI store for export beyond `export-store`'s format/codec/quality fields).
 
 The export flow itself (save-path dialog → `export.start` → live progress via `export.onProgress` → error surfacing) lives once in `features/export/hooks/useExportAction.ts` and is shared by both `ExportButton` (quick top-nav export using whatever's currently in `export-store`) and `ExportSidePanel`'s full config panel — don't duplicate that flow a third time.
 
