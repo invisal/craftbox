@@ -10,7 +10,7 @@ import { Jobs } from './jobs/Jobs';
 import { CronJobs } from './cronjobs/CronJobs';
 import { WorkloadOverview } from './workload-overview/WorkloadOverview';
 import { ServicesTable } from './ServicesTable';
-import { ConfigMapsTable } from './ConfigMapsTable';
+import { ConfigMaps } from './configmaps/ConfigMaps';
 import { Application } from './application/Application';
 import { Nodes } from './nodes/Nodes';
 import { KuberneterHomeView } from './kubernetes-home';
@@ -150,7 +150,7 @@ export const KuberneterWorkspace: React.FC<KuberneterWorkspaceProps> = ({ resour
           )}
 
           {resource === 'configmaps' && (
-            <ConfigMapsTable
+            <ConfigMaps
               configMapsData={configMapsData}
               kuberneterSelectedNamespace={kuberneterSelectedNamespace}
             />

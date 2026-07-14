@@ -406,11 +406,17 @@ export function useWorkspaceResources(resource: string) {
         setServicesData(transformed);
       } else if (resource === 'configmaps') {
         const transformed = items.map((item) => {
-          const keys = Object.keys(item.data || {}).length;
+          const keysList = Object.keys(item.data || {});
           return {
+            id: `${item.metadata?.namespace || ''}/${item.metadata?.name || ''}`,
             name: item.metadata?.name || '',
             ns: item.metadata?.namespace || '',
-            keys,
+            keysCount: keysList.length,
+            keysList,
+            data: item.data as Record<string, string> | undefined,
+            binaryData: item.binaryData,
+            labels: item.metadata?.labels,
+            annotations: item.metadata?.annotations,
             age: formatAge(item.metadata?.creationTimestamp || '')
           };
         });
