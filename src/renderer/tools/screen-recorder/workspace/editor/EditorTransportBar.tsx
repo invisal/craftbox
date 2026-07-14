@@ -14,7 +14,11 @@ import {
 } from 'lucide-react';
 import type { AspectRatio } from '@screen-recorder/types/export';
 import { useExportStore } from '../../features/export/store/export-store';
-import { useTimelineStore } from '../../features/timeline/store/timeline-store';
+import {
+  useTimelineStore,
+  MIN_TIMELINE_ZOOM,
+  MAX_TIMELINE_ZOOM
+} from '../../features/timeline/store/timeline-store';
 import { useZoomStore } from '../../features/zoom/store/zoom-store';
 import { cn } from '../../lib/utils';
 
@@ -162,7 +166,7 @@ export function EditorTransportBar({
 
       <div className="ml-auto flex items-center gap-2">
         <button
-          onClick={() => setTimelineZoom(Math.max(1, timelineZoom - 0.5))}
+          onClick={() => setTimelineZoom(Math.max(MIN_TIMELINE_ZOOM, timelineZoom - 0.5))}
           title="Zoom out timeline"
           className="flex h-7 w-7 items-center justify-center rounded-lg hover:bg-white/10"
         >
@@ -170,8 +174,8 @@ export function EditorTransportBar({
         </button>
         <input
           type="range"
-          min={1}
-          max={4}
+          min={MIN_TIMELINE_ZOOM}
+          max={MAX_TIMELINE_ZOOM}
           step={0.5}
           value={timelineZoom}
           onChange={(e) => setTimelineZoom(Number(e.target.value))}
@@ -179,7 +183,7 @@ export function EditorTransportBar({
           className="w-24 accent-accent"
         />
         <button
-          onClick={() => setTimelineZoom(Math.min(4, timelineZoom + 0.5))}
+          onClick={() => setTimelineZoom(Math.min(MAX_TIMELINE_ZOOM, timelineZoom + 0.5))}
           title="Zoom in timeline"
           className="flex h-7 w-7 items-center justify-center rounded-lg hover:bg-white/10"
         >
