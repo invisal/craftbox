@@ -13,6 +13,7 @@ import { ServicesTable } from './ServicesTable';
 import { ConfigMaps } from './configmaps/ConfigMaps';
 import { Secrets } from './secrets/Secrets';
 import { ResourceQuotas } from './resourcequotas/ResourceQuotas';
+import { LimitRanges } from './limitranges/LimitRanges';
 import { Application } from './application/Application';
 import { Nodes } from './nodes/Nodes';
 import { KuberneterHomeView } from './kubernetes-home';
@@ -44,6 +45,7 @@ export const KuberneterWorkspace: React.FC<KuberneterWorkspaceProps> = ({ resour
     configMapsData,
     secretsData,
     resourceQuotasData,
+    limitRangesData,
     applicationsData,
     nodesData,
     isLoading,
@@ -170,6 +172,13 @@ export const KuberneterWorkspace: React.FC<KuberneterWorkspaceProps> = ({ resour
           {resource === 'resourcequotas' && (
             <ResourceQuotas
               resourceQuotasData={resourceQuotasData}
+              kuberneterSelectedNamespace={kuberneterSelectedNamespace}
+            />
+          )}
+
+          {resource === 'limitranges' && (
+            <LimitRanges
+              limitRangesData={limitRangesData}
               kuberneterSelectedNamespace={kuberneterSelectedNamespace}
             />
           )}

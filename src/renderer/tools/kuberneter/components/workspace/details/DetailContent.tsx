@@ -9,6 +9,7 @@ import { CronJobDetail } from './CronJobDetail';
 import { ConfigMapDetail } from './ConfigMapDetail';
 import { SecretDetail } from './SecretDetail';
 import { ResourceQuotaDetail } from './ResourceQuotaDetail';
+import { LimitRangeDetail } from './LimitRangeDetail';
 
 import { type PodData } from '../../../types/PodData';
 import { type DeployData } from '../../../types/DeployData';
@@ -20,6 +21,7 @@ import { type CronJobData } from '../../../types/CronJobData';
 import { type ConfigMapData } from '../../../types/ConfigMapData';
 import { type SecretData } from '../../../types/SecretData';
 import { type ResourceQuotaData } from '../../../types/ResourceQuotaData';
+import { type LimitRangeData } from '../../../types/LimitRangeData';
 
 interface DetailContentProps {
   contentType: string;
@@ -53,6 +55,8 @@ export const DetailContent: React.FC<DetailContentProps> = ({
       return <SecretDetail payload={payload as SecretData} isTab={isTab} />;
     case 'resourcequota':
       return <ResourceQuotaDetail payload={payload as ResourceQuotaData} isTab={isTab} />;
+    case 'limitrange':
+      return <LimitRangeDetail payload={payload as LimitRangeData} isTab={isTab} />;
     default:
       return (
         <div className="p-4 text-xs text-zinc-500">

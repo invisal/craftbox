@@ -7,6 +7,7 @@ import { type ServiceData } from '../../types/ServiceData';
 import { type ConfigMapData } from '../../types/ConfigMapData';
 import { type SecretData } from '../../types/SecretData';
 import { type ResourceQuotaData } from '../../types/ResourceQuotaData';
+import { type LimitRangeData, type LimitRangeItem } from '../../types/LimitRangeData';
 import { type ApplicationData } from '../../types/ApplicationData';
 import { type NodeData } from '../../types/NodeData';
 import { type DaemonSetData } from '../../types/DaemonSetData';
@@ -47,6 +48,7 @@ export function useWorkspaceResources(resource: string) {
   const [configMapsData, setConfigMapsData] = useState<ConfigMapData[]>([]);
   const [secretsData, setSecretsData] = useState<SecretData[]>([]);
   const [resourceQuotasData, setResourceQuotasData] = useState<ResourceQuotaData[]>([]);
+  const [limitRangesData, setLimitRangesData] = useState<LimitRangeData[]>([]);
   const [applicationsData, setApplicationsData] = useState<ApplicationData[]>([]);
   const [nodesData, setNodesData] = useState<NodeData[]>([]);
 
@@ -76,6 +78,7 @@ export function useWorkspaceResources(resource: string) {
       else if (resource === 'configmaps') queryResource = 'configmaps';
       else if (resource === 'secrets') queryResource = 'secrets';
       else if (resource === 'resourcequotas') queryResource = 'resourcequotas';
+      else if (resource === 'limitranges') queryResource = 'limitranges';
       else if (resource === 'apps') queryResource = 'deployments,statefulsets,daemonsets';
       else if (resource === 'nodes') queryResource = 'nodes';
       else return;
@@ -486,6 +489,67 @@ export function useWorkspaceResources(resource: string) {
           };
         });
         setResourceQuotasData(transformed);
+      } else if (resource === 'limitranges') {
+        const transformed = items.map((item) => {
+          const lrItem = item as unknown as {
+            metadata?: K8sResource['metadata'];
+            spec?: {
+              limits?: Array<{
+                type: string;
+                default?: Record<string, string>;
+                defaultRequest?: Record<string, string>;
+                max?: Record<string, string>;
+                min?: Record<string, string>;
+                maxLimitRequestRatio?: Record<string, string>;
+              }>;
+            };
+          };
+
+          const name = lrItem.metadata?.name || '';
+          const ns = lrItem.metadata?.namespace || '';
+
+          const specLimits = lrItem.spec?.limits || [];
+          const limits: LimitRangeItem[] = [];
+
+          specLimits.forEach((limit) => {
+            const limitType = limit.type || '';
+            const resourceKeys = Array.from(
+              new Set([
+                ...Object.keys(limit.min || {}),
+                ...Object.keys(limit.max || {}),
+                ...Object.keys(limit.default || {}),
+                ...Object.keys(limit.defaultRequest || {}),
+                ...Object.keys(limit.maxLimitRequestRatio || {})
+              ])
+            );
+
+            resourceKeys.forEach((resKey) => {
+              limits.push({
+                type: limitType,
+                resource: resKey,
+                min: limit.min?.[resKey],
+                max: limit.max?.[resKey],
+                defaultLimit: limit.default?.[resKey],
+                defaultRequest: limit.defaultRequest?.[resKey],
+                maxLimitRequestRatio: limit.maxLimitRequestRatio?.[resKey]
+              });
+            });
+          });
+
+          const creationTimestamp = lrItem.metadata?.creationTimestamp || '';
+
+          return {
+            id: `${ns}/${name}`,
+            name,
+            ns,
+            labels: lrItem.metadata?.labels,
+            annotations: lrItem.metadata?.annotations,
+            age: formatAge(creationTimestamp),
+            createdTime: creationTimestamp ? new Date(creationTimestamp).toLocaleString() : '',
+            limits
+          };
+        });
+        setLimitRangesData(transformed);
       } else if (resource === 'apps') {
         const transformed = items
           .map((item) => {
@@ -684,6 +748,7 @@ export function useWorkspaceResources(resource: string) {
     configMapsData,
     secretsData,
     resourceQuotasData,
+    limitRangesData,
     applicationsData,
     nodesData,
     isLoading,
