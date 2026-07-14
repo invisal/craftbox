@@ -99,7 +99,8 @@ export const KubeDetailDrawer: React.FC<KubeDetailDrawerProps> = ({ tabId }) => 
     configmap: 'Config Map Details',
     secret: 'Secret Details',
     resourcequota: 'Resource Quota Details',
-    limitrange: 'Limit Range Details'
+    limitrange: 'Limit Range Details',
+    horizontalpodautoscaler: 'Horizontal Pod Autoscaler Details'
   };
 
   return (

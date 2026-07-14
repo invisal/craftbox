@@ -8,6 +8,10 @@ import { type ConfigMapData } from '../../types/ConfigMapData';
 import { type SecretData } from '../../types/SecretData';
 import { type ResourceQuotaData } from '../../types/ResourceQuotaData';
 import { type LimitRangeData, type LimitRangeItem } from '../../types/LimitRangeData';
+import {
+  type HorizontalPodAutoscalerData,
+  type HpaMetric
+} from '../../types/HorizontalPodAutoscalerData';
 import { type ApplicationData } from '../../types/ApplicationData';
 import { type NodeData } from '../../types/NodeData';
 import { type DaemonSetData } from '../../types/DaemonSetData';
@@ -49,6 +53,7 @@ export function useWorkspaceResources(resource: string) {
   const [secretsData, setSecretsData] = useState<SecretData[]>([]);
   const [resourceQuotasData, setResourceQuotasData] = useState<ResourceQuotaData[]>([]);
   const [limitRangesData, setLimitRangesData] = useState<LimitRangeData[]>([]);
+  const [hpasData, setHpasData] = useState<HorizontalPodAutoscalerData[]>([]);
   const [applicationsData, setApplicationsData] = useState<ApplicationData[]>([]);
   const [nodesData, setNodesData] = useState<NodeData[]>([]);
 
@@ -79,6 +84,7 @@ export function useWorkspaceResources(resource: string) {
       else if (resource === 'secrets') queryResource = 'secrets';
       else if (resource === 'resourcequotas') queryResource = 'resourcequotas';
       else if (resource === 'limitranges') queryResource = 'limitranges';
+      else if (resource === 'hpas') queryResource = 'horizontalpodautoscalers';
       else if (resource === 'apps') queryResource = 'deployments,statefulsets,daemonsets';
       else if (resource === 'nodes') queryResource = 'nodes';
       else return;
@@ -550,6 +556,138 @@ export function useWorkspaceResources(resource: string) {
           };
         });
         setLimitRangesData(transformed);
+      } else if (resource === 'hpas') {
+        const transformed = items.map((item) => {
+          const hpaItem = item as unknown as {
+            metadata?: K8sResource['metadata'];
+            spec?: {
+              scaleTargetRef?: {
+                apiVersion?: string;
+                kind?: string;
+                name?: string;
+              };
+              minReplicas?: number;
+              maxReplicas?: number;
+              targetCPUUtilizationPercentage?: number;
+              metrics?: Array<{
+                type: string;
+                resource?: {
+                  name: string;
+                  target?: {
+                    type: string;
+                    averageUtilization?: number;
+                    averageValue?: string;
+                  };
+                };
+              }>;
+            };
+            status?: {
+              currentReplicas?: number;
+              desiredReplicas?: number;
+              currentCPUUtilizationPercentage?: number;
+              currentMetrics?: Array<{
+                type: string;
+                resource?: {
+                  name: string;
+                  current?: {
+                    averageUtilization?: number;
+                    averageValue?: string;
+                  };
+                };
+              }>;
+              conditions?: Array<{
+                type: string;
+                status: string;
+                reason?: string;
+                message?: string;
+              }>;
+            };
+          };
+
+          const name = hpaItem.metadata?.name || '';
+          const ns = hpaItem.metadata?.namespace || '';
+
+          const refKind = hpaItem.spec?.scaleTargetRef?.kind || '';
+          const refName = hpaItem.spec?.scaleTargetRef?.name || '';
+
+          const minPods = hpaItem.spec?.minReplicas ?? 1;
+          const maxPods = hpaItem.spec?.maxReplicas ?? 1;
+          const replicas = hpaItem.status?.currentReplicas ?? 0;
+
+          const metricsList: HpaMetric[] = [];
+
+          if (hpaItem.spec?.targetCPUUtilizationPercentage !== undefined) {
+            const currentVal =
+              hpaItem.status?.currentCPUUtilizationPercentage !== undefined
+                ? `${hpaItem.status.currentCPUUtilizationPercentage}%`
+                : 'unknown';
+            metricsList.push({
+              name: 'Resource cpu on Pods',
+              current: currentVal,
+              target: `${hpaItem.spec.targetCPUUtilizationPercentage}%`
+            });
+          }
+
+          const specMetrics = hpaItem.spec?.metrics || [];
+          const statusMetrics = hpaItem.status?.currentMetrics || [];
+
+          specMetrics.forEach((m) => {
+            if (m.type === 'Resource' && m.resource) {
+              const resName = m.resource.name;
+
+              let targetVal = '—';
+              if (m.resource.target) {
+                if (m.resource.target.type === 'Utilization') {
+                  targetVal = `${m.resource.target.averageUtilization || 0}%`;
+                } else if (m.resource.target.type === 'AverageValue') {
+                  targetVal = m.resource.target.averageValue || '0';
+                }
+              }
+
+              let currentVal = 'unknown';
+              const matchingStatus = statusMetrics.find(
+                (sm) => sm.type === 'Resource' && sm.resource?.name === resName
+              );
+              if (matchingStatus && matchingStatus.resource?.current) {
+                if (matchingStatus.resource.current.averageUtilization !== undefined) {
+                  currentVal = `${matchingStatus.resource.current.averageUtilization}%`;
+                } else if (matchingStatus.resource.current.averageValue !== undefined) {
+                  currentVal = matchingStatus.resource.current.averageValue;
+                }
+              }
+
+              metricsList.push({
+                name: `Resource ${resName} on Pods`,
+                current: currentVal,
+                target: targetVal
+              });
+            }
+          });
+
+          const conditions = hpaItem.status?.conditions || [];
+          const trueCondition = conditions.find((c) => c.status === 'True');
+          const statusText = trueCondition ? trueCondition.type : '—';
+
+          const creationTimestamp = hpaItem.metadata?.creationTimestamp || '';
+
+          return {
+            id: `${ns}/${name}`,
+            name,
+            ns,
+            labels: hpaItem.metadata?.labels,
+            annotations: hpaItem.metadata?.annotations,
+            age: formatAge(creationTimestamp),
+            createdTime: creationTimestamp ? new Date(creationTimestamp).toLocaleString() : '',
+            referenceKind: refKind,
+            referenceName: refName,
+            minPods,
+            maxPods,
+            replicas,
+            statusText,
+            metrics: metricsList
+          };
+        });
+        setHpasData(transformed);
       } else if (resource === 'apps') {
         const transformed = items
           .map((item) => {
@@ -749,6 +887,7 @@ export function useWorkspaceResources(resource: string) {
     secretsData,
     resourceQuotasData,
     limitRangesData,
+    hpasData,
     applicationsData,
     nodesData,
     isLoading,

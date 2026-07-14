@@ -14,6 +14,7 @@ import { ConfigMaps } from './configmaps/ConfigMaps';
 import { Secrets } from './secrets/Secrets';
 import { ResourceQuotas } from './resourcequotas/ResourceQuotas';
 import { LimitRanges } from './limitranges/LimitRanges';
+import { HorizontalPodAutoscalers } from './hpas/HorizontalPodAutoscalers';
 import { Application } from './application/Application';
 import { Nodes } from './nodes/Nodes';
 import { KuberneterHomeView } from './kubernetes-home';
@@ -46,6 +47,7 @@ export const KuberneterWorkspace: React.FC<KuberneterWorkspaceProps> = ({ resour
     secretsData,
     resourceQuotasData,
     limitRangesData,
+    hpasData,
     applicationsData,
     nodesData,
     isLoading,
@@ -179,6 +181,13 @@ export const KuberneterWorkspace: React.FC<KuberneterWorkspaceProps> = ({ resour
           {resource === 'limitranges' && (
             <LimitRanges
               limitRangesData={limitRangesData}
+              kuberneterSelectedNamespace={kuberneterSelectedNamespace}
+            />
+          )}
+
+          {resource === 'hpas' && (
+            <HorizontalPodAutoscalers
+              hpasData={hpasData}
               kuberneterSelectedNamespace={kuberneterSelectedNamespace}
             />
           )}

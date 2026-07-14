@@ -209,7 +209,7 @@ export const KuberneterSidebar: React.FC = () => {
         { id: 'secrets', label: 'Secrets' },
         { id: 'resourcequotas', label: 'Resource Quotas' },
         { id: 'limitranges', label: 'Limit Ranges' },
-        { id: 'hpas', label: 'HPAs' },
+        { id: 'hpas', label: 'Horizontal Pod Autoscalers' },
         { id: 'pdbs', label: 'PDBs' }
       ]
     },
