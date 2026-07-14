@@ -5,6 +5,7 @@ import { CursorSettingsPanel } from '../../features/cursor/components/CursorSett
 import { WebcamPanel } from '../../features/webcam/components/WebcamPanel';
 import { CaptionsPanel } from '../../features/captions/components/CaptionsPanel';
 import { AnnotationsPanel } from '../../features/annotations/components/AnnotationsPanel';
+import { BlurMaskPanel } from '../../features/blur-mask/components/BlurMaskPanel';
 import { ZoomKeyframeEditor } from '../../features/zoom/components/ZoomKeyframeEditor';
 import { ClipSettingsPanel } from '../../features/timeline/components/ClipSettingsPanel';
 import { ExportSidePanel } from '../../features/export/components/ExportSidePanel';
@@ -35,6 +36,7 @@ export function EditorToolPanel({
       {tool === 'webcam' && <WebcamPanel />}
       {tool === 'captions' && <CaptionsPanel />}
       {tool === 'annotations' && <AnnotationsPanel currentTimeMs={currentTimeMs} />}
+      {tool === 'blur-mask' && <BlurMaskPanel currentTimeMs={currentTimeMs} />}
       {tool === 'zoom' && (
         <ZoomKeyframeEditor currentTimeMs={currentTimeMs} sourceResolution={sourceResolution} />
       )}

@@ -17,6 +17,7 @@ import { useAppStore } from '../../app/app-store';
 import { CropOverlay } from '../../features/crop/components/CropOverlay';
 import { CursorOverlay } from '../../features/cursor/components/CursorOverlay';
 import { AnnotationOverlay } from '../../features/annotations/components/AnnotationOverlay';
+import { BlurMaskOverlay } from '../../features/blur-mask/components/BlurMaskOverlay';
 import { REFERENCE_CANVAS_WIDTH } from '@shared/constants';
 import { resolveZoom } from '@shared/zoom-resolve';
 import { smoothCursorPath } from '@shared/cursor-path';
@@ -106,6 +107,7 @@ export function PreviewStage({
     (s) => s.tracks.find((t) => t.id === PRIMARY_VIDEO_TRACK_ID)?.segments ?? []
   );
   const setPlayhead = useTimelineStore((s) => s.setPlayhead);
+  const activeTool = useTimelineStore((s) => s.activeTool);
   const segmentsRef = useRef(segments);
   useEffect(() => {
     segmentsRef.current = segments;
@@ -313,6 +315,18 @@ export function PreviewStage({
                 segmentId={selectedSegmentId}
                 sourceWidth={sourceResolution.width}
                 sourceHeight={sourceResolution.height}
+              />
+            )}
+
+            {/* Blur/mask drawn *before* the cursor (both here and in
+                frame-compositor.ts's composite()) so the cursor stays
+                visible on top of a redacted region instead of getting
+                blurred/masked away with it. */}
+            {!cropToolActive && (
+              <BlurMaskOverlay
+                currentTimeMs={zoomTimeMs}
+                editable={activeTool === 'blur-mask'}
+                stageWidthPx={stageWidthPx}
               />
             )}
 

@@ -11,6 +11,7 @@ import type {
   BackgroundSettings,
   Annotation,
   ArrowAnnotation,
+  BlurMaskRegion,
   CursorSettings
 } from '@screen-recorder/types/project';
 import type { WebcamOptions } from '@screen-recorder/types/recording';
@@ -403,6 +404,88 @@ function drawAnnotations(
   }
 }
 
+function isBlurMaskActive(atMs: number, region: BlurMaskRegion): boolean {
+  return atMs >= region.atMs && atMs <= region.atMs + region.durationMs;
+}
+
+function clipRegionShape(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+  shape: BlurMaskRegion['shape']
+): void {
+  ctx.beginPath();
+  if (shape === 'ellipse') {
+    ctx.ellipse(x + width / 2, y + height / 2, width / 2, height / 2, 0, 0, Math.PI * 2);
+  } else {
+    ctx.rect(x, y, width, height);
+  }
+  ctx.clip();
+}
+
+/**
+ * Draws blur/mask redaction regions on top of the just-blitted video frame --
+ * called from `composite()` right after the frame is drawn onto `ctx`, still
+ * inside the zoom transform/clip, so regions pan and scale with the content
+ * exactly like the cursor does (see the call site).
+ *
+ * `region.rect` is authored against the *original, uncropped* source
+ * recording's normalized (0-1) dimensions (same convention as `CropRect`) and
+ * mapped onto `innerRect` the same naive way `drawCursor`/the zoom focal
+ * point already are -- not re-projected into any per-segment crop-local
+ * space. That matches this codebase's existing (crop-unaware) precedent for
+ * cursor/zoom rather than introducing a new, inconsistent convention; see
+ * `BlurMaskRegion`'s doc comment.
+ *
+ * `sourceScratch` is the untransformed canvas the decoded video frame was
+ * just written into (this.scratch in `composite()`) -- blur samples pixels
+ * from it directly rather than from `ctx`, since `ctx` is mid-transform and
+ * `getImageData`/`drawImage`-from-ctx would have to fight that.
+ */
+function drawBlurMasks(
+  ctx: CanvasRenderingContext2D,
+  sourceScratch: Canvas,
+  innerRect: InnerRect,
+  regions: BlurMaskRegion[],
+  atMs: number
+): void {
+  for (const region of regions) {
+    if (!isBlurMaskActive(atMs, region)) continue;
+
+    const srcX = region.rect.x * innerRect.width;
+    const srcY = region.rect.y * innerRect.height;
+    const width = region.rect.width * innerRect.width;
+    const height = region.rect.height * innerRect.height;
+    if (width <= 0 || height <= 0) continue;
+    const destX = innerRect.x + srcX;
+    const destY = innerRect.y + srcY;
+
+    ctx.save();
+    clipRegionShape(ctx, destX, destY, width, height, region.shape);
+
+    if (region.kind === 'mask') {
+      ctx.fillStyle = region.color;
+      ctx.fillRect(destX, destY, width, height);
+    } else {
+      // Same cheap shrink-then-scale-up blur as drawBlurredImage (background
+      // blur), applied to just this sub-rect of the source frame instead of
+      // the whole canvas -- draw the region into a much smaller offscreen
+      // canvas (discarding high-frequency detail) then scale that back up.
+      const shrink = 1 + region.intensity * 2.5;
+      const smallWidth = Math.max(1, Math.round(width / shrink));
+      const smallHeight = Math.max(1, Math.round(height / shrink));
+      const small = createCanvas(smallWidth, smallHeight);
+      small
+        .getContext('2d')
+        .drawImage(sourceScratch, srcX, srcY, width, height, 0, 0, smallWidth, smallHeight);
+      ctx.drawImage(small, 0, 0, smallWidth, smallHeight, destX, destY, width, height);
+    }
+    ctx.restore();
+  }
+}
+
 /**
  * Composites one output frame at a time. Reuses a single output canvas and a
  * single scratch canvas (sized to the inner content rect) across every frame
@@ -539,6 +622,11 @@ export class FrameCompositor {
     );
     scratchCtx.putImageData(new ImageData(clamped, innerRect.width, innerRect.height), 0, 0);
     ctx.drawImage(this.scratch, innerRect.x, innerRect.y, innerRect.width, innerRect.height);
+
+    // Drawn right after the frame (still inside the zoom transform/clip) and
+    // *before* the cursor, so the cursor stays visible on top of a redacted
+    // region instead of getting blurred/masked away with it.
+    drawBlurMasks(ctx, this.scratch, innerRect, project.blurMasks, atMs);
 
     // Drawn inside the zoom transform (before restore) so the cursor pans
     // and scales with the content -- it's part of the recorded scene, not a

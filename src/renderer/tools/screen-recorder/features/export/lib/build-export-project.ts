@@ -5,6 +5,7 @@ import { useBackgroundStore } from '../../background/store/background-store';
 import { useCursorStore } from '../../cursor/store/cursor-store';
 import { useZoomStore } from '../../zoom/store/zoom-store';
 import { useAnnotationsStore } from '../../annotations/store/annotations-store';
+import { useBlurMaskStore } from '../../blur-mask/store/blur-mask-store';
 import { useCaptionsStore } from '../../captions/store/captions-store';
 
 /**
@@ -19,6 +20,7 @@ export function buildExportProject(sourceVideoPath: string, durationMs: number):
   const cursorState = useCursorStore.getState();
   const { keyframes: zoomKeyframes } = useZoomStore.getState();
   const { annotations } = useAnnotationsStore.getState();
+  const { regions: blurMasks } = useBlurMaskStore.getState();
   const captionsState = useCaptionsStore.getState();
 
   const now = Date.now();
@@ -64,6 +66,7 @@ export function buildExportProject(sourceVideoPath: string, durationMs: number):
       segments: captionsState.segments
     },
     annotations,
+    blurMasks,
     motionBlur: false
   };
 }
