@@ -97,7 +97,8 @@ export const KubeDetailDrawer: React.FC<KubeDetailDrawerProps> = ({ tabId }) => 
     job: 'Job Details',
     cronjob: 'Cron Job Details',
     configmap: 'Config Map Details',
-    secret: 'Secret Details'
+    secret: 'Secret Details',
+    resourcequota: 'Resource Quota Details'
   };
 
   return (

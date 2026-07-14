@@ -6,6 +6,7 @@ import { type DeployData } from '../../types/DeployData';
 import { type ServiceData } from '../../types/ServiceData';
 import { type ConfigMapData } from '../../types/ConfigMapData';
 import { type SecretData } from '../../types/SecretData';
+import { type ResourceQuotaData } from '../../types/ResourceQuotaData';
 import { type ApplicationData } from '../../types/ApplicationData';
 import { type NodeData } from '../../types/NodeData';
 import { type DaemonSetData } from '../../types/DaemonSetData';
@@ -45,6 +46,7 @@ export function useWorkspaceResources(resource: string) {
   const [servicesData, setServicesData] = useState<ServiceData[]>([]);
   const [configMapsData, setConfigMapsData] = useState<ConfigMapData[]>([]);
   const [secretsData, setSecretsData] = useState<SecretData[]>([]);
+  const [resourceQuotasData, setResourceQuotasData] = useState<ResourceQuotaData[]>([]);
   const [applicationsData, setApplicationsData] = useState<ApplicationData[]>([]);
   const [nodesData, setNodesData] = useState<NodeData[]>([]);
 
@@ -73,6 +75,7 @@ export function useWorkspaceResources(resource: string) {
       else if (resource === 'services') queryResource = 'services';
       else if (resource === 'configmaps') queryResource = 'configmaps';
       else if (resource === 'secrets') queryResource = 'secrets';
+      else if (resource === 'resourcequotas') queryResource = 'resourcequotas';
       else if (resource === 'apps') queryResource = 'deployments,statefulsets,daemonsets';
       else if (resource === 'nodes') queryResource = 'nodes';
       else return;
@@ -441,6 +444,48 @@ export function useWorkspaceResources(resource: string) {
           };
         });
         setSecretsData(transformed);
+      } else if (resource === 'resourcequotas') {
+        const transformed = items.map((item) => {
+          const rqItem = item as unknown as {
+            metadata?: K8sResource['metadata'];
+            spec?: { hard?: Record<string, string> };
+            status?: { hard?: Record<string, string>; used?: Record<string, string> };
+          };
+          const name = rqItem.metadata?.name || '';
+          const ns = rqItem.metadata?.namespace || '';
+
+          const specHard = rqItem.spec?.hard || {};
+          const statusHard = rqItem.status?.hard || {};
+          const statusUsed = rqItem.status?.used || {};
+
+          const resourceKeys = Array.from(
+            new Set([...Object.keys(specHard), ...Object.keys(statusHard)])
+          );
+
+          const quotas = resourceKeys.map((key) => {
+            const hardVal = statusHard[key] || specHard[key] || '0';
+            const usedVal = statusUsed[key] || '0';
+            return {
+              resourceName: key,
+              used: usedVal,
+              hard: hardVal
+            };
+          });
+
+          const creationTimestamp = rqItem.metadata?.creationTimestamp || '';
+
+          return {
+            id: `${ns}/${name}`,
+            name,
+            ns,
+            labels: rqItem.metadata?.labels,
+            annotations: rqItem.metadata?.annotations,
+            age: formatAge(creationTimestamp),
+            createdTime: creationTimestamp ? new Date(creationTimestamp).toLocaleString() : '',
+            quotas
+          };
+        });
+        setResourceQuotasData(transformed);
       } else if (resource === 'apps') {
         const transformed = items
           .map((item) => {
@@ -638,6 +683,7 @@ export function useWorkspaceResources(resource: string) {
     servicesData,
     configMapsData,
     secretsData,
+    resourceQuotasData,
     applicationsData,
     nodesData,
     isLoading,
