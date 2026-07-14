@@ -73,6 +73,7 @@ export function CutTimeline(): JSX.Element {
   const { dragOverIndex, getDragHandlers } = useSegmentReorderDrag();
   const { startResize } = useEdgeResize();
   const trackAreaRef = useRef<HTMLDivElement>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
   const playheadDraggingRef = useRef(false);
 
   // Panel height is self-managed (not lifted to EditorPage) so the timeline
@@ -212,7 +213,7 @@ export function CutTimeline(): JSX.Element {
           scroll position, and the playhead (last child, absolutely
           positioned) spans the full stack instead of just the ruler.
         */}
-        <div className="min-h-0 flex-1 overflow-auto">
+        <div ref={scrollContainerRef} className="min-h-0 flex-1 overflow-auto">
           <div
             ref={trackAreaRef}
             className="relative flex flex-col gap-1.5"
@@ -316,6 +317,7 @@ export function CutTimeline(): JSX.Element {
               segments={segments}
               clampedTotal={clampedTotal}
               onPointerDown={startPlayheadDrag}
+              scrollContainerRef={scrollContainerRef}
             />
           </div>
         </div>

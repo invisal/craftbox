@@ -11,6 +11,20 @@ import { getSegmentOutputDurationMs } from '../lib/segment-duration';
 
 export const PRIMARY_VIDEO_TRACK_ID = 'video-1';
 const MIN_SEGMENT_MS = 200;
+export const MIN_TIMELINE_ZOOM = 1;
+export const MAX_TIMELINE_ZOOM = 4;
+// A recording this long (or shorter) is comfortable to cut at 1x -- zoom
+// scales up past that so longer recordings still get enough on-screen
+// resolution per clip to trim/split precisely, instead of always cramming
+// the whole thing into a fixed-width strip.
+const AUTO_ZOOM_REFERENCE_DURATION_MS = 60_000;
+
+/** Default zoom for a freshly-loaded recording -- longer recordings start more zoomed in (and scrollable) rather than always rendering at a fixed 1x regardless of length. Snapped to the same 0.5 steps as the zoom slider. */
+function computeAutoZoom(durationMs: number): number {
+  const raw = durationMs / AUTO_ZOOM_REFERENCE_DURATION_MS;
+  const clamped = Math.min(MAX_TIMELINE_ZOOM, Math.max(MIN_TIMELINE_ZOOM, raw));
+  return Math.round(clamped * 2) / 2;
+}
 
 interface TimelineStoreState {
   playheadMs: number;
@@ -117,6 +131,7 @@ export const useTimelineStore = create<TimelineStoreState>((set, get) => ({
     };
     set({
       sourceDurationMs: durationMs,
+      timelineZoom: computeAutoZoom(durationMs),
       tracks: replaceTrack(get().tracks, { ...track, segments: [segment] })
     });
   },
