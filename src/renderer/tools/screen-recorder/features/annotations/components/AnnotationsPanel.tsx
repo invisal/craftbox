@@ -2,7 +2,11 @@ import type { JSX } from 'react';
 import { useRef } from 'react';
 import { ArrowUpRight, ImagePlus, Trash2, Type } from 'lucide-react';
 import type { Annotation } from '@screen-recorder/types/project';
-import { useAnnotationsStore } from '../store/annotations-store';
+import {
+  useAnnotationsStore,
+  MIN_ARROW_THICKNESS,
+  MAX_ARROW_THICKNESS
+} from '../store/annotations-store';
 import { TEXT_ANIMATION_PRESETS } from '../presets/text-animation-presets';
 import { Slider } from '../../../components/ui/slider';
 import { Button } from '@renderer/components/ui/Button';
@@ -17,6 +21,21 @@ function formatTime(ms: number): string {
 
 const MIN_DURATION_MS = 300;
 const MAX_DURATION_MS = 15000;
+
+const ARROW_COLOR_SWATCHES = [
+  '#ffffff',
+  '#ef4444',
+  '#f59e0b',
+  '#facc15',
+  '#22c55e',
+  '#3b82f6',
+  '#a855f7',
+  '#ec4899'
+];
+const ARROW_STYLES: { id: 'solid' | 'dashed'; label: string }[] = [
+  { id: 'solid', label: 'Solid' },
+  { id: 'dashed', label: 'Dashed' }
+];
 
 const KIND_ICON: Record<Annotation['kind'], typeof Type> = {
   text: Type,
@@ -176,6 +195,77 @@ export function AnnotationsPanel({ currentTimeMs }: AnnotationsPanelProps): JSX.
                     </button>
                   ))}
                 </div>
+              </div>
+            </>
+          )}
+
+          {selected.kind === 'arrow' && (
+            <>
+              <div className="flex flex-col gap-1.5">
+                <span className="text-[10px] font-medium uppercase tracking-wide text-white/40">
+                  Color
+                </span>
+                <div className="grid grid-cols-8 gap-1.5">
+                  {ARROW_COLOR_SWATCHES.map((color) => (
+                    <button
+                      key={color}
+                      onClick={() => updateAnnotation(selected.id, { color })}
+                      title={color}
+                      aria-label={color}
+                      className={cn(
+                        'aspect-square rounded-md ring-2 ring-offset-2 ring-offset-surface-sunken transition-all',
+                        selected.color === color
+                          ? 'ring-white/80'
+                          : 'ring-transparent hover:ring-white/40'
+                      )}
+                      style={{ background: color }}
+                    />
+                  ))}
+                </div>
+                <input
+                  type="color"
+                  value={selected.color}
+                  onChange={(e) => updateAnnotation(selected.id, { color: e.target.value })}
+                  className="h-7 w-full cursor-pointer rounded-lg border border-line bg-transparent"
+                />
+              </div>
+
+              <div className="flex flex-col gap-1.5">
+                <span className="text-[10px] font-medium uppercase tracking-wide text-white/40">
+                  Line style
+                </span>
+                <div className="grid grid-cols-2 gap-1.5">
+                  {ARROW_STYLES.map((style) => (
+                    <button
+                      key={style.id}
+                      onClick={() => updateAnnotation(selected.id, { style: style.id })}
+                      className={cn(
+                        'rounded-md border px-1.5 py-1 text-[10px] font-medium transition-colors',
+                        selected.style === style.id
+                          ? 'border-accent text-accent'
+                          : 'border-line text-white/50 hover:border-white/20'
+                      )}
+                    >
+                      {style.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-1">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-medium uppercase tracking-wide text-white/40">
+                    Thickness
+                  </span>
+                  <span className="text-[11px] text-white/50">{selected.thickness}px</span>
+                </div>
+                <Slider
+                  value={selected.thickness}
+                  min={MIN_ARROW_THICKNESS}
+                  max={MAX_ARROW_THICKNESS}
+                  step={1}
+                  onChange={(thickness) => updateAnnotation(selected.id, { thickness })}
+                />
               </div>
             </>
           )}

@@ -114,6 +114,11 @@ export function AnnotationOverlay({
           const hy1 = y2 - headLength * Math.sin(angle - Math.PI / 6);
           const hx2 = x2 - headLength * Math.cos(angle + Math.PI / 6);
           const hy2 = y2 - headLength * Math.sin(angle + Math.PI / 6);
+          const strokeWidth = Math.max(2, annotation.thickness * scale);
+          // Dashing only applies to the shaft -- matches drawArrow's export
+          // behavior, so the head always reads as a clean arrowhead.
+          const dashArray =
+            annotation.style === 'dashed' ? `${strokeWidth * 2.5} ${strokeWidth * 1.8}` : undefined;
           return (
             <svg
               key={annotation.id}
@@ -127,7 +132,7 @@ export function AnnotationOverlay({
                   y2={y2}
                   stroke="var(--color-accent)"
                   strokeOpacity={0.5}
-                  strokeWidth={Math.max(2, 3 * scale) + 5}
+                  strokeWidth={strokeWidth + 5}
                   strokeLinecap="round"
                 />
               )}
@@ -137,24 +142,25 @@ export function AnnotationOverlay({
                   y1={y1}
                   x2={x2}
                   y2={y2}
-                  stroke="#ffffff"
-                  strokeWidth={Math.max(2, 3 * scale)}
+                  stroke={annotation.color}
+                  strokeWidth={strokeWidth}
+                  strokeDasharray={dashArray}
                 />
                 <line
                   x1={x2}
                   y1={y2}
                   x2={hx1}
                   y2={hy1}
-                  stroke="#ffffff"
-                  strokeWidth={Math.max(2, 3 * scale)}
+                  stroke={annotation.color}
+                  strokeWidth={strokeWidth}
                 />
                 <line
                   x1={x2}
                   y1={y2}
                   x2={hx2}
                   y2={hy2}
-                  stroke="#ffffff"
-                  strokeWidth={Math.max(2, 3 * scale)}
+                  stroke={annotation.color}
+                  strokeWidth={strokeWidth}
                 />
               </g>
               <circle
