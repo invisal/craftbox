@@ -16,6 +16,7 @@ import { useHpas } from './useHpas';
 import { usePdbs } from './usePdbs';
 import { usePriorityClasses } from './usePriorityClasses';
 import { useRuntimeClasses } from './useRuntimeClasses';
+import { useLeases } from './useLeases';
 import { useApplications } from './useApplications';
 import { useNodes } from './useNodes';
 
@@ -44,6 +45,7 @@ export function useWorkspaceResources(resource: string) {
   const pdbs = usePdbs(resource === 'pdbs');
   const priorityclasses = usePriorityClasses(resource === 'priorityclasses');
   const runtimeclasses = useRuntimeClasses(resource === 'runtimeclasses');
+  const leases = useLeases(resource === 'leases');
   const apps = useApplications(resource === 'apps');
   const nodes = useNodes(resource === 'nodes');
 
@@ -64,6 +66,7 @@ export function useWorkspaceResources(resource: string) {
   else if (resource === 'pdbs') activeQuery = pdbs;
   else if (resource === 'priorityclasses') activeQuery = priorityclasses;
   else if (resource === 'runtimeclasses') activeQuery = runtimeclasses;
+  else if (resource === 'leases') activeQuery = leases;
   else if (resource === 'apps') activeQuery = apps;
   else if (resource === 'nodes') activeQuery = nodes;
 
@@ -86,6 +89,7 @@ export function useWorkspaceResources(resource: string) {
     pdbsData: pdbs.data,
     priorityClassesData: priorityclasses.data,
     runtimeClassesData: runtimeclasses.data,
+    leasesData: leases.data,
     applicationsData: apps.data,
     nodesData: nodes.data,
     isLoading: activeQuery ? activeQuery.isLoading : false,

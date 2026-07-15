@@ -150,6 +150,7 @@ export const KuberneterSidebar: React.FC = () => {
     pdbs: 'config',
     priorityclasses: 'config',
     runtimeclasses: 'config',
+    leases: 'config',
     services: 'network',
     endpoints: 'network',
     ingresses: 'network',
@@ -214,7 +215,8 @@ export const KuberneterSidebar: React.FC = () => {
         { id: 'hpas', label: 'Horizontal Pod Autoscalers' },
         { id: 'pdbs', label: 'Pod Disruption Budgets' },
         { id: 'priorityclasses', label: 'Priority Classes' },
-        { id: 'runtimeclasses', label: 'Runtime Classes' }
+        { id: 'runtimeclasses', label: 'Runtime Classes' },
+        { id: 'leases', label: 'Leases' }
       ]
     },
     {
