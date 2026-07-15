@@ -1,8 +1,13 @@
 import type React from 'react';
 import { useState } from 'react';
-import { type ServiceData } from '../../../types/ServiceData';
+import {
+  type ServiceData,
+  type ServiceEndpointSlice,
+  type ServiceEndpoint
+} from '../../../types/ServiceData';
 import { useLayoutStore } from '../../../../../src/store/layout.store';
 import { useKuberneterStore } from '../../../store/kuberneter.store';
+import { KubeTable } from '../../kubeTable';
 
 interface ServiceDetailProps {
   payload: ServiceData;
@@ -177,31 +182,41 @@ export const ServiceDetail: React.FC<ServiceDetailProps> = ({ payload, isTab = f
         {payload.endpointSlices.length === 0 ? (
           <div className="text-xs text-zinc-500 italic pl-1">No endpoint slices found</div>
         ) : (
-          <div className="overflow-hidden border border-border/40 rounded-lg">
-            <table className="w-full text-left border-collapse text-[11px] font-mono">
-              <thead>
-                <tr className="bg-surface-3 border-b border-border/40 text-zinc-500 text-[9px] uppercase font-sans">
-                  <th className="p-2 font-semibold">Name</th>
-                  <th className="p-2 font-semibold">Endpoints</th>
-                  <th className="p-2 font-semibold">Ports</th>
-                  <th className="p-2 font-semibold">Address Type</th>
-                  <th className="p-2 font-semibold">Age</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border/20 text-zinc-300">
-                {payload.endpointSlices.map((slice) => (
-                  <tr key={slice.name} className="hover:bg-surface-2/20">
-                    <td className="p-2 truncate max-w-[120px]" title={slice.name}>
-                      {slice.name}
-                    </td>
-                    <td className="p-2 text-zinc-400">{slice.endpointsCount}</td>
-                    <td className="p-2 text-accent">{slice.ports}</td>
-                    <td className="p-2 text-zinc-400">{slice.addressType}</td>
-                    <td className="p-2 text-zinc-500">{slice.age}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div className="border border-border/40 rounded-lg overflow-hidden flex flex-col h-40">
+            <KubeTable<ServiceEndpointSlice>
+              columns={[
+                {
+                  key: 'name',
+                  header: 'Name',
+                  className: 'font-mono text-zinc-300 truncate max-w-[120px]',
+                  render: (row) => <span title={row.name}>{row.name}</span>
+                },
+                {
+                  key: 'endpointsCount',
+                  header: 'Endpoints',
+                  className: 'font-mono text-zinc-450'
+                },
+                {
+                  key: 'ports',
+                  header: 'Ports',
+                  className: 'font-mono text-accent'
+                },
+                {
+                  key: 'addressType',
+                  header: 'Address Type',
+                  className: 'font-mono text-zinc-450'
+                },
+                {
+                  key: 'age',
+                  header: 'Age',
+                  className: 'font-mono text-zinc-500'
+                }
+              ]}
+              data={payload.endpointSlices}
+              getRowKey={(row) => row.name}
+              variant="modern"
+              resizable={false}
+            />
           </div>
         )}
       </div>
@@ -214,25 +229,26 @@ export const ServiceDetail: React.FC<ServiceDetailProps> = ({ payload, isTab = f
         {payload.endpoints.length === 0 ? (
           <div className="text-xs text-zinc-500 italic pl-1">No endpoints found</div>
         ) : (
-          <div className="overflow-hidden border border-border/40 rounded-lg">
-            <table className="w-full text-left border-collapse text-[11px] font-mono">
-              <thead>
-                <tr className="bg-surface-3 border-b border-border/40 text-zinc-500 text-[9px] uppercase font-sans">
-                  <th className="p-2 font-semibold w-1/3">Name</th>
-                  <th className="p-2 font-semibold w-2/3">Endpoints</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border/20 text-zinc-300">
-                {payload.endpoints.map((ep) => (
-                  <tr key={ep.name} className="hover:bg-surface-2/20">
-                    <td className="p-2 truncate" title={ep.name}>
-                      {ep.name}
-                    </td>
-                    <td className="p-2 text-zinc-450 break-all select-text">{ep.endpoints}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div className="border border-border/40 rounded-lg overflow-hidden flex flex-col h-28">
+            <KubeTable<ServiceEndpoint>
+              columns={[
+                {
+                  key: 'name',
+                  header: 'Name',
+                  className: 'font-mono text-zinc-300 truncate max-w-[120px]',
+                  render: (row) => <span title={row.name}>{row.name}</span>
+                },
+                {
+                  key: 'endpoints',
+                  header: 'Endpoints',
+                  className: 'font-mono text-zinc-450 break-all select-text'
+                }
+              ]}
+              data={payload.endpoints}
+              getRowKey={(row) => row.name}
+              variant="modern"
+              resizable={false}
+            />
           </div>
         )}
       </div>
