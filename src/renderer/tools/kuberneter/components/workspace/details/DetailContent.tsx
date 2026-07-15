@@ -15,6 +15,7 @@ import { PodDisruptionBudgetDetail } from './PodDisruptionBudgetDetail';
 import { PriorityClassDetail } from './PriorityClassDetail';
 import { RuntimeClassDetail } from './RuntimeClassDetail';
 import { LeaseDetail } from './LeaseDetail';
+import { ServiceDetail } from './ServiceDetail';
 import { MutatingWebhookDetail } from './MutatingWebhookDetail';
 import { ValidatingWebhookDetail } from './ValidatingWebhookDetail';
 
@@ -34,6 +35,7 @@ import { type PodDisruptionBudgetData } from '../../../types/PodDisruptionBudget
 import { type PriorityClassData } from '../../../types/PriorityClassData';
 import { type RuntimeClassData } from '../../../types/RuntimeClassData';
 import { type LeaseData } from '../../../types/LeaseData';
+import { type ServiceData } from '../../../types/ServiceData';
 import { type MutatingWebhookConfigurationData } from '../../../types/MutatingWebhookConfigurationData';
 import { type ValidatingWebhookConfigurationData } from '../../../types/ValidatingWebhookConfigurationData';
 
@@ -88,6 +90,8 @@ export const DetailContent: React.FC<DetailContentProps> = ({
       return <RuntimeClassDetail payload={payload as RuntimeClassData} isTab={isTab} />;
     case 'lease':
       return <LeaseDetail payload={payload as LeaseData} isTab={isTab} />;
+    case 'service':
+      return <ServiceDetail payload={payload as ServiceData} isTab={isTab} />;
     case 'mutatingwebhook':
       return (
         <MutatingWebhookDetail

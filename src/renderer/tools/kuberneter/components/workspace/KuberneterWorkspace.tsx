@@ -9,7 +9,7 @@ import { ReplicaSets } from './replicasets/ReplicaSets';
 import { Jobs } from './jobs/Jobs';
 import { CronJobs } from './cronjobs/CronJobs';
 import { WorkloadOverview } from './workload-overview/WorkloadOverview';
-import { ServicesTable } from './ServicesTable';
+import { Services } from './services/Services';
 import { ConfigMaps } from './configmaps/ConfigMaps';
 import { Secrets } from './secrets/Secrets';
 import { ResourceQuotas } from './resourcequotas/ResourceQuotas';
@@ -163,7 +163,7 @@ export const KuberneterWorkspace: React.FC<KuberneterWorkspaceProps> = ({ resour
           )}
 
           {resource === 'services' && (
-            <ServicesTable
+            <Services
               servicesData={servicesData}
               kuberneterSelectedNamespace={kuberneterSelectedNamespace}
             />
