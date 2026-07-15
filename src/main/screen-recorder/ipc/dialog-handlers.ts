@@ -10,7 +10,6 @@ import {
   type ScreenshotCaptureRequest
 } from '../capture/screenshot-capture';
 import { pickOsCaptureSource } from '../capture/pick-os-capture-source';
-import { captureInteractiveRegionWayland } from '../capture/wayland-portal-screenshot';
 import type { OsPickerSource } from '@shared/os-picker-source';
 import type { ScreenRect } from '@shared/capture-region';
 import { getLastScreenshotSaveDir, setLastScreenshotSaveDir } from '../store/screen-capture-store';
@@ -48,12 +47,6 @@ export function registerDialogHandlers(): void {
   ipcMain.handle(IpcChannels.CaptureRegion, async (_event, rect: ScreenRect): Promise<Buffer> => {
     // Screen Capture tool, macOS only — native rectangle grab after the live overlay drag.
     return captureRegionPngDarwin(rect);
-  });
-
-  ipcMain.handle(IpcChannels.CaptureWaylandRegion, async (): Promise<Buffer | null> => {
-    // Screen Capture tool, Linux Wayland only — compositor-native interactive
-    // screenshot. Rejects if the portal is missing; renderer then falls back.
-    return captureInteractiveRegionWayland();
   });
 
   ipcMain.handle(

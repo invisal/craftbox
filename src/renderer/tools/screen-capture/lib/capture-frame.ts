@@ -112,75 +112,6 @@ function waitForNextVideoFrame(video: HTMLVideoElement, staleOkMs?: number): Pro
   });
 }
 
-function canvasToBlob(canvas: HTMLCanvasElement, type: string, quality?: number): Promise<Blob> {
-  return new Promise((resolve, reject) => {
-    canvas.toBlob(
-      (blob) => {
-        if (blob) resolve(blob);
-        else reject(new Error('Failed to encode screenshot'));
-      },
-      type,
-      quality
-    );
-  });
-}
-
-async function grabFrameFromStream(
-  stream: MediaStream,
-  options?: { skipFrames?: number; staleFrameMs?: number }
-): Promise<{ bitmap: ImageBitmap; jpeg: ArrayBuffer }> {
-  const track = stream.getVideoTracks()[0];
-  if (!track) throw new Error('No video track in capture stream.');
-  if (track.readyState === 'ended') throw new Error('Capture cancelled.');
-
-  const video = document.createElement('video');
-  video.muted = true;
-  video.playsInline = true;
-  video.srcObject = stream;
-  Object.assign(video.style, {
-    position: 'fixed',
-    opacity: '0',
-    width: '1px',
-    height: '1px',
-    pointerEvents: 'none'
-  });
-  document.body.appendChild(video);
-
-  try {
-    // Caller must hide the app before this — priming while visible caches dirty frames.
-    await video.play();
-    await waitForVideoFrame(video);
-
-    const skipFrames = options?.skipFrames ?? 2;
-    const staleFrameMs = options?.staleFrameMs ?? 150;
-    for (let i = 0; i < skipFrames; i += 1) {
-      await waitForNextVideoFrame(video, staleFrameMs);
-    }
-
-    const canvas = document.createElement('canvas');
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
-    const ctx = canvas.getContext('2d');
-    if (!ctx || canvas.width === 0 || canvas.height === 0) {
-      throw new Error('Captured screenshot is empty.');
-    }
-    ctx.drawImage(video, 0, 0);
-
-    // Keep bitmap for crop; JPEG only for the overlay (skip full-screen PNG
-    // encode). 0.92: at 0.7 the backdrop shows ringing around text, which
-    // reads as "the preview is lower quality than the final crop".
-    const [bitmap, jpegBlob] = await Promise.all([
-      createImageBitmap(canvas),
-      canvasToBlob(canvas, 'image/jpeg', 0.92)
-    ]);
-    const jpeg = await jpegBlob.arrayBuffer();
-    return { bitmap, jpeg };
-  } finally {
-    stream.getTracks().forEach((item) => item.stop());
-    video.remove();
-  }
-}
-
 /** Legacy PNG grab for non-region callers. */
 async function grabPngFromStream(
   stream: MediaStream,
@@ -476,7 +407,6 @@ export async function selectAndCaptureRegion(
 ): Promise<Blob | null> {
   let picked: OsPickerSource | null = null;
   let portalStream: MediaStream | null = null;
-  let frameBitmap: ImageBitmap | null = null;
 
   const stopPortalStream = (): void => {
     portalStream?.getTracks().forEach((track) => track.stop());
@@ -504,25 +434,12 @@ export async function selectAndCaptureRegion(
     }
 
     if (usesOsPicker) {
-      // Wayland: prefer the compositor's own interactive screenshot UI (native
-      // look, real colors, no frozen backdrop). Hide first so the frozen frame
-      // its UI snapshots does not include CraftBox. If no portal/session bus is
-      // present (older wlroots), fall through to the getUserMedia + backdrop
-      // flow below.
-      try {
-        await hideMainWindow();
-        await new Promise<void>((resolve) => window.setTimeout(resolve, 200));
-        onStep?.('region');
-        const buffer = await window.screenRecorder!.screenshot.captureWaylandRegion();
-        if (!buffer) return null;
-        return new Blob([buffer], { type: 'image/png' });
-      } catch (err) {
-        console.warn(
-          '[capture] wayland screenshot portal unavailable, using stream fallback:',
-          err
-        );
-      }
-
+      // Wayland: same live overlay as every other platform. The compositor
+      // hides a window's absolute position, so instead of a frozen backdrop we
+      // keep the PipeWire stream open, dim the LIVE monitor with the overlay,
+      // and grab the real pixels only after the user commits -- then crop in
+      // overlay-local space (overlayRelative) to sidestep the global-coordinate
+      // offset that plagued the old flow.
       onStep?.('picker');
       picked = await pickOsCaptureSource(true);
       if (!picked) return null;
@@ -534,28 +451,25 @@ export async function selectAndCaptureRegion(
         nativeResolution: true
       });
 
-      // Same order as full capture: hide first, then attach video — priming while
-      // visible caches frames that still contain CraftBox.
       await hideMainWindow();
       await new Promise<void>((resolve) => window.setTimeout(resolve, 200));
-
-      const frame = await grabFrameFromStream(portalStream, {
-        skipFrames: 3,
-        staleFrameMs: 150
-      });
-      stopPortalStream();
-      frameBitmap = frame.bitmap;
 
       onStep?.('region');
       const selection =
         (await window.screenRecorder?.screenshot.selectRegion({
-          backdropJpeg: frame.jpeg,
-          bounds: picked.displayBounds
+          bounds: picked.displayBounds,
+          overlayRelative: true
         })) ?? null;
       if (!selection) return null;
 
       onStep?.('processing');
-      return await cropImageBitmap(frameBitmap, selection);
+      // Overlay is torn down now; skip a couple frames so it is not in the grab.
+      const fullBlob = await grabPngFromStream(portalStream, {
+        skipFrames: 2,
+        staleFrameMs: 150
+      });
+      stopPortalStream();
+      return await cropPngBlob(fullBlob, selection);
     }
 
     // Windows/X11 (macOS and Wayland handled above): both platforms give apps
@@ -583,7 +497,6 @@ export async function selectAndCaptureRegion(
     if (err instanceof Error && err.message.includes('monitor')) throw err;
     return null;
   } finally {
-    frameBitmap?.close();
     stopPortalStream();
     await showApp({ focus: true });
   }
