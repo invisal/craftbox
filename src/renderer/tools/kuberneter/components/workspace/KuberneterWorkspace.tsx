@@ -20,6 +20,7 @@ import { PriorityClasses } from './priorityclasses/PriorityClasses';
 import { RuntimeClasses } from './runtimeclasses/RuntimeClasses';
 import { Leases } from './leases/Leases';
 import { MutatingWebhooks } from './mutatingwebhooks/MutatingWebhooks';
+import { ValidatingWebhooks } from './validatingwebhooks/ValidatingWebhooks';
 import { Application } from './application/Application';
 import { Nodes } from './nodes/Nodes';
 import { KuberneterHomeView } from './kubernetes-home';
@@ -58,6 +59,7 @@ export const KuberneterWorkspace: React.FC<KuberneterWorkspaceProps> = ({ resour
     runtimeClassesData,
     leasesData,
     mutatingWebhooksData,
+    validatingWebhooksData,
     applicationsData,
     nodesData,
     isLoading,
@@ -226,6 +228,10 @@ export const KuberneterWorkspace: React.FC<KuberneterWorkspaceProps> = ({ resour
 
           {resource === 'mutatingwebhooks' && (
             <MutatingWebhooks mutatingWebhooksData={mutatingWebhooksData} />
+          )}
+
+          {resource === 'validatingwebhooks' && (
+            <ValidatingWebhooks validatingWebhooksData={validatingWebhooksData} />
           )}
 
           {resource === 'apps' && (

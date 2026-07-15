@@ -105,7 +105,8 @@ export const KubeDetailDrawer: React.FC<KubeDetailDrawerProps> = ({ tabId }) => 
     priorityclass: 'Priority Class Details',
     runtimeclass: 'Runtime Class Details',
     lease: 'Lease Details',
-    mutatingwebhook: 'Mutating Webhook Configuration Details'
+    mutatingwebhook: 'Mutating Webhook Configuration Details',
+    validatingwebhook: 'Validating Webhook Configuration Details'
   };
 
   return (

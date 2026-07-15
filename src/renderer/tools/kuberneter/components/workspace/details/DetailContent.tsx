@@ -16,6 +16,7 @@ import { PriorityClassDetail } from './PriorityClassDetail';
 import { RuntimeClassDetail } from './RuntimeClassDetail';
 import { LeaseDetail } from './LeaseDetail';
 import { MutatingWebhookDetail } from './MutatingWebhookDetail';
+import { ValidatingWebhookDetail } from './ValidatingWebhookDetail';
 
 import { type PodData } from '../../../types/PodData';
 import { type DeployData } from '../../../types/DeployData';
@@ -34,6 +35,7 @@ import { type PriorityClassData } from '../../../types/PriorityClassData';
 import { type RuntimeClassData } from '../../../types/RuntimeClassData';
 import { type LeaseData } from '../../../types/LeaseData';
 import { type MutatingWebhookConfigurationData } from '../../../types/MutatingWebhookConfigurationData';
+import { type ValidatingWebhookConfigurationData } from '../../../types/ValidatingWebhookConfigurationData';
 
 interface DetailContentProps {
   contentType: string;
@@ -90,6 +92,13 @@ export const DetailContent: React.FC<DetailContentProps> = ({
       return (
         <MutatingWebhookDetail
           payload={payload as MutatingWebhookConfigurationData}
+          isTab={isTab}
+        />
+      );
+    case 'validatingwebhook':
+      return (
+        <ValidatingWebhookDetail
+          payload={payload as ValidatingWebhookConfigurationData}
           isTab={isTab}
         />
       );
