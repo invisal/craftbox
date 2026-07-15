@@ -463,9 +463,11 @@ export async function selectAndCaptureRegion(
       if (!selection) return null;
 
       onStep?.('processing');
-      // Overlay is torn down now; skip a couple frames so it is not in the grab.
+      // Overlay is torn down now; skip one frame so it is not in the grab. Each
+      // skip costs up to staleFrameMs of dead wait (a static desktop emits no
+      // new PipeWire frames), so keep it at one to avoid a laggy crop.
       const fullBlob = await grabPngFromStream(portalStream, {
-        skipFrames: 2,
+        skipFrames: 1,
         staleFrameMs: 150
       });
       stopPortalStream();

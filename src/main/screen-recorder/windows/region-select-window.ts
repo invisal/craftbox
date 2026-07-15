@@ -205,12 +205,12 @@ export function selectCaptureRegion(
     overlayRelative = options?.overlayRelative ?? false;
     const bounds = options?.bounds ?? getVirtualDesktopBounds();
     const hasBackdrop = Boolean(backdropPayload);
-    // overlayRelative overlays must cover exactly the captured display, so run
-    // them fullscreen/exclusive like the backdrop overlay.
-    exclusiveFullscreen =
-      hasBackdrop ||
-      overlayRelative ||
-      (process.platform === 'linux' && screen.getAllDisplays().length === 1);
+    // Fullscreen ONLY for an opaque backdrop overlay. A transparent overlay
+    // (the live dim-the-desktop mode) must never be fullscreen: transparent +
+    // fullscreen on Linux/Wayland renders as solid black, hiding the desktop
+    // the user is trying to select. Non-fullscreen + setBounds still covers the
+    // display.
+    exclusiveFullscreen = hasBackdrop;
 
     regionWindow = new BrowserWindow({
       x: bounds.x,
