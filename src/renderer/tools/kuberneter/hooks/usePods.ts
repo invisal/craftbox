@@ -96,7 +96,8 @@ export function usePods(enabled: boolean) {
           controlledBy,
           node,
           qos,
-          hasWarning
+          hasWarning,
+          rawItem: item
         };
       });
     },
