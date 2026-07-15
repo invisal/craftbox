@@ -148,6 +148,11 @@ export const KuberneterSidebar: React.FC = () => {
     limitranges: 'config',
     hpas: 'config',
     pdbs: 'config',
+    priorityclasses: 'config',
+    runtimeclasses: 'config',
+    leases: 'config',
+    mutatingwebhooks: 'config',
+    validatingwebhooks: 'config',
     services: 'network',
     endpoints: 'network',
     ingresses: 'network',
@@ -210,7 +215,12 @@ export const KuberneterSidebar: React.FC = () => {
         { id: 'resourcequotas', label: 'Resource Quotas' },
         { id: 'limitranges', label: 'Limit Ranges' },
         { id: 'hpas', label: 'Horizontal Pod Autoscalers' },
-        { id: 'pdbs', label: 'Pod Disruption Budgets' }
+        { id: 'pdbs', label: 'Pod Disruption Budgets' },
+        { id: 'priorityclasses', label: 'Priority Classes' },
+        { id: 'runtimeclasses', label: 'Runtime Classes' },
+        { id: 'leases', label: 'Leases' },
+        { id: 'mutatingwebhooks', label: 'Mutating Webhook Configurations' },
+        { id: 'validatingwebhooks', label: 'Validating Webhook Configurations' }
       ]
     },
     {
