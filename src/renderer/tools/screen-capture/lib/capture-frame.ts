@@ -504,6 +504,25 @@ export async function selectAndCaptureRegion(
     }
 
     if (usesOsPicker) {
+      // Wayland: prefer the compositor's own interactive screenshot UI (native
+      // look, real colors, no frozen backdrop). Hide first so the frozen frame
+      // its UI snapshots does not include CraftBox. If no portal/session bus is
+      // present (older wlroots), fall through to the getUserMedia + backdrop
+      // flow below.
+      try {
+        await hideMainWindow();
+        await new Promise<void>((resolve) => window.setTimeout(resolve, 200));
+        onStep?.('region');
+        const buffer = await window.screenRecorder!.screenshot.captureWaylandRegion();
+        if (!buffer) return null;
+        return new Blob([buffer], { type: 'image/png' });
+      } catch (err) {
+        console.warn(
+          '[capture] wayland screenshot portal unavailable, using stream fallback:',
+          err
+        );
+      }
+
       onStep?.('picker');
       picked = await pickOsCaptureSource(true);
       if (!picked) return null;

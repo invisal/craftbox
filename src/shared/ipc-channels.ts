@@ -19,6 +19,7 @@ export const IpcChannels = {
   CopyScreenshot: 'screenshot:copy',
   CaptureScreenshot: 'screenshot:capture',
   CaptureRegion: 'screenshot:capture-region',
+  CaptureWaylandRegion: 'screenshot:capture-wayland-region',
   SelectCaptureRegion: 'screenshot:select-region',
   RegionSelectComplete: 'region-select:complete',
   RegionSelectCancel: 'region-select:cancel',
