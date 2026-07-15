@@ -4,6 +4,7 @@ import { tmpdir } from 'os';
 import { join } from 'path';
 import { promisify } from 'util';
 import { desktopCapturer, screen, type BrowserWindow, type Display } from 'electron';
+import type { ScreenRect } from '@shared/capture-region';
 import { hideCaptureWindow, restoreCaptureWindow } from '../windows/window-visibility';
 import { findDisplayForCapturerId } from './display-for-source';
 
@@ -94,6 +95,22 @@ export async function captureScreenPng(request: ScreenshotCaptureRequest): Promi
   }
 
   return captureScreenPngChromium(request);
+}
+
+/**
+ * macOS: capture a rectangle of the desktop directly via `screencapture -R`,
+ * in global point coordinates. Used after the live overlay reports a drag, so
+ * the pixels come straight from the OS (Display P3, native scale) with no
+ * frozen-frame round trip. `-o` drops the window shadow so adjacent windows
+ * inside the rect are not haloed.
+ */
+export async function captureRegionPngDarwin(rect: ScreenRect): Promise<Buffer> {
+  return captureDarwinPng([
+    '-x',
+    '-o',
+    '-R',
+    `${Math.round(rect.x)},${Math.round(rect.y)},${Math.round(rect.width)},${Math.round(rect.height)}`
+  ]);
 }
 
 /** Hide, capture, and restore in one main-process turn so the renderer is not suspended mid-flow. */

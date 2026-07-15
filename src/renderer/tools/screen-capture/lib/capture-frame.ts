@@ -484,6 +484,25 @@ export async function selectAndCaptureRegion(
   };
 
   try {
+    // macOS: dim the live desktop with the transparent overlay (no frozen
+    // screenshot), then grab just the dragged rectangle natively. screencapture
+    // -R returns Display P3 pixels straight from the OS, so what the user framed
+    // on the real screen is exactly what gets captured.
+    if (window.api?.platform === 'darwin') {
+      await hideMainWindow();
+      await new Promise<void>((resolve) => window.setTimeout(resolve, 150));
+
+      onStep?.('region');
+      const selection = (await window.screenRecorder?.screenshot.selectRegion()) ?? null;
+      if (!selection) return null;
+
+      onStep?.('processing');
+      // Let the overlay window finish tearing down so it is not in the grab.
+      await new Promise<void>((resolve) => window.setTimeout(resolve, 80));
+      const buffer = await window.screenRecorder!.screenshot.captureRegion(selection.rect);
+      return new Blob([buffer], { type: 'image/png' });
+    }
+
     if (usesOsPicker) {
       onStep?.('picker');
       picked = await pickOsCaptureSource(true);
