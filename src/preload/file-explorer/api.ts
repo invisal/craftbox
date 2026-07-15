@@ -1,4 +1,5 @@
 import { ipcRenderer } from 'electron';
+import { IpcChannels } from '@shared/ipc-channels';
 
 export interface FileEntry {
   name: string;
@@ -38,6 +39,15 @@ export interface R2CredentialStatus {
   configured: boolean;
 }
 
+/** Progress for a copy/move that streams bytes between local disk and R2. */
+export interface TransferProgress {
+  currentFile: string;
+  filesCompleted: number;
+  totalFiles: number;
+  bytesTransferred: number;
+  totalBytes: number;
+}
+
 export interface FileExplorerApi {
   getHomeDir: () => Promise<string>;
   listDirectory: (dirPath: string, cursor?: string) => Promise<ListDirectoryResponse>;
@@ -55,6 +65,7 @@ export interface FileExplorerApi {
     sourcePaths: string[],
     destDir: string
   ) => Promise<{ success: true } | { error: string }>;
+  onTransferProgress: (callback: (progress: TransferProgress) => void) => () => void;
   writeClipboardFiles: (paths: string[], mode: ClipboardMode) => Promise<void>;
   readClipboardFiles: () => Promise<ClipboardFiles | null>;
   createFile: (
@@ -91,6 +102,11 @@ export const fileExplorerApi: FileExplorerApi = {
     ipcRenderer.invoke('file-explorer:copy-entries', sourcePaths, destDir),
   moveEntries: (sourcePaths, destDir) =>
     ipcRenderer.invoke('file-explorer:move-entries', sourcePaths, destDir),
+  onTransferProgress: (callback): (() => void) => {
+    const listener = (_event: unknown, progress: TransferProgress): void => callback(progress);
+    ipcRenderer.on(IpcChannels.FileExplorerTransferProgress, listener);
+    return () => ipcRenderer.removeListener(IpcChannels.FileExplorerTransferProgress, listener);
+  },
   writeClipboardFiles: (paths, mode) =>
     ipcRenderer.invoke('file-explorer:clipboard-write', paths, mode),
   readClipboardFiles: () => ipcRenderer.invoke('file-explorer:clipboard-read'),

@@ -23,7 +23,7 @@ import {
 import { getR2Credential } from './r2Credential';
 import { parseLocation } from './location';
 
-function getS3Client(): S3Client {
+export function getS3Client(): S3Client {
   const credential = getR2Credential();
   if (!credential) throw new Error('R2 is not configured.');
 
@@ -45,19 +45,19 @@ function getCloudflareClient(): Cloudflare {
   return new Cloudflare({ apiToken: credential.apiToken });
 }
 
-function parseR2Uri(uri: string): { bucket: string; key: string } {
+export function parseR2Uri(uri: string): { bucket: string; key: string } {
   const { path } = parseLocation(uri);
   const slashIndex = path.indexOf('/');
   if (slashIndex === -1) return { bucket: path, key: '' };
   return { bucket: path.slice(0, slashIndex), key: path.slice(slashIndex + 1) };
 }
 
-function normalizePrefix(key: string): string {
+export function normalizePrefix(key: string): string {
   if (key === '') return '';
   return key.endsWith('/') ? key : `${key}/`;
 }
 
-function keyBasename(key: string): string {
+export function keyBasename(key: string): string {
   const trimmed = key.replace(/\/$/, '');
   const slashIndex = trimmed.lastIndexOf('/');
   return slashIndex === -1 ? trimmed : trimmed.slice(slashIndex + 1);
@@ -78,7 +78,33 @@ async function objectExists(client: S3Client, bucket: string, key: string): Prom
   }
 }
 
-async function listAllKeysUnderPrefix(
+/**
+ * Mirrors localFileDriver's getAvailableName -- finds a non-colliding key
+ * under destPrefix by appending " (2)", " (3)", etc. `baseName` is a bare
+ * file/folder name (no slashes); folders are recognized by a trailing '/'.
+ */
+export async function getAvailableR2Name(
+  client: S3Client,
+  bucket: string,
+  destPrefix: string,
+  baseName: string
+): Promise<string> {
+  const isFolder = baseName.endsWith('/');
+  const trimmed = isFolder ? baseName.slice(0, -1) : baseName;
+  const dotIndex = trimmed.lastIndexOf('.');
+  const extension = isFolder || dotIndex <= 0 ? '' : trimmed.slice(dotIndex);
+  const stem = isFolder || dotIndex <= 0 ? trimmed : trimmed.slice(0, dotIndex);
+
+  let candidate = baseName;
+  let attempt = 1;
+  while (await objectExists(client, bucket, `${destPrefix}${candidate}`)) {
+    attempt += 1;
+    candidate = isFolder ? `${stem} (${attempt})/` : `${stem} (${attempt})${extension}`;
+  }
+  return candidate;
+}
+
+export async function listAllKeysUnderPrefix(
   client: S3Client,
   bucket: string,
   prefix: string

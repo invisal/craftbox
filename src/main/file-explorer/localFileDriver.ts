@@ -23,7 +23,7 @@ export function pathExists(target: string): boolean {
   }
 }
 
-async function getAvailableName(destDir: string, baseName: string): Promise<string> {
+export async function getAvailableName(destDir: string, baseName: string): Promise<string> {
   const extension = path.extname(baseName);
   const stem = path.basename(baseName, extension);
 

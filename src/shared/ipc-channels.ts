@@ -45,5 +45,6 @@ export const IpcChannels = {
   TrayRegister: 'tray:register',
   TrayUnregister: 'tray:unregister',
   ShowNotification: 'notification:show',
-  PickOsCaptureSource: 'screenshot:pick-os-source'
+  PickOsCaptureSource: 'screenshot:pick-os-source',
+  FileExplorerTransferProgress: 'file-explorer:transfer-progress'
 } as const;
