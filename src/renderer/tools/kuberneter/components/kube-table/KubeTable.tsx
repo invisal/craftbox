@@ -19,11 +19,11 @@ export function KubeTable<T>({
   emptyMessage,
   hideHeaderWhenEmpty,
   className,
-  variant = 'standard',
   resizable = true,
-  rowHeight
+  rowHeight,
+  borderTop = false
 }: KubeTableProps<T>) {
-  const isModern = variant === 'modern';
+  const isModern = true;
 
   // Initialize column widths from initialWidth prop or default
   const [colWidths, setColWidths] = useState<Record<string, number>>(() =>
@@ -139,18 +139,14 @@ export function KubeTable<T>({
   return (
     <div
       className={cn(
-        'flex flex-col flex-1 min-h-0 bg-transparent border-t border-border-dark/60',
+        'flex flex-col flex-1 min-h-0 bg-transparent',
+        borderTop && 'border-t border-border-dark/60',
         className
       )}
     >
       {/* 1. Dedicated Header Container (fixed vertical position) */}
       {(!hideHeaderWhenEmpty || data.length > 0) && (
-        <div
-          ref={headerRef}
-          className={cn(
-            'shrink-0 overflow-hidden select-none bg-sidebar-bg border-b border-border-dark/60'
-          )}
-        >
+        <div ref={headerRef} className={cn('shrink-0 overflow-hidden select-none bg-sidebar-bg')}>
           <table className="text-left text-xs bg-transparent" style={tableStyle}>
             {resizable && (
               <colgroup>

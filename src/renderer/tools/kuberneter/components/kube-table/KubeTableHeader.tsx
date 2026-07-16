@@ -54,8 +54,8 @@ export function KubeTableHeader<T>({
                 'font-sans select-none relative',
                 alignClass,
                 isModern
-                  ? 'bg-sidebar-bg py-2.5 px-3 border-b border-border-dark/60 text-zinc-400 font-semibold'
-                  : 'bg-surface-2 py-2.5 px-2 border border-border/20',
+                  ? 'bg-sidebar-bg py-2.5 px-3 text-zinc-400 font-semibold'
+                  : 'bg-surface-2 py-2.5 px-2',
                 col.headerClassName
               )}
               style={resizable && colWidth !== undefined ? { width: colWidth } : undefined}

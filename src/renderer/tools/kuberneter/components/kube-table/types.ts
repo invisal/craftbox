@@ -28,4 +28,6 @@ export interface KubeTableProps<T> {
   resizable?: boolean;
   /** Fixed row height for virtualization. Optional */
   rowHeight?: number;
+  /** Whether to render a top border on the table. Default: true */
+  borderTop?: boolean;
 }
