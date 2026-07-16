@@ -11,6 +11,11 @@ export interface Column<T> {
   initialWidth?: number;
   /** Set false to prevent this specific column from being resized */
   resizable?: boolean;
+  /** Set false to prevent this specific column from being sorted. Default: true */
+  sortable?: boolean;
+  /** Optional custom extractor to get sortable value from row */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  sortValue?: (row: T) => any;
 }
 
 export interface KubeTableProps<T> {

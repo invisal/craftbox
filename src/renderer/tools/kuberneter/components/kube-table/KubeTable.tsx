@@ -1,5 +1,5 @@
 import type React from 'react';
-import { useState, useRef, useCallback, useEffect } from 'react';
+import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import { cn } from 'cnfast';
 import { AlertCircle } from 'lucide-react';
 import { type KubeTableProps, type Column } from './types';
@@ -37,6 +37,58 @@ export function KubeTable<T>({
   const [containerHeight, setContainerHeight] = useState(400);
 
   const rHeight = rowHeight ?? (isModern ? 38 : 36);
+
+  // Sorting state
+  const [sortCol, setSortCol] = useState<string | null>(null);
+  const [sortDir, setSortDir] = useState<'asc' | 'desc' | null>(null);
+
+  const handleSort = useCallback(
+    (colKey: string) => {
+      const col = columns.find((c) => c.key === colKey);
+      if (col?.sortable === false) return;
+
+      if (sortCol === colKey) {
+        if (sortDir === 'asc') {
+          setSortDir('desc');
+        } else if (sortDir === 'desc') {
+          setSortCol(null);
+          setSortDir(null);
+        } else {
+          setSortDir('asc');
+        }
+      } else {
+        setSortCol(colKey);
+        setSortDir('asc');
+      }
+    },
+    [columns, sortCol, sortDir]
+  );
+
+  const sortedData = useMemo(() => {
+    if (!sortCol || !sortDir) return data;
+
+    const column = columns.find((c) => c.key === sortCol);
+    if (!column) return data;
+
+    return [...data].sort((a, b) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const valA = column.sortValue ? column.sortValue(a) : (a as any)[sortCol];
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const valB = column.sortValue ? column.sortValue(b) : (b as any)[sortCol];
+
+      if (valA === valB) return 0;
+      if (valA == null) return 1;
+      if (valB == null) return -1;
+
+      const factor = sortDir === 'asc' ? 1 : -1;
+
+      if (typeof valA === 'string' && typeof valB === 'string') {
+        return valA.localeCompare(valB, undefined, { numeric: true, sensitivity: 'base' }) * factor;
+      }
+
+      return (valA < valB ? -1 : 1) * factor;
+    });
+  }, [data, sortCol, sortDir, columns]);
 
   useEffect(() => {
     const el = containerRef.current;
@@ -115,16 +167,18 @@ export function KubeTable<T>({
   const buffer = 8;
   const startIndex = Math.max(0, Math.floor(scrollTop / rHeight) - buffer);
   const endIndex = Math.min(
-    data.length,
+    sortedData.length,
     Math.ceil((scrollTop + containerHeight) / rHeight) + buffer
   );
-  const visibleData = data.slice(startIndex, endIndex);
+  const visibleData = sortedData.slice(startIndex, endIndex);
 
   const spacerTopHeight = startIndex * rHeight;
-  const spacerBottomHeight = (data.length - endIndex) * rHeight;
+  const spacerBottomHeight = (sortedData.length - endIndex) * rHeight;
 
   const tableWidth =
-    resizable && data.length > 0 ? Object.values(colWidths).reduce((a, b) => a + b, 0) : undefined;
+    resizable && sortedData.length > 0
+      ? Object.values(colWidths).reduce((a, b) => a + b, 0)
+      : undefined;
 
   const tableStyle: React.CSSProperties =
     tableWidth !== undefined
@@ -145,7 +199,7 @@ export function KubeTable<T>({
       )}
     >
       {/* 1. Dedicated Header Container (fixed vertical position) */}
-      {(!hideHeaderWhenEmpty || data.length > 0) && (
+      {(!hideHeaderWhenEmpty || sortedData.length > 0) && (
         <div ref={headerRef} className={cn('shrink-0 overflow-hidden select-none bg-sidebar-bg')}>
           <table className="text-left text-xs bg-transparent" style={tableStyle}>
             {resizable && (
@@ -160,10 +214,13 @@ export function KubeTable<T>({
               colWidths={colWidths}
               isModern={isModern}
               hideHeaderWhenEmpty={hideHeaderWhenEmpty}
-              dataLength={data.length}
+              dataLength={sortedData.length}
               resizable={resizable}
               startResize={startResize}
               isColResizable={isColResizable}
+              sortCol={sortCol}
+              sortDir={sortDir}
+              onSort={handleSort}
             />
           </table>
         </div>
@@ -185,7 +242,7 @@ export function KubeTable<T>({
           )}
 
           <tbody className="text-zinc-350 bg-transparent">
-            {data.length === 0 ? (
+            {sortedData.length === 0 ? (
               <tr className="bg-transparent">
                 <td
                   colSpan={columns.length}
