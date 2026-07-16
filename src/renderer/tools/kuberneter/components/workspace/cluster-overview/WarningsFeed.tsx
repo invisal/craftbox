@@ -60,8 +60,7 @@ export const WarningsFeed: React.FC<WarningsFeedProps> = ({ events, namespace })
       const timeA = new Date(a.lastTimestamp || a.metadata?.creationTimestamp || 0).getTime();
       const timeB = new Date(b.lastTimestamp || b.metadata?.creationTimestamp || 0).getTime();
       return timeB - timeA;
-    })
-    .slice(0, 5);
+    });
 
   const columns: Column<EventResource>[] = [
     {
@@ -133,19 +132,19 @@ export const WarningsFeed: React.FC<WarningsFeedProps> = ({ events, namespace })
   ];
 
   return (
-    <div className="flex flex-col gap-2 select-none min-w-0 w-full relative">
+    <div className="flex-1 flex flex-col gap-2 select-none min-w-0 w-full relative min-h-0">
       <div className="px-4">
         <span className="text-xs font-bold text-text-base uppercase tracking-wider font-sans pb-1.5 border-b border-border/40 truncate shrink-0 block">
           Warning Events Log
         </span>
       </div>
 
-      <div className="mt-2">
+      <div className="flex-1 min-h-0 flex flex-col mt-2">
         <KubeTable
           columns={columns}
           data={warningEvents}
           getRowKey={(evt) => evt.metadata?.name || Math.random().toString()}
-          className="mt-2 overflow-visible flex-initial"
+          className="flex-1 overflow-x-auto"
           hideHeaderWhenEmpty
           emptyState={
             <div className="w-full flex flex-col items-center justify-center text-zinc-550 gap-2 py-8 select-none">
