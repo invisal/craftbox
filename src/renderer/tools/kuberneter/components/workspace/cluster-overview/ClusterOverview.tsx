@@ -463,7 +463,7 @@ export const ClusterOverview: React.FC = () => {
         />
       }
     >
-      <div className="flex-1 flex flex-col gap-3.5 min-h-0 pb-4">
+      <div className="flex-1 flex flex-col gap-3.5 min-h-0">
         {/* Row 1: ECharts Concentric gauges */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5 shrink-0 px-4">
           <MetricGauge
