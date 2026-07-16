@@ -6,16 +6,9 @@ interface KubeTableCellProps<T> {
   col: Column<T>;
   colWidth: number | undefined;
   isModern: boolean;
-  resizable: boolean;
 }
 
-export function KubeTableCell<T>({
-  row,
-  col,
-  colWidth,
-  isModern,
-  resizable
-}: KubeTableCellProps<T>) {
+export function KubeTableCell<T>({ row, col, colWidth, isModern }: KubeTableCellProps<T>) {
   const alignClass =
     col.align === 'center' ? 'text-center' : col.align === 'right' ? 'text-right' : 'text-left';
 
@@ -30,9 +23,10 @@ export function KubeTableCell<T>({
         isModern ? 'py-2.5 border-none' : 'border border-border/20',
         col.className
       )}
-      style={resizable && colWidth !== undefined ? { maxWidth: colWidth } : undefined}
     >
-      <div className="truncate">{content}</div>
+      <div className="truncate" style={colWidth !== undefined ? { maxWidth: colWidth } : undefined}>
+        {content}
+      </div>
     </td>
   );
 }

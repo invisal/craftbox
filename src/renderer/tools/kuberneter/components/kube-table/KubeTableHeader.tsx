@@ -11,7 +11,7 @@ interface KubeTableHeaderProps<T> {
   dataLength: number;
   resizable: boolean;
   startResize: (e: React.MouseEvent, colKey: string) => void;
-  isColResizable: (col: Column<T>) => boolean;
+  isColResizable: () => boolean;
   sortCol: string | null;
   sortDir: 'asc' | 'desc' | null;
   onSort: (colKey: string) => void;
@@ -51,7 +51,7 @@ export function KubeTableHeader<T>({
               : col.align === 'right'
                 ? 'text-right'
                 : 'text-left';
-          const canResize = isColResizable(col);
+          const canResize = isColResizable();
           const colWidth = colWidths[col.key];
           const isSortable = col.sortable !== false;
           const isSorted = sortCol === col.key;
@@ -59,11 +59,9 @@ export function KubeTableHeader<T>({
           return (
             <th
               key={col.key}
-              onClick={() => isSortable && onSort(col.key)}
               className={cn(
                 'font-sans select-none relative group',
                 alignClass,
-                isSortable && 'cursor-pointer hover:bg-surface-2/30',
                 isModern
                   ? 'bg-sidebar-bg py-2.5 px-3 text-zinc-400 font-semibold'
                   : 'bg-surface-2 py-2.5 px-2',
@@ -71,10 +69,18 @@ export function KubeTableHeader<T>({
               )}
               style={resizable && colWidth !== undefined ? { width: colWidth } : undefined}
             >
-              <div className="flex items-center gap-1.5 min-w-0">
+              <div
+                className="flex items-center gap-1.5 min-w-0"
+                style={colWidth !== undefined ? { maxWidth: colWidth - 16 } : undefined}
+              >
                 <span className="block truncate">{col.header}</span>
                 {isSortable && (
-                  <span className="inline-flex shrink-0 text-zinc-550 group-hover:text-zinc-400 transition-colors">
+                  <button
+                    type="button"
+                    onClick={() => onSort(col.key)}
+                    className="inline-flex shrink-0 text-zinc-550 hover:text-accent cursor-pointer transition-colors focus:outline-none"
+                    title={`Sort by ${typeof col.header === 'string' ? col.header : col.key}`}
+                  >
                     {isSorted ? (
                       sortDir === 'asc' ? (
                         <ChevronUp className="size-3 text-accent" />
@@ -84,7 +90,7 @@ export function KubeTableHeader<T>({
                     ) : (
                       <ChevronsUpDown className="size-3 opacity-0 group-hover:opacity-100 transition-opacity" />
                     )}
-                  </span>
+                  </button>
                 )}
               </div>
 

@@ -2,7 +2,7 @@ import type React from 'react';
 import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import { cn } from 'cnfast';
 import { AlertCircle } from 'lucide-react';
-import { type KubeTableProps, type Column } from './types';
+import { type KubeTableProps } from './types';
 import { KubeTableHeader } from './KubeTableHeader';
 import { KubeTableRow } from './KubeTableRow';
 
@@ -161,7 +161,7 @@ export function KubeTable<T>({
     [colWidths]
   );
 
-  const isColResizable = (col: Column<T>) => resizable && col.resizable !== false;
+  const isColResizable = () => true;
 
   // Windowing calculation
   const buffer = 8;
@@ -175,20 +175,13 @@ export function KubeTable<T>({
   const spacerTopHeight = startIndex * rHeight;
   const spacerBottomHeight = (sortedData.length - endIndex) * rHeight;
 
-  const tableWidth =
-    resizable && sortedData.length > 0
-      ? Object.values(colWidths).reduce((a, b) => a + b, 0)
-      : undefined;
+  const tableWidth = Object.values(colWidths).reduce((a, b) => a + b, 0);
 
-  const tableStyle: React.CSSProperties =
-    tableWidth !== undefined
-      ? {
-          tableLayout: 'fixed',
-          width: tableWidth,
-          minWidth: '100%',
-          borderCollapse: 'collapse'
-        }
-      : { width: '100%', borderCollapse: 'collapse' };
+  const tableStyle: React.CSSProperties = {
+    tableLayout: 'fixed',
+    width: tableWidth,
+    borderCollapse: 'collapse'
+  };
 
   return (
     <div
@@ -276,7 +269,6 @@ export function KubeTable<T>({
                     selectedRowKey={selectedRowKey}
                     colWidths={colWidths}
                     isModern={isModern}
-                    resizable={resizable}
                   />
                 ))}
                 {spacerBottomHeight > 0 && (
