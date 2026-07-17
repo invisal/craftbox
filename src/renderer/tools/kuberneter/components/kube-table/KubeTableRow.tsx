@@ -32,12 +32,7 @@ export function KubeTableRow<T>({
       )}
     >
       {columns.map((col) => (
-        <KubeTableCell<T>
-          key={col.key}
-          row={row}
-          col={col}
-          colWidth={colWidths[col.key]}
-        />
+        <KubeTableCell<T> key={col.key} row={row} col={col} colWidth={colWidths[col.key]} />
       ))}
     </tr>
   );
