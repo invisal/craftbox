@@ -115,7 +115,7 @@ export const KubeDetailDrawer: React.FC<KubeDetailDrawerProps> = ({ tabId }) => 
     <div
       ref={drawerRef}
       style={{ width: `${width}px` }}
-      className="absolute top-0 right-0 z-30 bg-sidebar-bg border-l border-border-dark flex flex-col h-full select-none shadow-2xl"
+      className="absolute top-0 right-0 z-30 bg-surface-2 border-l border-border-dark flex flex-col h-full select-none shadow-2xl"
     >
       {/* Resize Handle on the left side of the drawer */}
       <div
