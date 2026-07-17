@@ -83,6 +83,11 @@ export function FocusToolbarApp(): JSX.Element | null {
   const [cropRegion, setCropRegion] = useState<CaptureRegionSelection | null>(
     init?.cropRegion ?? null
   );
+  // Which of Display/Window the user has actually clicked -- starts at
+  // null (neither highlighted) rather than derived from the initial
+  // sourceId's type, which would make a tab look pre-selected before the
+  // user has interacted with anything.
+  const [activeTab, setActiveTab] = useState<CaptureTargetType | null>(null);
   const [mode, setMode] = useState<Mode>('setup');
   const [error, setError] = useState<string | null>(null);
   const [openPopover, setOpenPopover] = useState<'camera' | null>(null);
@@ -127,6 +132,7 @@ export function FocusToolbarApp(): JSX.Element | null {
         if (!source) return;
         setSourceId(source.id);
         setCropRegion(null);
+        setActiveTab(source.type);
         startRecording(source);
       }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -170,6 +176,9 @@ export function FocusToolbarApp(): JSX.Element | null {
       if (selection) {
         setSourceId(screenSource.id);
         setCropRegion(selection);
+        // Area has its own highlight (driven by cropRegion) -- clear
+        // Display/Window's so only one control ever reads as active.
+        setActiveTab(null);
         setOpenPopover(null);
       }
     } finally {
@@ -269,11 +278,14 @@ export function FocusToolbarApp(): JSX.Element | null {
           {TABS.map(({ type, label, icon: Icon }) => (
             <button
               key={type}
-              onClick={() => void openSourcePicker(type)}
+              onClick={() => {
+                setActiveTab(type);
+                void openSourcePicker(type);
+              }}
               className={cn(
                 NO_DRAG,
                 'flex flex-col items-center gap-0.5 rounded-2xl px-3 py-1.5 text-[10px]',
-                focusedSource.type === type && !cropRegion
+                activeTab === type
                   ? 'bg-white/15 text-white'
                   : 'text-white/50 hover:bg-white/10 hover:text-white/80'
               )}

@@ -1,10 +1,10 @@
 import type { JSX } from 'react';
 import { useEffect, useState } from 'react';
 import { Monitor, RefreshCw, Smartphone } from 'lucide-react';
-import type { CaptureSource, CaptureTargetType } from '@screen-recorder/types/recording';
+import type { CaptureTargetType } from '@screen-recorder/types/recording';
 import { useCaptureSources } from '../hooks/useCaptureSources';
 import { useRecordingStore } from '../store/recording-store';
-import { useWebcamStore } from '../../webcam/store/webcam-store';
+import { openFocusToolbarFor } from '../lib/open-focus-toolbar';
 
 /** Chrome's Screen Capture API adds this to MediaTrackSettings; lib.dom doesn't have it yet. */
 interface DisplaySurfaceSettings extends MediaTrackSettings {
@@ -15,7 +15,6 @@ export function SourcePicker(): JSX.Element {
   const { sources, bootedSimulatorName, loading, error, refresh } = useCaptureSources();
   const selectedSource = useRecordingStore((state) => state.selectedSource);
   const setSelectedSource = useRecordingStore((state) => state.setSelectedSource);
-  const audio = useRecordingStore((state) => state.audio);
   const [systemPickerSupported, setSystemPickerSupported] = useState(false);
   const [systemPickerError, setSystemPickerError] = useState<string | null>(null);
 
@@ -25,20 +24,6 @@ export function SourcePicker(): JSX.Element {
       .then(setSystemPickerSupported)
       .catch(() => setSystemPickerSupported(false));
   }, []);
-
-  // Hides this window and opens a small always-on-top settings bar floating
-  // over the real desktop -- see main/screen-recorder/windows/
-  // focus-toolbar-window.ts. Reveals the actual picked window/screen instead
-  // of a copy rendered inside the app.
-  function openFocusToolbar(source: CaptureSource): void {
-    setSelectedSource(source);
-    const { enabled, deviceId, shape, mirrored, position, size } = useWebcamStore.getState();
-    void window.screenRecorder.focusToolbar.open({
-      sourceId: source.id,
-      audio,
-      webcam: { enabled, deviceId, shape, mirrored, position, size }
-    });
-  }
 
   // macOS 15+ only (gated by supportsNativeSystemPicker/registerDisplayMediaHandler).
   // Hands source selection to the real ScreenCaptureKit dialog instead of our
@@ -130,7 +115,7 @@ export function SourcePicker(): JSX.Element {
             <button
               key={source.id}
               onClick={() => setSelectedSource(source)}
-              onDoubleClick={() => openFocusToolbar(source)}
+              onDoubleClick={() => void openFocusToolbarFor(source)}
               title="Double-click to focus this source and record from a floating toolbar"
               className={`rounded-xl border p-2 text-left ${
                 selectedSource?.id === source.id

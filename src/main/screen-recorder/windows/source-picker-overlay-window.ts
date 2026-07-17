@@ -48,6 +48,15 @@ function createOverlayWindow(): BrowserWindow {
     hasShadow: false,
     show: false,
     backgroundColor: '#00000000',
+    // Without this, macOS silently clamps a window's bounds to fit within
+    // a single display -- fatal here since `bounds` spans the whole
+    // multi-monitor virtual desktop (see region-select-window.ts, which
+    // needs the exact same flag for the exact same reason). Without it,
+    // every display past the first renders outside the (clamped) window
+    // and its panel is just never shown.
+    ...(process.platform === 'darwin'
+      ? { enableLargerThanScreen: true, roundedCorners: false }
+      : {}),
     webPreferences: {
       preload: preloadScriptPath(),
       sandbox: false,

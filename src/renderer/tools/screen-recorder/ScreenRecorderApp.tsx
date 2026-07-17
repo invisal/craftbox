@@ -1,8 +1,7 @@
 import type { ComponentType, JSX } from 'react';
-import { Circle, FolderOpen, Settings as SettingsIcon, Sliders } from 'lucide-react';
+import { FolderOpen, Settings as SettingsIcon, Sliders } from 'lucide-react';
 import { useAppStore, type ScreenRecorderRoute } from './app/app-store';
 import { cn } from './lib/utils';
-import { RecordSetupPage } from './workspace/record-setup/RecordSetupPage';
 import { EditorPage } from './workspace/editor/EditorPage';
 import { LibraryPage } from './workspace/library/LibraryPage';
 import { PresetsPage } from './workspace/presets/PresetsPage';
@@ -12,16 +11,11 @@ import { CutTimeline } from './features/timeline/components/CutTimeline';
 import { RecordingControllerProvider } from './features/recording/context/RecordingControllerContext';
 import { FocusToolbarBridge } from './features/recording/components/FocusToolbarBridge';
 
-// `recording-hud` is intentionally excluded: double-clicking a source opens
-// its own frameless always-on-top window instead (main/screen-recorder/
-// windows/focus-toolbar-window.ts), not navigated to inside the main
-// workspace.
 const NAV_ITEMS: {
   route: ScreenRecorderRoute;
   label: string;
   icon: ComponentType<{ size?: number }>;
 }[] = [
-  { route: 'record-setup', label: 'Record', icon: Circle },
   { route: 'library', label: 'Library', icon: FolderOpen },
   { route: 'presets', label: 'Presets', icon: Sliders },
   { route: 'settings', label: 'Settings', icon: SettingsIcon }
@@ -32,6 +26,10 @@ export function ScreenRecorderApp(): JSX.Element {
   const setRoute = useAppStore((state) => state.setRoute);
   const lastRecording = useAppStore((state) => state.lastRecording);
 
+  function handleNavClick(itemRoute: ScreenRecorderRoute): void {
+    setRoute(itemRoute);
+  }
+
   return (
     <RecordingControllerProvider>
       <FocusToolbarBridge />
@@ -40,7 +38,7 @@ export function ScreenRecorderApp(): JSX.Element {
           {NAV_ITEMS.map(({ route: itemRoute, label, icon: Icon }) => (
             <button
               key={itemRoute}
-              onClick={() => setRoute(itemRoute)}
+              onClick={() => handleNavClick(itemRoute)}
               className={cn(
                 'flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors',
                 route === itemRoute
@@ -74,7 +72,6 @@ export function ScreenRecorderApp(): JSX.Element {
             </div>
 
             <div className="flex min-h-0 flex-1 overflow-auto">
-              {route === 'record-setup' && <RecordSetupPage />}
               {route === 'editor' && <EditorPage />}
               {route === 'library' && <LibraryPage />}
               {route === 'presets' && <PresetsPage />}
