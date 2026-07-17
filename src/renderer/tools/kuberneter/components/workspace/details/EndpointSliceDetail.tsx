@@ -1,5 +1,4 @@
 import type React from 'react';
-import { useState } from 'react';
 import {
   type EndpointSliceData,
   type EndpointSliceEndpoint,
@@ -8,24 +7,17 @@ import {
 import { useLayoutStore } from '../../../../../src/store/layout.store';
 import { useKuberneterStore } from '../../../store/kuberneter.store';
 import { KubeTable } from '../../kubeTable';
+import { KubePropertiesTable, type PropertyItem } from './KubePropertiesTable';
 
 interface EndpointSliceDetailProps {
   payload: EndpointSliceData;
   isTab?: boolean;
 }
 
-interface PropertyRow {
-  id: string;
-  name: string;
-  value: React.ReactNode;
-  hasDetail?: boolean;
-}
-
 export const EndpointSliceDetail: React.FC<EndpointSliceDetailProps> = ({
   payload,
   isTab = false
 }) => {
-  const [expandedKeys, setExpandedKeys] = useState<Set<string | number>>(new Set());
   const activeInstanceId = useLayoutStore((s) => s.activeInstanceId);
   const openTab = useLayoutStore((s) => s.openTab);
   const setNamespace = useKuberneterStore((s) => s.setKuberneterInstanceNamespace);
@@ -83,59 +75,10 @@ export const EndpointSliceDetail: React.FC<EndpointSliceDetailProps> = ({
     }
   };
 
-  const handleRowClick = (row: PropertyRow) => {
-    if (row.hasDetail) {
-      setExpandedKeys((prev) => {
-        const next = new Set(prev);
-        if (next.has(row.id)) {
-          next.delete(row.id);
-        } else {
-          next.add(row.id);
-        }
-        return next;
-      });
-    }
-  };
-
-  const renderRowExpansion = (row: PropertyRow) => {
-    if (row.id === 'labels') {
-      return (
-        <div className="flex flex-wrap gap-1 max-h-32 overflow-y-auto pr-1 select-text">
-          {labels.map(([k, v]) => (
-            <span
-              key={k}
-              className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-mono bg-surface-3 border border-border/60 text-zinc-350 truncate max-w-full"
-              title={`${k}=${v}`}
-            >
-              {k}={v}
-            </span>
-          ))}
-        </div>
-      );
-    }
-    if (row.id === 'annotations') {
-      return (
-        <div className="flex flex-wrap gap-1 max-h-32 overflow-y-auto pr-1 select-text">
-          {annotations.map(([k, v]) => (
-            <span
-              key={k}
-              className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-mono bg-surface-3 border border-border/60 text-zinc-350 truncate max-w-full"
-              title={`${k}=${v}`}
-            >
-              {k}={v}
-            </span>
-          ))}
-        </div>
-      );
-    }
-    return null;
-  };
-
   const annotations = payload.annotations ? Object.entries(payload.annotations) : [];
   const labels = payload.labels ? Object.entries(payload.labels) : [];
 
-  // Setup properties data array
-  const propertiesData: PropertyRow[] = [
+  const propertiesData: PropertyItem[] = [
     {
       id: 'created',
       name: 'Created',
@@ -161,28 +104,40 @@ export const EndpointSliceDetail: React.FC<EndpointSliceDetailProps> = ({
     {
       id: 'labels',
       name: 'Labels',
-      value: (
-        <div className="flex justify-between items-center w-full pr-2">
-          <span>{labels.length} Labels</span>
-          <span className="text-[10px] text-zinc-550 font-semibold cursor-pointer hover:text-zinc-350">
-            {expandedKeys.has('labels') ? '▲' : '▼'}
-          </span>
+      value: `${labels.length} Labels`,
+      hasDetail: labels.length > 0,
+      renderDetail: () => (
+        <div className="flex flex-wrap gap-1 max-h-32 overflow-y-auto pr-1 select-text">
+          {labels.map(([k, v]) => (
+            <span
+              key={k}
+              className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-mono bg-surface-3 border border-border/60 text-zinc-350 truncate max-w-full"
+              title={`${k}=${v}`}
+            >
+              {k}={v}
+            </span>
+          ))}
         </div>
-      ),
-      hasDetail: labels.length > 0
+      )
     },
     {
       id: 'annotations',
       name: 'Annotations',
-      value: (
-        <div className="flex justify-between items-center w-full pr-2">
-          <span>{annotations.length} Annotations</span>
-          <span className="text-[10px] text-zinc-555 font-semibold cursor-pointer hover:text-zinc-350">
-            {expandedKeys.has('annotations') ? '▲' : '▼'}
-          </span>
+      value: `${annotations.length} Annotations`,
+      hasDetail: annotations.length > 0,
+      renderDetail: () => (
+        <div className="flex flex-wrap gap-1 max-h-32 overflow-y-auto pr-1 select-text">
+          {annotations.map(([k, v]) => (
+            <span
+              key={k}
+              className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-mono bg-surface-3 border border-border/60 text-zinc-350 truncate max-w-full"
+              title={`${k}=${v}`}
+            >
+              {k}={v}
+            </span>
+          ))}
         </div>
-      ),
-      hasDetail: annotations.length > 0
+      )
     }
   ];
 
@@ -210,27 +165,6 @@ export const EndpointSliceDetail: React.FC<EndpointSliceDetailProps> = ({
     value: payload.addressType
   });
 
-  const propertiesColumns = [
-    {
-      key: 'name',
-      header: 'Property',
-      render: (row: PropertyRow) => (
-        <span className="text-[10px] text-zinc-555 uppercase tracking-wider font-semibold">
-          {row.name}
-        </span>
-      ),
-      initialWidth: 120
-    },
-    {
-      key: 'value',
-      header: 'Value',
-      render: (row: PropertyRow) => (
-        <span className="font-mono text-zinc-300 break-all">{row.value}</span>
-      ),
-      initialWidth: 320
-    }
-  ];
-
   return (
     <div className={`flex flex-col gap-4 ${isTab ? 'p-6 h-full overflow-y-auto' : 'flex-1'}`}>
       {/* Properties Section */}
@@ -238,18 +172,7 @@ export const EndpointSliceDetail: React.FC<EndpointSliceDetailProps> = ({
         <span className="text-[10px] font-bold text-zinc-450 uppercase tracking-wider mb-1">
           Properties
         </span>
-        <div className="border-y border-border/40 flex flex-col h-auto w-full overflow-y-auto">
-          <KubeTable<PropertyRow>
-            columns={propertiesColumns}
-            data={propertiesData}
-            getRowKey={(row) => row.id}
-            showHeader={false}
-            resizable={false}
-            onRowClick={handleRowClick}
-            renderRowExpansion={renderRowExpansion}
-            expandedRowKeys={expandedKeys}
-          />
-        </div>
+        <KubePropertiesTable properties={propertiesData} />
       </div>
 
       {/* Endpoints Table Section */}

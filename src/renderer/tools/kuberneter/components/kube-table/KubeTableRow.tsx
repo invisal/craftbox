@@ -5,7 +5,7 @@ import { KubeTableCell } from './KubeTableCell';
 interface KubeTableRowProps<T> {
   row: T;
   columns: Column<T>[];
-  getRowKey: (row: T) => string | number;
+  getRowKey: (row: T, index?: number) => string | number;
   onRowClick?: (row: T) => void;
   selectedRowKey?: string | number;
   colWidths: Record<string, number>;

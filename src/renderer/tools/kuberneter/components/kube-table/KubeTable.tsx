@@ -259,15 +259,15 @@ export function KubeTable<T>({
                     <td colSpan={columns.length} style={{ padding: 0, height: spacerTopHeight }} />
                   </tr>
                 )}
-                {visibleData.map((row) => {
-                  const key = getRowKey(row);
+                {visibleData.map((row, index) => {
+                  const key = getRowKey(row, index);
                   const isExpanded = expandedRowKeys?.has(key);
                   return (
                     <Fragment key={key}>
                       <KubeTableRow<T>
                         row={row}
                         columns={columns}
-                        getRowKey={getRowKey}
+                        getRowKey={(r) => getRowKey(r, index)}
                         onRowClick={onRowClick}
                         selectedRowKey={selectedRowKey}
                         colWidths={colWidths}

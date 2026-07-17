@@ -23,7 +23,7 @@ export interface KubeTableProps<T> {
   data: T[];
   onRowClick?: (row: T) => void;
   selectedRowKey?: string | number;
-  getRowKey: (row: T) => string | number;
+  getRowKey: (row: T, index?: number) => string | number;
   emptyState?: React.ReactNode;
   emptyMessage?: string;
   hideHeaderWhenEmpty?: boolean;
