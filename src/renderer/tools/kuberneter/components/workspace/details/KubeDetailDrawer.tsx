@@ -109,7 +109,8 @@ export const KubeDetailDrawer: React.FC<KubeDetailDrawerProps> = ({ tabId }) => 
     lease: 'Lease Details',
     mutatingwebhook: 'Mutating Webhook Configuration Details',
     validatingwebhook: 'Validating Webhook Configuration Details',
-    endpoints: 'Endpoints Details'
+    endpoints: 'Endpoints Details',
+    ingresses: 'Ingress Details'
   };
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -131,7 +132,9 @@ export const KubeDetailDrawer: React.FC<KubeDetailDrawerProps> = ({ tabId }) => 
         <span className="text-xs font-bold text-white uppercase tracking-wider">
           {contentType === 'endpoints'
             ? `Endpoints: ${resourceName}`
-            : titleNames[contentType] || 'Details'}
+            : contentType === 'ingresses'
+              ? `Ingress: ${resourceName}`
+              : titleNames[contentType] || 'Details'}
         </span>
         <div className="flex items-center gap-2">
           <button

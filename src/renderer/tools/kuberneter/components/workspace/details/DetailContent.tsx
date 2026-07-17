@@ -20,6 +20,7 @@ import { MutatingWebhookDetail } from './MutatingWebhookDetail';
 import { ValidatingWebhookDetail } from './ValidatingWebhookDetail';
 import { EndpointSliceDetail } from './EndpointSliceDetail';
 import { EndpointDetail } from './EndpointDetail';
+import { IngressDetail } from './IngressDetail';
 
 import { type PodData } from '../../../types/PodData';
 import { type DeployData } from '../../../types/DeployData';
@@ -42,6 +43,7 @@ import { type MutatingWebhookConfigurationData } from '../../../types/MutatingWe
 import { type ValidatingWebhookConfigurationData } from '../../../types/ValidatingWebhookConfigurationData';
 import { type EndpointSliceData } from '../../../types/EndpointSliceData';
 import { type EndpointData } from '../../../types/EndpointData';
+import { type IngressData } from '../../../types/IngressData';
 
 interface DetailContentProps {
   contentType: string;
@@ -100,6 +102,8 @@ export const DetailContent: React.FC<DetailContentProps> = ({
       return <EndpointSliceDetail payload={payload as EndpointSliceData} isTab={isTab} />;
     case 'endpoints':
       return <EndpointDetail payload={payload as EndpointData} isTab={isTab} />;
+    case 'ingresses':
+      return <IngressDetail payload={payload as IngressData} isTab={isTab} />;
     case 'mutatingwebhook':
       return (
         <MutatingWebhookDetail
