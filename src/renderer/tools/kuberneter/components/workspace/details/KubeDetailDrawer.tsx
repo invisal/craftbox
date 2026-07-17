@@ -1,9 +1,10 @@
 import type React from 'react';
 import { useRef, useEffect } from 'react';
-import { Maximize2, X } from 'lucide-react';
+import { Maximize2, Pencil, Star, Trash2, X } from 'lucide-react';
 import { useLayoutStore } from '../../../../../src/store/layout.store';
 import { useKuberneterStore } from '../../../store/kuberneter.store';
 import { DetailContent } from './DetailContent';
+import { type IngressClassData } from '../../../types/IngressClassData';
 
 interface KubeDetailDrawerProps {
   tabId: string;
@@ -110,7 +111,8 @@ export const KubeDetailDrawer: React.FC<KubeDetailDrawerProps> = ({ tabId }) => 
     mutatingwebhook: 'Mutating Webhook Configuration Details',
     validatingwebhook: 'Validating Webhook Configuration Details',
     endpoints: 'Endpoints Details',
-    ingresses: 'Ingress Details'
+    ingresses: 'Ingress Details',
+    ingressclasses: 'Ingress Class Details'
   };
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -134,9 +136,37 @@ export const KubeDetailDrawer: React.FC<KubeDetailDrawerProps> = ({ tabId }) => 
             ? `Endpoints: ${resourceName}`
             : contentType === 'ingresses'
               ? `Ingress: ${resourceName}`
-              : titleNames[contentType] || 'Details'}
+              : contentType === 'ingressclasses'
+                ? `IngressClass: ${resourceName}`
+                : titleNames[contentType] || 'Details'}
         </span>
         <div className="flex items-center gap-2">
+          {contentType === 'ingressclasses' && (
+            <>
+              <button
+                title={`${(payload as IngressClassData).isDefault ? 'Remove default' : 'Set as default'}`}
+                className="text-zinc-400 hover:text-yellow-400 cursor-pointer hover:bg-border-dark/40 p-1 rounded transition-colors border-none bg-transparent flex items-center justify-center"
+              >
+                {(payload as IngressClassData).isDefault ? (
+                  <Star className="size-3.5 fill-yellow-400 text-yellow-400" />
+                ) : (
+                  <Star className="size-3.5" />
+                )}
+              </button>
+              <button
+                title="Edit"
+                className="text-zinc-400 hover:text-white cursor-pointer hover:bg-border-dark/40 p-1 rounded transition-colors border-none bg-transparent flex items-center justify-center"
+              >
+                <Pencil className="size-3.5" />
+              </button>
+              <button
+                title="Delete"
+                className="text-zinc-400 hover:text-red-400 cursor-pointer hover:bg-border-dark/40 p-1 rounded transition-colors border-none bg-transparent flex items-center justify-center"
+              >
+                <Trash2 className="size-3.5" />
+              </button>
+            </>
+          )}
           <button
             onClick={handleMaximize}
             title="Open in new tab"
