@@ -113,6 +113,26 @@ export function FocusToolbarApp(): JSX.Element | null {
     []
   );
 
+  // A pick from the Display/Window click-to-record overlay (see
+  // source-picker-overlay-window.ts) skips the toolbar's own Record button
+  // entirely -- clicking a display/window panel there both selects it and
+  // starts recording immediately, same as the native macOS window-select
+  // flow. `sources`/`cropRegion`/`audio`/`webcam` are all read inside
+  // startRecording via closure, so this has to re-subscribe whenever any of
+  // them change or it'd start with stale config.
+  useEffect(
+    () =>
+      window.screenRecorder.focusToolbar.onSourcePicked((sourceId) => {
+        const source = sources.find((s) => s.id === sourceId);
+        if (!source) return;
+        setSourceId(source.id);
+        setCropRegion(null);
+        startRecording(source);
+      }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [sources, cropRegion, audio, webcam]
+  );
+
   useEffect(() => {
     if (mode !== 'recording' || recordingStartedAt === null) return;
     const id = setInterval(
@@ -133,14 +153,6 @@ export function FocusToolbarApp(): JSX.Element | null {
   }, [mode]);
 
   const focusedSource = sources.find((s) => s.id === sourceId) ?? null;
-
-  function pick(source: CaptureSource): void {
-    setSourceId(source.id);
-    setOpenPopover(null);
-    // A crop rect is only meaningful against the display it was measured
-    // on -- picking anything else invalidates it.
-    setCropRegion(null);
-  }
 
   // Drag-select a sub-rectangle of a display to record instead of the whole
   // thing. Reuses the same fullscreen overlay window Screen Capture's region
@@ -165,8 +177,7 @@ export function FocusToolbarApp(): JSX.Element | null {
     }
   }
 
-  function handleStart(): void {
-    if (!focusedSource) return;
+  function startRecording(source: CaptureSource): void {
     setMode('starting');
     setError(null);
     // The drag-selected Area rect is the most specific target available;
@@ -175,14 +186,27 @@ export function FocusToolbarApp(): JSX.Element | null {
     // owner -- currently just the Simulator -- see CaptureSource.displayBounds).
     // A generic window with no bounds just leaves this undefined, and the
     // toolbar stays wherever it already is.
-    const targetBounds = cropRegion?.rect ?? focusedSource.displayBounds;
+    const targetBounds = cropRegion?.rect ?? source.displayBounds;
     window.screenRecorder.focusToolbar.requestStart({
-      sourceId: focusedSource.id,
+      sourceId: source.id,
       audio,
       webcam,
       cropRegion: cropRegion ?? undefined,
       targetBounds
     });
+  }
+
+  function handleStart(): void {
+    if (!focusedSource) return;
+    startRecording(focusedSource);
+  }
+
+  // Opens the full-desktop click-to-record overlay for this tab's type
+  // instead of silently auto-picking the first matching source -- see
+  // source-picker-overlay-window.ts. A pick there arrives via
+  // onSourcePicked above and starts recording immediately.
+  async function openSourcePicker(type: CaptureTargetType): Promise<void> {
+    await window.screenRecorder.focusToolbar.openSourcePicker({ type });
   }
 
   function handleStop(): void {
@@ -245,10 +269,7 @@ export function FocusToolbarApp(): JSX.Element | null {
           {TABS.map(({ type, label, icon: Icon }) => (
             <button
               key={type}
-              onClick={() => {
-                const first = sources.find((s) => s.type === type);
-                if (first) pick(first);
-              }}
+              onClick={() => void openSourcePicker(type)}
               className={cn(
                 NO_DRAG,
                 'flex flex-col items-center gap-0.5 rounded-2xl px-3 py-1.5 text-[10px]',

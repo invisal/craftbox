@@ -34,7 +34,8 @@ export default defineConfig({
         input: {
           index: resolve('src/renderer/index.html'),
           regionSelect: resolve('src/renderer/region-select.html'),
-          focusToolbar: resolve('src/renderer/focus-toolbar.html')
+          focusToolbar: resolve('src/renderer/focus-toolbar.html'),
+          sourcePickerOverlay: resolve('src/renderer/source-picker-overlay.html')
         }
       }
     },

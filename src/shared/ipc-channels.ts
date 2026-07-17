@@ -53,6 +53,10 @@ export const IpcChannels = {
   FocusToolbarStopRequested: 'focus-toolbar:stop-requested',
   FocusToolbarRecordingStarted: 'focus-toolbar:recording-started',
   FocusToolbarRecordingStopped: 'focus-toolbar:recording-stopped',
+  SourcePickerOverlayOpen: 'source-picker-overlay:open',
+  SourcePickerOverlayPick: 'source-picker-overlay:pick',
+  SourcePickerOverlayCancel: 'source-picker-overlay:cancel',
+  SourcePickerOverlayPicked: 'source-picker-overlay:picked',
   ShowNotification: 'notification:show',
   PickOsCaptureSource: 'screenshot:pick-os-source',
   FileExplorerTransferProgress: 'file-explorer:transfer-progress'

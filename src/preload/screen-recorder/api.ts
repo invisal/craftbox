@@ -20,6 +20,7 @@ import type {
   FocusToolbarStartPayload,
   FocusToolbarRecordingResult
 } from '@shared/focus-toolbar';
+import type { SourcePickerOverlayOpenOptions } from '@shared/source-picker-overlay';
 
 export const screenRecorderApi = {
   recording: {
@@ -186,7 +187,23 @@ export const screenRecorderApi = {
         callback(result);
       ipcRenderer.on(IpcChannels.FocusToolbarRecordingStarted, listener);
       return () => ipcRenderer.removeListener(IpcChannels.FocusToolbarRecordingStarted, listener);
+    },
+    /** Called by the toolbar window's Display/Window tabs to open the click-to-record overlay. */
+    openSourcePicker: (options: SourcePickerOverlayOpenOptions): Promise<void> =>
+      ipcRenderer.invoke(IpcChannels.SourcePickerOverlayOpen, options),
+    /** Toolbar window: a source was picked in the overlay -- apply it and start recording. */
+    onSourcePicked: (callback: (sourceId: string) => void): (() => void) => {
+      const listener = (_event: unknown, sourceId: string): void => callback(sourceId);
+      ipcRenderer.on(IpcChannels.SourcePickerOverlayPicked, listener);
+      return () => ipcRenderer.removeListener(IpcChannels.SourcePickerOverlayPicked, listener);
     }
+  },
+  sourcePickerOverlay: {
+    /** Called by the overlay window itself when a display/window card is clicked. */
+    pick: (sourceId: string): void =>
+      ipcRenderer.send(IpcChannels.SourcePickerOverlayPick, sourceId),
+    /** Called by the overlay window itself (Esc / click outside a card). */
+    cancel: (): void => ipcRenderer.send(IpcChannels.SourcePickerOverlayCancel)
   }
 };
 
