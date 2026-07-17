@@ -28,11 +28,8 @@ export interface KubeTableProps<T> {
   emptyMessage?: string;
   hideHeaderWhenEmpty?: boolean;
   className?: string;
-  variant?: 'standard' | 'modern';
   /** Enable column resizing by drag. Default: true */
   resizable?: boolean;
-  /** Fixed row height for virtualization. Optional */
-  rowHeight?: number;
   /** Whether to render a top border on the table. Default: true */
   borderTop?: boolean;
 }

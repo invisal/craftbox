@@ -3,6 +3,7 @@ import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import { cn } from 'cnfast';
 import { AlertCircle } from 'lucide-react';
 import { type KubeTableProps } from './types';
+import { ROW_HEIGHT } from './constants';
 import { KubeTableHeader } from './KubeTableHeader';
 import { KubeTableRow } from './KubeTableRow';
 
@@ -20,11 +21,8 @@ export function KubeTable<T>({
   hideHeaderWhenEmpty,
   className,
   resizable = true,
-  rowHeight,
   borderTop = false
 }: KubeTableProps<T>) {
-  const isModern = true;
-
   // Initialize column widths from initialWidth prop or default
   const [colWidths, setColWidths] = useState<Record<string, number>>(() =>
     Object.fromEntries(columns.map((col) => [col.key, col.initialWidth ?? DEFAULT_COL_WIDTH]))
@@ -36,7 +34,7 @@ export function KubeTable<T>({
   const [scrollTop, setScrollTop] = useState(0);
   const [containerHeight, setContainerHeight] = useState(400);
 
-  const rHeight = rowHeight ?? (isModern ? 38 : 36);
+  const rHeight = ROW_HEIGHT;
 
   // Sorting state
   const [sortCol, setSortCol] = useState<string | null>(null);
@@ -205,7 +203,6 @@ export function KubeTable<T>({
             <KubeTableHeader
               columns={columns}
               colWidths={colWidths}
-              isModern={isModern}
               hideHeaderWhenEmpty={hideHeaderWhenEmpty}
               dataLength={sortedData.length}
               resizable={resizable}
@@ -241,7 +238,7 @@ export function KubeTable<T>({
                   colSpan={columns.length}
                   className={cn(
                     'p-8 text-center text-zinc-550 italic font-sans bg-transparent',
-                    isModern ? 'border-b border-border-dark/30' : 'border border-border/20'
+                    'border-b border-border-dark/30'
                   )}
                 >
                   {emptyState || (
@@ -268,7 +265,6 @@ export function KubeTable<T>({
                     onRowClick={onRowClick}
                     selectedRowKey={selectedRowKey}
                     colWidths={colWidths}
-                    isModern={isModern}
                   />
                 ))}
                 {spacerBottomHeight > 0 && (
