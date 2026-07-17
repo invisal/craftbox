@@ -347,7 +347,6 @@ export const DeploymentDetail: React.FC<DeploymentDetailProps> = ({ payload, isT
               ]}
               data={payload.revisions || []}
               getRowKey={(row) => row.name}
-              variant="modern"
               resizable={false}
             />
           </div>
@@ -416,7 +415,6 @@ export const DeploymentDetail: React.FC<DeploymentDetailProps> = ({ payload, isT
               ]}
               data={payload.podsList || []}
               getRowKey={(row) => row.name}
-              variant="modern"
               resizable={false}
             />
           </div>

@@ -214,7 +214,6 @@ export const ServiceDetail: React.FC<ServiceDetailProps> = ({ payload, isTab = f
               ]}
               data={payload.endpointSlices}
               getRowKey={(row) => row.name}
-              variant="modern"
               resizable={false}
             />
           </div>
@@ -246,7 +245,6 @@ export const ServiceDetail: React.FC<ServiceDetailProps> = ({ payload, isTab = f
               ]}
               data={payload.endpoints}
               getRowKey={(row) => row.name}
-              variant="modern"
               resizable={false}
             />
           </div>

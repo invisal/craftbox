@@ -262,7 +262,6 @@ export const EndpointSliceDetail: React.FC<EndpointSliceDetailProps> = ({
               ]}
               data={payload.endpoints}
               getRowKey={(row) => row.addresses.join('-')}
-              variant="modern"
               resizable={false}
             />
           </div>
@@ -307,7 +306,6 @@ export const EndpointSliceDetail: React.FC<EndpointSliceDetailProps> = ({
               ]}
               data={payload.ports}
               getRowKey={(row) => `${row.name}-${row.port}`}
-              variant="modern"
               resizable={false}
             />
           </div>
