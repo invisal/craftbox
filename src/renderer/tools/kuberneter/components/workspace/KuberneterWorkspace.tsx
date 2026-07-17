@@ -25,6 +25,7 @@ import { Application } from './application/Application';
 import { Nodes } from './nodes/Nodes';
 import { KuberneterHomeView } from './kubernetes-home';
 import { EndpointSlices } from './endpointslices/EndpointSlices';
+import { Endpoints } from './endpoints/Endpoints';
 import { AlertCircle, Loader2 } from 'lucide-react';
 import { useLayoutStore } from '../../../../src/store/layout.store';
 import { DetailContent } from './details/DetailContent';
@@ -64,6 +65,7 @@ export const KuberneterWorkspace: React.FC<KuberneterWorkspaceProps> = ({ resour
     applicationsData,
     nodesData,
     endpointSlicesData,
+    endpointsData,
     isLoading,
     errorMsg
   } = useWorkspaceResources(resource);
@@ -174,6 +176,13 @@ export const KuberneterWorkspace: React.FC<KuberneterWorkspaceProps> = ({ resour
           {resource === 'endpointslices' && (
             <EndpointSlices
               endpointSlicesData={endpointSlicesData}
+              kuberneterSelectedNamespace={kuberneterSelectedNamespace}
+            />
+          )}
+
+          {resource === 'endpoints' && (
+            <Endpoints
+              endpointsData={endpointsData}
               kuberneterSelectedNamespace={kuberneterSelectedNamespace}
             />
           )}

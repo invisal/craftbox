@@ -22,6 +22,7 @@ import { useValidatingWebhooks } from './useValidatingWebhooks';
 import { useApplications } from './useApplications';
 import { useNodes } from './useNodes';
 import { useEndpointSlices } from './useEndpointSlices';
+import { useEndpoints } from './useEndpoints';
 
 export function useWorkspaceResources(resource: string) {
   const activeInstanceId = useLayoutStore((s) => s.activeInstanceId);
@@ -54,6 +55,7 @@ export function useWorkspaceResources(resource: string) {
   const apps = useApplications(resource === 'apps');
   const nodes = useNodes(resource === 'nodes');
   const endpointslices = useEndpointSlices(resource === 'endpointslices');
+  const endpoints = useEndpoints(resource === 'endpoints');
 
   let activeQuery: { data: unknown[]; isLoading: boolean; errorMsg: string | null } | null = null;
   if (resource === 'pods') activeQuery = pods;
@@ -78,6 +80,7 @@ export function useWorkspaceResources(resource: string) {
   else if (resource === 'apps') activeQuery = apps;
   else if (resource === 'nodes') activeQuery = nodes;
   else if (resource === 'endpointslices') activeQuery = endpointslices;
+  else if (resource === 'endpoints') activeQuery = endpoints;
 
   return {
     kuberneterSelectedCluster,
@@ -104,6 +107,7 @@ export function useWorkspaceResources(resource: string) {
     applicationsData: apps.data,
     nodesData: nodes.data,
     endpointSlicesData: endpointslices.data,
+    endpointsData: endpoints.data,
     isLoading: activeQuery ? activeQuery.isLoading : false,
     errorMsg: activeQuery ? activeQuery.errorMsg : null
   };

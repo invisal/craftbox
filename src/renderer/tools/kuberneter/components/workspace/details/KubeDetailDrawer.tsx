@@ -108,8 +108,12 @@ export const KubeDetailDrawer: React.FC<KubeDetailDrawerProps> = ({ tabId }) => 
     runtimeclass: 'Runtime Class Details',
     lease: 'Lease Details',
     mutatingwebhook: 'Mutating Webhook Configuration Details',
-    validatingwebhook: 'Validating Webhook Configuration Details'
+    validatingwebhook: 'Validating Webhook Configuration Details',
+    endpoints: 'Endpoints Details'
   };
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const resourceName = (payload as any)?.name || '';
 
   return (
     <div
@@ -123,10 +127,11 @@ export const KubeDetailDrawer: React.FC<KubeDetailDrawerProps> = ({ tabId }) => 
         className="absolute top-0 left-0 w-[4px] h-full cursor-col-resize hover:bg-accent/40 active:bg-accent transition-colors z-40"
       />
 
-      {/* Header — fixed height matches tab content header zone (py-2 + h-7 + gap-2 = 44px) */}
       <div className="h-11 shrink-0 flex items-center justify-between px-4 border-b border-border-dark">
         <span className="text-xs font-bold text-white uppercase tracking-wider">
-          {titleNames[contentType] || 'Details'}
+          {contentType === 'endpoints'
+            ? `Endpoints: ${resourceName}`
+            : titleNames[contentType] || 'Details'}
         </span>
         <div className="flex items-center gap-2">
           <button
