@@ -28,6 +28,27 @@ selected: bg-surface-3
 If the container itself is already `bg-surface-2`, shift the chain up one step:
 hover becomes `bg-surface-3`, selected becomes `bg-surface-4`.
 
+## Text: `text-foreground` vs `text-muted-foreground`
+
+- `text-foreground` — primary text color. Backed by `--color-foreground`.
+- `text-muted-foreground` — secondary/dimmed text (labels, hints, subtext).
+  Backed by `--color-muted-foreground`.
+
+These were renamed from `text-text-base` / `text-text-dim` (formerly
+`--color-text-base` / `--color-text-dim`) for clearer, more conventional
+naming. The old names are kept as aliases (`--color-text-base: var(--color-foreground)`,
+`--color-text-dim: var(--color-muted-foreground)`) so existing `text-text-base` /
+`text-text-dim` usages keep working — but use `text-foreground` /
+`text-muted-foreground` in any new code.
+
+`text-white` is a separate, raw Tailwind color — not a theme token, and not
+an alias for `text-foreground`. Don't swap existing `text-white` for
+`text-foreground`; that changes its meaning from "always white" to
+"theme-adaptive." Reserve `text-white` for text that must render as true
+white regardless of theme (e.g. on a saturated accent/danger fill); reach
+for `text-foreground` / `text-muted-foreground` for ordinary body/UI text
+that should adapt between light and dark.
+
 ## Border levels: `border-border` vs `border-border-dark`
 
 There are only two border colors — don't introduce a third:

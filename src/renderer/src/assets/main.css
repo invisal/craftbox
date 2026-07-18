@@ -7,7 +7,7 @@
   --color-bottom-bg: #181825; /* Catppuccin Mocha Mantle */
   --color-status-bg: #11111b; /* Catppuccin Mocha Crust */
   --color-border-dark: #313244; /* Catppuccin Mocha Surface 0 */
-  --color-text-dim: #a6adc8; /* Catppuccin Mocha Subtext 0 */
+  --color-muted-foreground: #a6adc8; /* Catppuccin Mocha Subtext 0 */
   --color-accent: #89b4fa; /* Catppuccin Mocha Blue */
   --color-danger: #f38ba8; /* Catppuccin Mocha Red */
   --color-surface: #1e1e1e; /* base background, VS Code editor tone */
@@ -22,7 +22,13 @@
   --color-surface-sunken: var(--color-activity-bg); /* screen-recorder: recessed side panel */
   --color-line: var(--color-border-dark); /* screen-recorder: hairline border */
   --color-emphasis-text: #11111b; /* Catppuccin Mocha Crust — text on accent/danger fills */
-  --color-text-base: #c0c5d8; /* softened from Catppuccin Mocha Text — less near-white contrast */
+  --color-foreground: #c0c5d8; /* softened from Catppuccin Mocha Text — less near-white contrast */
+  --color-text-base: var(
+    --color-foreground
+  ); /* alias so old `text-text-base` utility keeps working */
+  --color-text-dim: var(
+    --color-muted-foreground
+  ); /* alias so old `text-text-dim` utility keeps working */
   --color-scrollbar-track: #181825;
   --color-scrollbar-thumb: #313244;
   --color-scrollbar-thumb-hover: #45475a;
@@ -80,7 +86,7 @@
   --color-bottom-bg: #e6e9ef; /* Catppuccin Latte Mantle */
   --color-status-bg: #dce0e8; /* Catppuccin Latte Crust */
   --color-border-dark: #ccd0da; /* Catppuccin Latte Surface 0 */
-  --color-text-dim: #6c6f85; /* Catppuccin Latte Subtext 0 */
+  --color-muted-foreground: #6c6f85; /* Catppuccin Latte Subtext 0 */
   --color-accent: #1e66f5; /* Catppuccin Latte Blue */
   --color-danger: #d20f39; /* Catppuccin Latte Red */
   --color-surface: #ffffff; /* base background, pure white */
@@ -95,7 +101,7 @@
   --color-surface-sunken: var(--color-activity-bg); /* screen-recorder: recessed side panel */
   --color-line: var(--color-border-dark); /* screen-recorder: hairline border */
   --color-emphasis-text: #ffffff; /* Latte's accent/danger are saturated — need light text */
-  --color-text-base: #5c5f7a; /* softened from Catppuccin Latte Text — less near-black contrast */
+  --color-foreground: #5c5f7a; /* softened from Catppuccin Latte Text — less near-black contrast */
   --color-scrollbar-track: #e6e9ef;
   --color-scrollbar-thumb: #ccd0da;
   --color-scrollbar-thumb-hover: #bcc0cc;
@@ -165,7 +171,7 @@ body,
   margin: 0;
   padding: 0;
   background-color: var(--color-editor-bg);
-  color: var(--color-text-base);
+  color: var(--color-foreground);
   font-family:
     'Inter',
     -apple-system,
