@@ -67,10 +67,10 @@ export function ZoomTrack(): JSX.Element | null {
               (in-flow, non-positioned) content still paints above these
               (positioned) layers -- see CutTimeline.tsx's segments/
               background layers for the same ordering concern. */}
-          <div className="pointer-events-none absolute inset-0 bg-linear-to-t from-purple-600 via-purple-400 to-purple-200" />
+          <div className="pointer-events-none absolute inset-0 bg-linear-to-t from-purple-400 via-purple-500 to-purple-600" />
           <div className="pointer-events-none absolute inset-0 bg-linear-to-t from-white/40 via-white/5 to-black/15" />
           <div className="relative flex flex-col items-center justify-center gap-0.5 leading-none">
-            <span className="text-[9px] font-semibold text-purple-950/70">Zoom</span>
+            <span className="text-[9px] font-semibold text-purple-950">Zoom</span>
             <span className="flex items-center gap-2 text-[10px] font-semibold">
               <span className="flex items-center gap-1">
                 <ZoomIn size={11} className="shrink-0" />

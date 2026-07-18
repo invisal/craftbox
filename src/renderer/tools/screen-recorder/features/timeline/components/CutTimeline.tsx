@@ -397,7 +397,7 @@ export function CutTimeline(): JSX.Element {
                 button -- still paint on top.
               */}
               <div
-                className="relative flex shrink-0 items-stretch overflow-hidden rounded-md border border-amber-900/40 mx-3 shadow-inherit"
+                className="relative flex shrink-0 items-stretch overflow-hidden rounded-md border border-amber-900/40 shadow-inherit"
                 style={{ height: CLIP_ROW_HEIGHT_PX * 1.3 }}
               >
                 <div className="pointer-events-none absolute inset-0 bg-linear-to-b from-blue-500 via-blue-400 to-blue-400" />
@@ -483,11 +483,11 @@ export function CutTimeline(): JSX.Element {
 
               {effectiveHoverFraction !== null && (
                 <div
-                  className="pointer-events-none absolute inset-y-0 z-5 mx-0.5"
+                  className="pointer-events-none absolute inset-y-0.5 z-5 mx-0.5"
                   style={{ left: `${effectiveHoverFraction * 100}%` }}
                 >
-                  <div className="absolute inset-y-0 left-0 w-px bg-white/40" />
-                  <div className="absolute -left-1 -top-1 h-2 w-2 rounded-full border border-black/40 bg-white/70" />
+                  <div className="absolute inset-y-0 left-0 w-0.5 bg-white/40" />
+                  <div className="absolute -left-1 top-0 h-2.5 w-2.5 rounded-full border border-black/40 bg-white/70" />
                 </div>
               )}
             </div>
