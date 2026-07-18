@@ -25,6 +25,7 @@ import { useEndpointSlices } from './useEndpointSlices';
 import { useEndpoints } from './useEndpoints';
 import { useIngresses } from './useIngresses';
 import { useIngressClasses } from './useIngressClasses';
+import { useNetworkPolicies } from './useNetworkPolicies';
 
 export function useWorkspaceResources(resource: string) {
   const activeInstanceId = useLayoutStore((s) => s.activeInstanceId);
@@ -60,6 +61,7 @@ export function useWorkspaceResources(resource: string) {
   const endpoints = useEndpoints(resource === 'endpoints');
   const ingresses = useIngresses(resource === 'ingresses');
   const ingressclasses = useIngressClasses(resource === 'ingressclasses');
+  const networkpolicies = useNetworkPolicies(resource === 'networkpolicies');
 
   let activeQuery: { data: unknown[]; isLoading: boolean; errorMsg: string | null } | null = null;
   if (resource === 'pods') activeQuery = pods;
@@ -87,6 +89,7 @@ export function useWorkspaceResources(resource: string) {
   else if (resource === 'endpoints') activeQuery = endpoints;
   else if (resource === 'ingresses') activeQuery = ingresses;
   else if (resource === 'ingressclasses') activeQuery = ingressclasses;
+  else if (resource === 'networkpolicies') activeQuery = networkpolicies;
 
   return {
     kuberneterSelectedCluster,
@@ -116,6 +119,7 @@ export function useWorkspaceResources(resource: string) {
     endpointsData: endpoints.data,
     ingressesData: ingresses.data,
     ingressClassesData: ingressclasses.data,
+    networkPoliciesData: networkpolicies.data,
     isLoading: activeQuery ? activeQuery.isLoading : false,
     errorMsg: activeQuery ? activeQuery.errorMsg : null
   };

@@ -28,6 +28,7 @@ import { EndpointSlices } from './endpointslices/EndpointSlices';
 import { Endpoints } from './endpoints/Endpoints';
 import { Ingresses } from './ingresses/Ingresses';
 import { IngressClasses } from './ingressclasses/IngressClasses';
+import { NetworkPolicies } from './networkpolicies/NetworkPolicies';
 import { AlertCircle, Loader2 } from 'lucide-react';
 import { useLayoutStore } from '../../../../src/store/layout.store';
 import { DetailContent } from './details/DetailContent';
@@ -70,6 +71,7 @@ export const KuberneterWorkspace: React.FC<KuberneterWorkspaceProps> = ({ resour
     endpointsData,
     ingressesData,
     ingressClassesData,
+    networkPoliciesData,
     isLoading,
     errorMsg
   } = useWorkspaceResources(resource);
@@ -200,6 +202,13 @@ export const KuberneterWorkspace: React.FC<KuberneterWorkspaceProps> = ({ resour
 
           {resource === 'ingressclasses' && (
             <IngressClasses ingressClassesData={ingressClassesData} />
+          )}
+
+          {resource === 'networkpolicies' && (
+            <NetworkPolicies
+              networkPoliciesData={networkPoliciesData}
+              kuberneterSelectedNamespace={kuberneterSelectedNamespace}
+            />
           )}
 
           {resource === 'configmaps' && (

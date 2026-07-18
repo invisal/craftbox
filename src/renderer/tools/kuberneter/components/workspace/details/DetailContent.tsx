@@ -22,6 +22,7 @@ import { EndpointSliceDetail } from './EndpointSliceDetail';
 import { EndpointDetail } from './EndpointDetail';
 import { IngressDetail } from './IngressDetail';
 import { IngressClassDetail } from './IngressClassDetail';
+import { NetworkPolicyDetail } from './NetworkPolicyDetail';
 
 import { type PodData } from '../../../types/PodData';
 import { type DeployData } from '../../../types/DeployData';
@@ -46,6 +47,7 @@ import { type EndpointSliceData } from '../../../types/EndpointSliceData';
 import { type EndpointData } from '../../../types/EndpointData';
 import { type IngressData } from '../../../types/IngressData';
 import { type IngressClassData } from '../../../types/IngressClassData';
+import { type NetworkPolicyData } from '../../../types/NetworkPolicyData';
 
 interface DetailContentProps {
   contentType: string;
@@ -108,6 +110,8 @@ export const DetailContent: React.FC<DetailContentProps> = ({
       return <IngressDetail payload={payload as IngressData} isTab={isTab} />;
     case 'ingressclasses':
       return <IngressClassDetail payload={payload as IngressClassData} isTab={isTab} />;
+    case 'networkpolicies':
+      return <NetworkPolicyDetail payload={payload as NetworkPolicyData} isTab={isTab} />;
     case 'mutatingwebhook':
       return (
         <MutatingWebhookDetail
