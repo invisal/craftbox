@@ -2,6 +2,7 @@ import type React from 'react';
 import { useState, useRef, useEffect } from 'react';
 import { FileText, X, Home } from 'lucide-react';
 import { useLayoutStore, type Tab } from '../../store/layout.store';
+import { ContextMenu } from '../ui/ContextMenu';
 import { HomeTab } from './HomeTab';
 import { KuberneterWorkspace } from '../../../tools/kuberneter/components/workspace/KuberneterWorkspace';
 import { HttpClientWorkspace } from '../../../tools/http-client/HttpClientWorkspace';
@@ -9,7 +10,17 @@ import { KubeDetailDrawer } from '../../../tools/kuberneter/components/workspace
 import { ScreenRecorderWorkspace } from './workspaces/ScreenRecorderWorkspace';
 
 export const Workspace: React.FC = () => {
-  const { openTabs, activeTabId, setActiveTabId, closeTab, renameTab, pinTab } = useLayoutStore();
+  const {
+    openTabs,
+    activeTabId,
+    setActiveTabId,
+    closeTab,
+    renameTab,
+    pinTab,
+    closeOthers,
+    closeToRight,
+    closeAll
+  } = useLayoutStore();
   const activeInstanceId = useLayoutStore((s) => s.activeInstanceId);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -62,6 +73,9 @@ export const Workspace: React.FC = () => {
             onClose={() => closeTab(tab.id)}
             onRename={(title) => renameTab(tab.id, title)}
             onPin={() => pinTab(tab.id)}
+            onCloseOthers={() => closeOthers(tab.id)}
+            onCloseToRight={() => closeToRight(tab.id)}
+            onCloseAll={() => closeAll(activeInstanceId)}
           />
         ))}
       </div>
@@ -101,6 +115,9 @@ interface TabBarItemProps {
   onClose: () => void;
   onRename: (title: string) => void;
   onPin: () => void;
+  onCloseOthers: () => void;
+  onCloseToRight: () => void;
+  onCloseAll: () => void;
 }
 
 const TabBarItem: React.FC<TabBarItemProps> = ({
@@ -109,7 +126,10 @@ const TabBarItem: React.FC<TabBarItemProps> = ({
   onActivate,
   onClose,
   onRename,
-  onPin
+  onPin,
+  onCloseOthers,
+  onCloseToRight,
+  onCloseAll
 }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [draftTitle, setDraftTitle] = useState(tab.title);
@@ -163,39 +183,51 @@ const TabBarItem: React.FC<TabBarItemProps> = ({
   }
 
   return (
-    <div
-      data-active={isActive}
-      onClick={onActivate}
-      onDoubleClick={() => {
-        if (tab.isPreview) {
-          onPin();
-        } else {
-          setDraftTitle(tab.title);
-          setIsEditing(true);
+    <ContextMenu.Root>
+      <ContextMenu.Trigger
+        render={
+          <div
+            data-active={isActive}
+            onClick={onActivate}
+            onDoubleClick={() => {
+              if (tab.isPreview) {
+                onPin();
+              } else {
+                setDraftTitle(tab.title);
+                setIsEditing(true);
+              }
+            }}
+            title={tab.isPreview ? 'Double-click to pin' : 'Double-click to rename'}
+            className={`flex items-center gap-2 px-3 border-r border-border-dark cursor-pointer text-xs transition-colors shrink-0 group ${
+              isActive
+                ? 'bg-editor-bg text-white border-t-2 border-t-accent'
+                : 'bg-sidebar-bg text-zinc-555 hover:bg-editor-bg/40 hover:text-zinc-300'
+            }`}
+          >
+            <FileText size={12} className={isActive ? 'text-accent' : 'text-zinc-600'} />
+            <span
+              className={`truncate max-w-30 ${tab.isPreview ? 'italic text-zinc-400 font-normal' : ''}`}
+            >
+              {tab.title}
+            </span>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onClose();
+              }}
+              className="p-0.5 rounded-full hover:bg-border-dark/65 text-zinc-555 group-hover:text-zinc-400 hover:text-white"
+            >
+              <X size={10} />
+            </button>
+          </div>
         }
-      }}
-      title={tab.isPreview ? 'Double-click to pin' : 'Double-click to rename'}
-      className={`flex items-center gap-2 px-3 border-r border-border-dark cursor-pointer text-xs transition-colors shrink-0 group ${
-        isActive
-          ? 'bg-editor-bg text-white border-t-2 border-t-accent'
-          : 'bg-sidebar-bg text-zinc-555 hover:bg-editor-bg/40 hover:text-zinc-300'
-      }`}
-    >
-      <FileText size={12} className={isActive ? 'text-accent' : 'text-zinc-600'} />
-      <span
-        className={`truncate max-w-30 ${tab.isPreview ? 'italic text-zinc-400 font-normal' : ''}`}
-      >
-        {tab.title}
-      </span>
-      <button
-        onClick={(e) => {
-          e.stopPropagation();
-          onClose();
-        }}
-        className="p-0.5 rounded-full hover:bg-border-dark/65 text-zinc-555 group-hover:text-zinc-400 hover:text-white"
-      >
-        <X size={10} />
-      </button>
-    </div>
+      />
+      <ContextMenu.Content>
+        <ContextMenu.Item onClick={onClose}>Close</ContextMenu.Item>
+        <ContextMenu.Item onClick={onCloseOthers}>Close Other</ContextMenu.Item>
+        <ContextMenu.Item onClick={onCloseToRight}>Close to the Right</ContextMenu.Item>
+        <ContextMenu.Item onClick={onCloseAll}>Close All</ContextMenu.Item>
+      </ContextMenu.Content>
+    </ContextMenu.Root>
   );
 };

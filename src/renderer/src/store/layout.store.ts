@@ -39,6 +39,9 @@ interface LayoutState {
   setActiveTabId: (id: string | null) => void;
   renameTab: (id: string, title: string) => void;
   pinTab: (id: string) => void;
+  closeOthers: (id: string) => void;
+  closeToRight: (id: string) => void;
+  closeAll: (instanceId: string) => void;
 
   // Instance Lifecycle Actions
   addActivityInstance: (
@@ -132,6 +135,61 @@ export const useLayoutStore = create<LayoutState>()(
         set((state) => ({
           openTabs: state.openTabs.map((t) => (t.id === id ? { ...t, isPreview: false } : t))
         })),
+
+      closeOthers: (id) =>
+        set((state) => {
+          const targetTab = state.openTabs.find((t) => t.id === id);
+          if (!targetTab) return {};
+
+          const newTabs = state.openTabs.filter(
+            (t) => t.instanceId !== targetTab.instanceId || t.id === id
+          );
+
+          return {
+            openTabs: newTabs,
+            activeTabId: id
+          };
+        }),
+
+      closeToRight: (id) =>
+        set((state) => {
+          const targetTab = state.openTabs.find((t) => t.id === id);
+          if (!targetTab) return {};
+
+          const instanceTabs = state.openTabs.filter((t) => t.instanceId === targetTab.instanceId);
+          const targetIndex = instanceTabs.findIndex((t) => t.id === id);
+          if (targetIndex === -1) return {};
+
+          const tabIdsToClose = new Set(instanceTabs.slice(targetIndex + 1).map((t) => t.id));
+
+          const newTabs = state.openTabs.filter((t) => !tabIdsToClose.has(t.id));
+
+          let nextActiveId = state.activeTabId;
+          if (nextActiveId && tabIdsToClose.has(nextActiveId)) {
+            nextActiveId = id;
+          }
+
+          return {
+            openTabs: newTabs,
+            activeTabId: nextActiveId
+          };
+        }),
+
+      closeAll: (instanceId) =>
+        set((state) => {
+          const newTabs = state.openTabs.filter((t) => t.instanceId !== instanceId);
+
+          let nextActiveId = state.activeTabId;
+          const activeTab = state.openTabs.find((t) => t.id === state.activeTabId);
+          if (activeTab && activeTab.instanceId === instanceId) {
+            nextActiveId = null;
+          }
+
+          return {
+            openTabs: newTabs,
+            activeTabId: nextActiveId
+          };
+        }),
 
       addActivityInstance: (type, customId, context) =>
         set((state) => {
