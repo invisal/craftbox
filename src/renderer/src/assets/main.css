@@ -34,7 +34,7 @@
      would break the `:root.light` override below. Plain custom properties
      don't have that problem, so `@utility shadow-panel-elevate` (below)
      reads this one directly. */
-  --panel-elevate-shadow: inset -1px 0 4px -3px rgba(255, 255, 255, 0.5);
+  --panel-elevate-shadow: inset -1px 0 6px -3px rgba(255, 255, 255, 0.15);
 
   /* screen-recorder: annotation entrance animations, see
      features/annotations/presets/text-animation-presets.ts */
@@ -84,7 +84,7 @@
   --color-accent: #1e66f5; /* Catppuccin Latte Blue */
   --color-danger: #d20f39; /* Catppuccin Latte Red */
   --color-surface: #ffffff; /* base background, pure white */
-  --color-surface-2: #f1f2f6; /* elevation 1 — hover on surface */
+  --color-surface-2: #fafbfc; /* elevation 1 — hover on surface */
   --color-surface-3: #e1e4eb; /* elevation 2 — hover on surface-2, selected on surface */
   --color-surface-4: #ccd0dd; /* elevation 3 — selected on surface-2 */
   --color-surface-5: #b8bed0; /* elevation 4 — selected on surface-3 */
@@ -188,6 +188,16 @@ body {
 @utility bg-dotted {
   background-image: radial-gradient(circle at 1px 1px, var(--color-surface-3) 1px, #0000 0);
   background-size: 16px 16px;
+}
+
+@utility bg-diagonal-stripes {
+  background-image: repeating-linear-gradient(
+    -45deg,
+    var(--color-border) 0,
+    var(--color-border) 1px,
+    transparent 1px,
+    transparent 6px
+  );
 }
 
 @utility shadow-panel-elevate {
