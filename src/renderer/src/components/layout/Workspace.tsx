@@ -1,7 +1,8 @@
 import type React from 'react';
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { FileText, X, Home } from 'lucide-react';
 import { useLayoutStore, type Tab } from '../../store/layout.store';
+import { ContextMenu } from '../ui/ContextMenu';
 import { HomeTab } from './HomeTab';
 import { KuberneterWorkspace } from '../../../tools/kuberneter/components/workspace/KuberneterWorkspace';
 import { HttpClientWorkspace } from '../../../tools/http-client/HttpClientWorkspace';
@@ -9,8 +10,33 @@ import { KubeDetailDrawer } from '../../../tools/kuberneter/components/workspace
 import { ScreenRecorderWorkspace } from './workspaces/ScreenRecorderWorkspace';
 
 export const Workspace: React.FC = () => {
-  const { openTabs, activeTabId, setActiveTabId, closeTab, renameTab } = useLayoutStore();
+  const {
+    openTabs,
+    activeTabId,
+    setActiveTabId,
+    closeTab,
+    renameTab,
+    pinTab,
+    closeOthers,
+    closeToRight,
+    closeAll
+  } = useLayoutStore();
   const activeInstanceId = useLayoutStore((s) => s.activeInstanceId);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!activeTabId || !containerRef.current) return;
+    const activeEl = containerRef.current.querySelector('[data-active="true"]');
+    if (activeEl) {
+      activeEl.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
+    }
+  }, [activeTabId]);
+
+  const handleWheel = (e: React.WheelEvent<HTMLDivElement>) => {
+    if (containerRef.current) {
+      containerRef.current.scrollLeft += e.deltaY;
+    }
+  };
   const activeTab = openTabs.find((t) => t.id === activeTabId);
   const filteredTabs = openTabs.filter((t) => t.instanceId === activeInstanceId);
 
@@ -33,7 +59,11 @@ export const Workspace: React.FC = () => {
   return (
     <div className="flex-1 bg-editor-bg flex flex-col min-w-0 overflow-hidden">
       {/* Tab bar header */}
-      <div className="flex h-9 bg-sidebar-bg border-b border-border-dark overflow-x-auto select-none shrink-0 scrollbar-none">
+      <div
+        ref={containerRef}
+        onWheel={handleWheel}
+        className="flex h-9 bg-sidebar-bg border-b border-border-dark overflow-x-auto select-none shrink-0 tab-bar-container"
+      >
         {filteredTabs.map((tab) => (
           <TabBarItem
             key={tab.id}
@@ -42,6 +72,10 @@ export const Workspace: React.FC = () => {
             onActivate={() => setActiveTabId(tab.id)}
             onClose={() => closeTab(tab.id)}
             onRename={(title) => renameTab(tab.id, title)}
+            onPin={() => pinTab(tab.id)}
+            onCloseOthers={() => closeOthers(tab.id)}
+            onCloseToRight={() => closeToRight(tab.id)}
+            onCloseAll={() => closeAll(activeInstanceId)}
           />
         ))}
       </div>
@@ -55,7 +89,7 @@ export const Workspace: React.FC = () => {
           return (
             <div
               key={tab.id}
-              className={`relative flex-1 overflow-hidden flex flex-col min-h-0 min-w-0 bg-surface${isActive ? '' : ' hidden'}`}
+              className={`relative pr-1 flex-1 overflow-hidden flex flex-col min-h-0 min-w-0 bg-surface${isActive ? '' : ' hidden'}`}
             >
               <KuberneterWorkspace resource={resource} />
               <KubeDetailDrawer tabId={tab.id} />
@@ -80,6 +114,10 @@ interface TabBarItemProps {
   onActivate: () => void;
   onClose: () => void;
   onRename: (title: string) => void;
+  onPin: () => void;
+  onCloseOthers: () => void;
+  onCloseToRight: () => void;
+  onCloseAll: () => void;
 }
 
 const TabBarItem: React.FC<TabBarItemProps> = ({
@@ -87,7 +125,11 @@ const TabBarItem: React.FC<TabBarItemProps> = ({
   isActive,
   onActivate,
   onClose,
-  onRename
+  onRename,
+  onPin,
+  onCloseOthers,
+  onCloseToRight,
+  onCloseAll
 }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [draftTitle, setDraftTitle] = useState(tab.title);
@@ -107,7 +149,7 @@ const TabBarItem: React.FC<TabBarItemProps> = ({
         className={`flex items-center justify-center w-10 border-r border-border-dark cursor-pointer text-xs transition-colors shrink-0 ${
           isActive
             ? 'bg-editor-bg text-white border-t-2 border-t-accent'
-            : 'bg-sidebar-bg text-zinc-550 hover:bg-editor-bg/40 hover:text-zinc-300'
+            : 'bg-sidebar-bg text-zinc-555 hover:bg-editor-bg/40 hover:text-zinc-300'
         }`}
         title="Kuberneter Connection Settings"
       >
@@ -141,30 +183,51 @@ const TabBarItem: React.FC<TabBarItemProps> = ({
   }
 
   return (
-    <div
-      onClick={onActivate}
-      onDoubleClick={() => {
-        setDraftTitle(tab.title);
-        setIsEditing(true);
-      }}
-      title="Double-click to rename"
-      className={`flex items-center gap-2 px-3 border-r border-border-dark cursor-pointer text-xs transition-colors shrink-0 group ${
-        isActive
-          ? 'bg-editor-bg text-white border-t-2 border-t-accent'
-          : 'bg-sidebar-bg text-zinc-555 hover:bg-editor-bg/40 hover:text-zinc-300'
-      }`}
-    >
-      <FileText size={12} className={isActive ? 'text-accent' : 'text-zinc-600'} />
-      <span className="truncate max-w-30">{tab.title}</span>
-      <button
-        onClick={(e) => {
-          e.stopPropagation();
-          onClose();
-        }}
-        className="p-0.5 rounded-full hover:bg-border-dark/65 text-zinc-555 group-hover:text-zinc-400 hover:text-white"
-      >
-        <X size={10} />
-      </button>
-    </div>
+    <ContextMenu.Root>
+      <ContextMenu.Trigger
+        render={
+          <div
+            data-active={isActive}
+            onClick={onActivate}
+            onDoubleClick={() => {
+              if (tab.isPreview) {
+                onPin();
+              } else {
+                setDraftTitle(tab.title);
+                setIsEditing(true);
+              }
+            }}
+            title={tab.isPreview ? 'Double-click to pin' : 'Double-click to rename'}
+            className={`flex items-center gap-2 px-3 border-r border-border-dark cursor-pointer text-xs transition-colors shrink-0 group ${
+              isActive
+                ? 'bg-editor-bg text-white border-t-2 border-t-accent'
+                : 'bg-sidebar-bg text-zinc-555 hover:bg-editor-bg/40 hover:text-zinc-300'
+            }`}
+          >
+            <FileText size={12} className={isActive ? 'text-accent' : 'text-zinc-600'} />
+            <span
+              className={`truncate max-w-30 ${tab.isPreview ? 'italic text-zinc-400 font-normal' : ''}`}
+            >
+              {tab.title}
+            </span>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onClose();
+              }}
+              className="p-0.5 rounded-full hover:bg-border-dark/65 text-zinc-555 group-hover:text-zinc-400 hover:text-white"
+            >
+              <X size={10} />
+            </button>
+          </div>
+        }
+      />
+      <ContextMenu.Content>
+        <ContextMenu.Item onClick={onClose}>Close</ContextMenu.Item>
+        <ContextMenu.Item onClick={onCloseOthers}>Close Other</ContextMenu.Item>
+        <ContextMenu.Item onClick={onCloseToRight}>Close to the Right</ContextMenu.Item>
+        <ContextMenu.Item onClick={onCloseAll}>Close All</ContextMenu.Item>
+      </ContextMenu.Content>
+    </ContextMenu.Root>
   );
 };

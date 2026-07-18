@@ -1,28 +1,30 @@
-import { Age } from '../../Age';
 import type React from 'react';
 import { useMemo } from 'react';
-import { KubeTable, type Column } from '../../kubeTable';
-import { MoreVertical } from 'lucide-react';
-import { type PodDisruptionBudgetData } from '../../../types/PodDisruptionBudgetData';
+import { KubeTable, type Column } from '../../kube-table';
+import { MoreVertical, AlertTriangle } from 'lucide-react';
+import { type NetworkPolicyData } from '../../../types/NetworkPolicyData';
+import { Age } from '../../Age';
 
-interface PodDisruptionBudgetsTableProps {
-  filteredData: PodDisruptionBudgetData[];
+interface NetworkPoliciesTableProps {
+  filteredData: NetworkPolicyData[];
   selectedIds: Set<string>;
   onSelectAll: (checked: boolean) => void;
   onSelectRow: (id: string, checked: boolean) => void;
-  onSelectPdb: (pdb: PodDisruptionBudgetData) => void;
-  selectedPdbId?: string;
+  onSelectPolicy: (policy: NetworkPolicyData) => void;
+  onNamespaceClick: (ns: string) => void;
+  selectedPolicyId?: string;
 }
 
-export const PodDisruptionBudgetsTable: React.FC<PodDisruptionBudgetsTableProps> = ({
+export const NetworkPoliciesTable: React.FC<NetworkPoliciesTableProps> = ({
   filteredData,
   selectedIds,
   onSelectAll,
   onSelectRow,
-  onSelectPdb,
-  selectedPdbId
+  onSelectPolicy,
+  onNamespaceClick,
+  selectedPolicyId
 }) => {
-  const columns = useMemo<Column<PodDisruptionBudgetData>[]>(
+  const columns = useMemo<Column<NetworkPolicyData>[]>(
     () => [
       {
         key: 'select',
@@ -60,62 +62,66 @@ export const PodDisruptionBudgetsTable: React.FC<PodDisruptionBudgetsTableProps>
             {row.name}
           </span>
         ),
-        className: 'font-mono text-zinc-300 max-w-[200px] truncate',
-        initialWidth: 200
+        className: 'font-mono text-zinc-300 max-w-[240px] truncate',
+        initialWidth: 240
+      },
+      {
+        key: 'warning',
+        header: (
+          <div className="flex justify-center select-none" title="Warnings">
+            <AlertTriangle className="size-3.5 text-zinc-555" />
+          </div>
+        ),
+        render: (row) => (
+          <div className="flex justify-center">
+            {row.hasWarning ? (
+              <span title={row.warningReason || 'Network Policy has warnings.'}>
+                <AlertTriangle className="size-3.5 text-amber-500 fill-amber-500/10" />
+              </span>
+            ) : null}
+          </div>
+        ),
+        headerClassName: 'w-10 text-center',
+        className: 'w-10 text-center',
+        initialWidth: 40,
+        resizable: false,
+        sortable: false
       },
       {
         key: 'namespace',
         header: 'Namespace',
         render: (row) => (
-          <span className="font-mono text-accent hover:underline cursor-pointer">{row.ns}</span>
+          <span
+            onClick={(e) => {
+              e.stopPropagation();
+              onNamespaceClick(row.ns);
+            }}
+            className="font-mono text-accent hover:underline cursor-pointer"
+          >
+            {row.ns}
+          </span>
         ),
         className: 'font-mono text-accent',
-        initialWidth: 100
+        initialWidth: 140
       },
       {
-        key: 'minAvailable',
-        header: 'Min Available',
+        key: 'policyTypes',
+        header: 'Policy Types',
         render: (row) => (
-          <span className="font-mono text-[11px] text-zinc-300">{row.minAvailable}</span>
+          <span className="text-zinc-400 font-mono text-[11px]">{row.policyTypesStr}</span>
         ),
-        initialWidth: 100
-      },
-      {
-        key: 'maxUnavailable',
-        header: 'Max Unavailable',
-        render: (row) => (
-          <span className="font-mono text-[11px] text-zinc-300">{row.maxUnavailable}</span>
-        ),
-        initialWidth: 110
-      },
-      {
-        key: 'currentHealthy',
-        header: 'Current Healthy',
-        render: (row) => (
-          <span className="font-mono text-[11px] text-zinc-300">{row.currentHealthy}</span>
-        ),
-        initialWidth: 110
-      },
-      {
-        key: 'desiredHealthy',
-        header: 'Desired Healthy',
-        render: (row) => (
-          <span className="font-mono text-[11px] text-zinc-300">{row.desiredHealthy}</span>
-        ),
-        initialWidth: 110
+        initialWidth: 200
       },
       {
         key: 'age',
         header: 'Age',
         render: (row) => (
           <span className="text-zinc-500 font-mono text-[11px]">
-            <Age
-              timestamp={(row as unknown as Record<string, unknown>).creationTimestamp as string}
-            />
+            <Age timestamp={row.creationTimestamp} />
           </span>
         ),
         className: 'text-zinc-500',
-        initialWidth: 80
+        initialWidth: 100
       },
       {
         key: 'actions',
@@ -140,7 +146,7 @@ export const PodDisruptionBudgetsTable: React.FC<PodDisruptionBudgetsTableProps>
         resizable: false
       }
     ],
-    [filteredData, selectedIds, onSelectAll, onSelectRow]
+    [filteredData, selectedIds, onSelectAll, onSelectRow, onNamespaceClick]
   );
 
   return (
@@ -149,9 +155,9 @@ export const PodDisruptionBudgetsTable: React.FC<PodDisruptionBudgetsTableProps>
       data={filteredData}
       getRowKey={(row) => row.id}
       className="flex-1"
-      onRowClick={(row) => onSelectPdb(row)}
-      selectedRowKey={selectedPdbId}
-      emptyMessage="No Pod Disruption Budgets match the search filters."
+      onRowClick={(row) => onSelectPolicy(row)}
+      selectedRowKey={selectedPolicyId}
+      emptyMessage="No Network Policies match the search filters."
     />
   );
 };
