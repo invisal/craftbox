@@ -112,7 +112,8 @@ export const KubeDetailDrawer: React.FC<KubeDetailDrawerProps> = ({ tabId }) => 
     validatingwebhook: 'Validating Webhook Configuration Details',
     endpoints: 'Endpoints Details',
     ingresses: 'Ingress Details',
-    ingressclasses: 'Ingress Class Details'
+    ingressclasses: 'Ingress Class Details',
+    networkpolicies: 'Network Policy Details'
   };
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -137,8 +138,10 @@ export const KubeDetailDrawer: React.FC<KubeDetailDrawerProps> = ({ tabId }) => 
             : contentType === 'ingresses'
               ? `Ingress: ${resourceName}`
               : contentType === 'ingressclasses'
-                ? `IngressClass: ${resourceName}`
-                : titleNames[contentType] || 'Details'}
+                ? `Ingress Class: ${resourceName}`
+                : contentType === 'networkpolicies'
+                  ? `Network Policy: ${resourceName}`
+                  : titleNames[contentType] || 'Details'}
         </span>
         <div className="flex items-center gap-2">
           {contentType === 'ingressclasses' && (

@@ -48,7 +48,7 @@ function highlightText(text: string, search: string): React.ReactNode {
 }
 
 export const KuberneterSidebar: React.FC = () => {
-  const { openTab, openTabs, activeTabId, activeInstanceId } = useLayoutStore();
+  const { openTab, openTabs, activeTabId, activeInstanceId, pinTab } = useLayoutStore();
   const {
     kuberneterInstanceCluster,
     kuberneterInstanceResource,
@@ -170,15 +170,20 @@ export const KuberneterSidebar: React.FC = () => {
     setKuberneterInstanceResource(activeInstanceId, resourceId);
     openTab({
       id: `kuberneter-k8s-${resourceId}-${activeInstanceId}`,
-      title: `K8s ${label}`,
+      title: `${label}`,
       type: 'kuberneter',
       instanceId: activeInstanceId,
-      meta: { resource: resourceId }
+      meta: { resource: resourceId },
+      isPreview: true
     });
+  };
+  const handleDoubleClickResource = (resourceId: string) => {
+    const tabId = `kuberneter-k8s-${resourceId}-${activeInstanceId}`;
+    pinTab(tabId);
   };
 
   const categories: SidebarCategory[] = [
-    { id: 'overview', label: 'Overview', icon: Monitor },
+    { id: 'overview', label: 'Cluster Overview', icon: Monitor },
     { id: 'apps', label: 'Applications', icon: Layers },
     { id: 'nodes', label: 'Nodes', icon: Cpu },
     {
@@ -186,7 +191,7 @@ export const KuberneterSidebar: React.FC = () => {
       label: 'Workloads',
       icon: Boxes,
       subItems: [
-        { id: 'workloads-overview', label: 'Overview' },
+        { id: 'workloads-overview', label: 'Workload Overview' },
         { id: 'pods', label: 'Pods' },
         { id: 'deployments', label: 'Deployments' },
         { id: 'daemonsets', label: 'Daemon Sets' },
@@ -356,6 +361,7 @@ export const KuberneterSidebar: React.FC = () => {
                 <button
                   key={cat.id}
                   onClick={() => handleSelectResource(cat.id, cat.label)}
+                  onDoubleClick={() => handleDoubleClickResource(cat.id)}
                   className={`w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded text-xs text-left cursor-pointer transition-all ${
                     isActive
                       ? 'bg-border-dark text-white font-semibold'
@@ -406,6 +412,7 @@ export const KuberneterSidebar: React.FC = () => {
                         <button
                           key={sub.id}
                           onClick={() => handleSelectResource(sub.id, sub.label)}
+                          onDoubleClick={() => handleDoubleClickResource(sub.id)}
                           className={`w-full py-1 px-2.5 rounded text-[11px] text-left cursor-pointer transition-colors ${
                             isActive
                               ? 'bg-border-dark/60 text-accent font-semibold'
