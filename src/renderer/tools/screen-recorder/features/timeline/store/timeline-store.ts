@@ -29,6 +29,24 @@ function computeAutoZoom(durationMs: number): number {
 
 interface TimelineStoreState {
   playheadMs: number;
+  /**
+   * Mirrors the `<video>` element's actual play state -- lives here (not
+   * just EditorPage's local state) so CutTimeline can read it too: the
+   * ruler's hover-scrub only live-previews while paused, since while
+   * actually playing back, a hovering mouse shouldn't fight the running
+   * playback position (see CutTimeline.tsx's `handleRulerPointerMove`).
+   */
+  isPlaying: boolean;
+  /**
+   * True for the duration of a ruler/clip hover-scrub session (see
+   * CutTimeline.tsx) -- while true, PreviewStage's rAF loop skips syncing
+   * `playheadMs` from the video's actual `currentTime`, so the *real*
+   * playhead visually stays put while `previewSeek` moves the video/preview
+   * around underneath it. Cleared (and `playheadMs` catches up in one
+   * `requestSeek`) once the hover is committed (click/release) or cancelled
+   * (mouse leaves without clicking).
+   */
+  isHoverScrubbing: boolean;
   /** Full duration of the underlying recording (segments' ranges are bounded by this). */
   sourceDurationMs: number;
   tracks: TimelineTrack[];
@@ -60,11 +78,22 @@ interface TimelineStoreState {
    */
   seekRequestMs: number | null;
   setPlayhead: (ms: number) => void;
+  setIsPlaying: (isPlaying: boolean) => void;
+  setIsHoverScrubbing: (isHoverScrubbing: boolean) => void;
   setTracks: (tracks: TimelineTrack[]) => void;
   setSelectedSegmentId: (segmentId: string | null) => void;
   setTimelineZoom: (zoom: number) => void;
   setActiveTool: (tool: EditorTool | null) => void;
   requestSeek: (ms: number) => void;
+  /**
+   * Like `requestSeek`, but leaves `playheadMs` alone -- moves the actual
+   * `<video>` (so the preview shows that frame) without visually moving the
+   * main playhead, for hover-scrub's "gray marker follows the cursor, blue
+   * playhead doesn't" behavior (see CutTimeline.tsx). Only makes sense
+   * combined with `isHoverScrubbing: true`, otherwise PreviewStage's rAF
+   * loop will sync `playheadMs` from the video on the very next frame anyway.
+   */
+  previewSeek: (ms: number) => void;
   clearSeekRequest: () => void;
   initializeFromDuration: (durationMs: number) => void;
   /** Splits whichever kept segment covers `atOutputMs` (in the ripple/output timeline) into two. */
@@ -104,6 +133,8 @@ export const useTimelineStore = create<TimelineStoreState>(
     (s) => ({ tracks: s.tracks }),
     (set, get) => ({
       playheadMs: 0,
+      isPlaying: false,
+      isHoverScrubbing: false,
       sourceDurationMs: 0,
       tracks: [
         { id: PRIMARY_VIDEO_TRACK_ID, kind: 'video', segments: [] },
@@ -116,11 +147,14 @@ export const useTimelineStore = create<TimelineStoreState>(
       activeTool: 'background',
       seekRequestMs: null,
       setPlayhead: (playheadMs) => set({ playheadMs }),
+      setIsPlaying: (isPlaying) => set({ isPlaying }),
+      setIsHoverScrubbing: (isHoverScrubbing) => set({ isHoverScrubbing }),
       setTracks: (tracks) => set({ tracks }),
       setSelectedSegmentId: (selectedSegmentId) => set({ selectedSegmentId }),
       setTimelineZoom: (timelineZoom) => set({ timelineZoom }),
       setActiveTool: (activeTool) => set({ activeTool }),
       requestSeek: (ms) => set({ seekRequestMs: ms, playheadMs: ms }),
+      previewSeek: (ms) => set({ seekRequestMs: ms }),
       clearSeekRequest: () => set({ seekRequestMs: null }),
 
       initializeFromDuration: (durationMs) => {

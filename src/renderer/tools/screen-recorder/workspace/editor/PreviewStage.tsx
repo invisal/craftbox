@@ -113,6 +113,19 @@ export function PreviewStage({
     segmentsRef.current = segments;
   }, [segments]);
 
+  // While a ruler/clip hover-scrub is in progress (see CutTimeline.tsx),
+  // `previewSeek` still moves the actual video so this stage shows the
+  // hovered frame, but the tick loop below should *not* sync that back into
+  // `playheadMs` -- the main playhead stays put until the hover commits.
+  // Ref (not read directly), same reason `segmentsRef` is: the tick loop's
+  // effect has an empty dep array and would otherwise close over a stale
+  // value.
+  const isHoverScrubbing = useTimelineStore((s) => s.isHoverScrubbing);
+  const isHoverScrubbingRef = useRef(isHoverScrubbing);
+  useEffect(() => {
+    isHoverScrubbingRef.current = isHoverScrubbing;
+  }, [isHoverScrubbing]);
+
   // `currentTimeMs` only updates on the video's `timeupdate` event, which
   // browsers fire just a few times a second -- fine for captions sync, but
   // far too coarse for a smooth zoom or playhead: driving either off it
@@ -133,7 +146,7 @@ export function PreviewStage({
       if (video) {
         const sourceMs = video.currentTime * 1000;
         setZoomTimeMs(sourceMs);
-        setPlayhead(sourceMs);
+        if (!isHoverScrubbingRef.current) setPlayhead(sourceMs);
         const activeSegment = segmentsRef.current.find(
           (s) => sourceMs >= s.range.startMs && sourceMs < s.range.endMs
         );

@@ -68,14 +68,14 @@ export function Playhead({
   return (
     <div
       ref={markerRef}
-      className="pointer-events-none absolute inset-y-0 z-10 mx-0.5"
+      className="pointer-events-none absolute inset-y-0 h-full z-10 mx-0.5"
       style={{ left: `${(outputPlayheadMs / clampedTotal) * 100}%` }}
     >
-      <div className="absolute inset-y-0 left-0 w-px bg-accent" />
+      <div className="absolute inset-y-0 left-0 w-0.5 bg-accent" />
       <div
         onPointerDown={onPointerDown}
         title="Drag to scrub"
-        className="pointer-events-auto absolute -left-1.75 -top-1.75 h-3.5 w-3.5 cursor-ew-resize rounded-full border-2 border-surface-raised bg-accent shadow-sm"
+        className="pointer-events-auto absolute top-0 -left-1.75  h-3.5 w-3.5 cursor-ew-resize rounded-full border-2 border-surface-raised bg-accent shadow-sm"
       />
     </div>
   );

@@ -31,11 +31,16 @@ export function EditorPage(): JSX.Element {
   const setActiveTool = useTimelineStore((s) => s.setActiveTool);
   const seekRequestMs = useTimelineStore((s) => s.seekRequestMs);
   const clearSeekRequest = useTimelineStore((s) => s.clearSeekRequest);
+  // Lives in the timeline store (not local state) for the same reason
+  // selection/activeTool do -- CutTimeline (rendered independently, see
+  // above) needs to read play state too, to gate the ruler's hover-scrub
+  // (only live-previews while paused; see CutTimeline.tsx).
+  const isPlaying = useTimelineStore((s) => s.isPlaying);
+  const setIsPlaying = useTimelineStore((s) => s.setIsPlaying);
   const undo = useHistoryStore((s) => s.undo);
   const redo = useHistoryStore((s) => s.redo);
 
   const [duration, setDuration] = useState(0);
-  const [isPlaying, setIsPlaying] = useState(false);
   const [currentTimeMs, setCurrentTimeMs] = useState(0);
   const [cropToolActive, setCropToolActive] = useState(false);
   const [sourceResolution, setSourceResolution] = useState<{
