@@ -17,26 +17,32 @@ interface HistorySlice {
 
 /** Caps memory growth for very long editing sessions. */
 const MAX_HISTORY_ENTRIES = 100;
-/**
- * How long a burst of rapid changes (dragging a trim handle, scrubbing a
- * slider) can stay "open" before the *next* change is treated as a new,
- * separate undo step. The burst's entry is committed to `past` the moment
- * it starts, not after this window elapses -- the window only controls
- * merging of whatever follows, so Undo enables the instant something
- * happens instead of lagging behind every edit.
- */
-const BURST_WINDOW_MS = 500;
 
 const registry = new Map<string, HistorySlice>();
 
 let isRestoring = false;
-let burstActive = false;
-let burstTimer: ReturnType<typeof setTimeout> | null = null;
+/**
+ * Depth (not a boolean) so a gesture that itself triggers another
+ * `beginGesture`/`endGesture` pair -- unlikely, but cheap to make safe --
+ * doesn't close prematurely. Only 0 <-> >0 transitions matter.
+ */
+let gestureDepth = 0;
+/** Whether the *current* gesture has already committed its one entry. */
+let gestureEntryCommitted = false;
 
 function captureSnapshot(): HistorySnapshot {
   const snapshot: HistorySnapshot = {};
   for (const [key, slice] of registry) snapshot[key] = slice.getSnapshot();
   return snapshot;
+}
+
+/**
+ * Exposed so `withHistory` can grab the pre-change snapshot itself, before
+ * it knows yet whether this particular write is even worth recording (see
+ * `recordChange`'s doc comment for why that check matters).
+ */
+export function captureHistorySnapshot(): HistorySnapshot {
+  return captureSnapshot();
 }
 
 function restoreSnapshot(snapshot: HistorySnapshot): void {
@@ -50,13 +56,28 @@ function restoreSnapshot(snapshot: HistorySnapshot): void {
   }
 }
 
-/** Ends whatever burst is currently merging changes, so the next change starts a fresh undo step. */
-function closeBurst(): void {
-  if (burstTimer !== null) {
-    clearTimeout(burstTimer);
-    burstTimer = null;
-  }
-  burstActive = false;
+/**
+ * Brackets a continuous drag gesture (trim-handle drag, slider scrub, crop
+ * rect drag, ...) so however many individual `set` calls it makes along the
+ * way -- one per pointermove -- collapse into a single undo step, the state
+ * from right before the drag started. Every `beginGesture` must be paired
+ * with an `endGesture` once the drag ends (mirror the pointerdown/pointerup
+ * pair the caller already has for the drag itself).
+ *
+ * Changes made *outside* a gesture (a button click, picking a preset, a
+ * single committed edit) are never merged with each other, regardless of
+ * how close together they happen -- each is always its own undo step. This
+ * is deliberate: two distinct user actions performed quickly back-to-back
+ * (e.g. resize a zoom keyframe, then delete it) must still undo one at a
+ * time, not jump both at once.
+ */
+export function beginGesture(): void {
+  gestureDepth++;
+}
+
+export function endGesture(): void {
+  gestureDepth = Math.max(0, gestureDepth - 1);
+  if (gestureDepth === 0) gestureEntryCommitted = false;
 }
 
 /**
@@ -78,23 +99,29 @@ export function isApplyingHistory(): boolean {
 }
 
 /**
- * Called by `withHistory` right before a registered store applies a real
- * content change. The *first* change of a burst commits the pre-change
- * snapshot to `past` immediately and clears `future`; changes that follow
- * within `BURST_WINDOW_MS` reuse that same entry instead of pushing more --
- * e.g. every pointermove of a trim-handle drag collapses into the one entry
- * captured when the drag started.
+ * Called by `withHistory` after it's confirmed a store's write actually
+ * changed that store's own undoable slice -- NOT on every `set` call
+ * regardless of what it touched. That distinction matters: stores also
+ * carry non-undoable UI state through the exact same `set` (timeline's
+ * `playheadMs`, for instance, updates ~60x/second while the preview plays).
+ * Recording those would flood `past` with no-op duplicates that silently
+ * evict real edits once the cap is hit -- undo would then restore a
+ * snapshot indistinguishable from the current state, i.e. visibly do
+ * nothing. `beforeSnapshot` is the cross-store snapshot captured right
+ * before the change, by whichever store called this.
+ *
+ * Outside a gesture, every call commits its own undo step immediately.
+ * Inside one (between `beginGesture`/`endGesture`), only the first call
+ * commits -- the rest are absorbed into that same step.
  */
-export function recordChange(): void {
+export function recordChange(beforeSnapshot: HistorySnapshot): void {
   if (isRestoring) return;
-  if (!burstActive) {
-    burstActive = true;
-    const before = captureSnapshot();
-    const past = [...useHistoryStore.getState().past, before].slice(-MAX_HISTORY_ENTRIES);
-    useHistoryStore.setState({ past, future: [] });
+  if (gestureDepth > 0) {
+    if (gestureEntryCommitted) return;
+    gestureEntryCommitted = true;
   }
-  if (burstTimer !== null) clearTimeout(burstTimer);
-  burstTimer = setTimeout(closeBurst, BURST_WINDOW_MS);
+  const past = [...useHistoryStore.getState().past, beforeSnapshot].slice(-MAX_HISTORY_ENTRIES);
+  useHistoryStore.setState({ past, future: [] });
 }
 
 interface HistoryStoreState {
@@ -116,7 +143,11 @@ export const useHistoryStore = create<HistoryStoreState>((set, get) => ({
   past: [],
   future: [],
   undo: () => {
-    closeBurst();
+    // Defensive: a gesture that never got its matching `endGesture` (a drag
+    // component unmounting mid-drag, say) would otherwise wedge future
+    // changes into silently not recording at all.
+    gestureDepth = 0;
+    gestureEntryCommitted = false;
     const { past, future } = get();
     if (past.length === 0) return;
     const previous = past[past.length - 1];
@@ -125,7 +156,8 @@ export const useHistoryStore = create<HistoryStoreState>((set, get) => ({
     set({ past: past.slice(0, -1), future: [...future, current] });
   },
   redo: () => {
-    closeBurst();
+    gestureDepth = 0;
+    gestureEntryCommitted = false;
     const { past, future } = get();
     if (future.length === 0) return;
     const next = future[future.length - 1];
@@ -144,6 +176,7 @@ export const useHistoryStore = create<HistoryStoreState>((set, get) => ({
  * `EditorPage`'s `initializeFromDuration` call.
  */
 export function resetHistory(): void {
-  closeBurst();
+  gestureDepth = 0;
+  gestureEntryCommitted = false;
   useHistoryStore.setState({ past: [], future: [] });
 }

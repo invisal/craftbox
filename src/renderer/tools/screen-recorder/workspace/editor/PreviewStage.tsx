@@ -18,6 +18,7 @@ import { CropOverlay } from '../../features/crop/components/CropOverlay';
 import { CursorOverlay } from '../../features/cursor/components/CursorOverlay';
 import { AnnotationOverlay } from '../../features/annotations/components/AnnotationOverlay';
 import { BlurMaskOverlay } from '../../features/blur-mask/components/BlurMaskOverlay';
+import { beginGesture, endGesture } from '../../features/history/store/history-store';
 import { REFERENCE_CANVAS_WIDTH } from '@shared/constants';
 import { resolveZoom } from '@shared/zoom-resolve';
 import { smoothCursorPath } from '@shared/cursor-path';
@@ -213,6 +214,7 @@ export function PreviewStage({
 
   function startWebcamDrag(event: React.PointerEvent): void {
     event.preventDefault();
+    beginGesture();
     dragState.current = {
       startClientX: event.clientX,
       startClientY: event.clientY,
@@ -236,9 +238,19 @@ export function PreviewStage({
   }
 
   function stopWebcamDrag(): void {
+    if (dragState.current) endGesture();
     dragState.current = null;
     window.removeEventListener('pointermove', handleWebcamDrag);
   }
+
+  // Guards against the pointerup listener never firing (this stage
+  // unmounts mid-drag) -- otherwise the gesture it opened would stay open
+  // forever, silently swallowing every undo-tracked change made afterward.
+  useEffect(() => {
+    return () => {
+      if (dragState.current) endGesture();
+    };
+  }, []);
 
   // The stage mirrors the export canvas: fixed to the selected export aspect
   // ratio (not just whatever shape the flex column happens to be), letting
