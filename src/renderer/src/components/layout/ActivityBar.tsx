@@ -6,6 +6,7 @@ import cn from 'cnfast';
 import { ContextMenu } from '../ui/ContextMenu';
 import { ToolDialog } from '../dialog/ToolDialog';
 import kuberneterIcon from '@renderer/assets/kuberneter-icon.svg';
+import { KuberneterActivityContextMenu } from '../../../tools/kuberneter/components/activities-bar/KuberneterActivityContextMenu';
 
 export const ActivityBar: React.FC = () => {
   const { tabs, activeTabId, selectTab, closeTab } = useToolTabs();
@@ -54,6 +55,9 @@ export const ActivityBar: React.FC = () => {
             }
           />
           <ContextMenu.Content>
+            {tab.type === 'kuberneter' && (
+              <KuberneterActivityContextMenu tabId={tab.id} payload={tab.payload} />
+            )}
             <ContextMenu.Item onClick={() => closeTab(tab.id)}>Close</ContextMenu.Item>
           </ContextMenu.Content>
         </ContextMenu.Root>

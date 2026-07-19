@@ -9,7 +9,7 @@ import { PasteConfigModal } from './PasteConfigModal';
 import { Server, AlertCircle } from 'lucide-react';
 
 export const KuberneterHomeView: React.FC = () => {
-  const { activeInstanceId } = useLayoutStore();
+  const { activeInstanceId, openTab } = useLayoutStore();
 
   const {
     kuberneterKubeconfigs,
@@ -21,7 +21,8 @@ export const KuberneterHomeView: React.FC = () => {
     kuberneterInstanceConfigPath,
     setKuberneterInstanceConfigPath,
     kuberneterRecentConnections,
-    addKuberneterRecentConnection
+    addKuberneterRecentConnection,
+    setKuberneterInstanceResource
   } = useKuberneterStore();
 
   const activeConfigPath = kuberneterInstanceConfigPath[activeInstanceId] || 'default';
@@ -56,8 +57,19 @@ export const KuberneterHomeView: React.FC = () => {
     setKuberneterInstanceCluster(activeInstanceId, contextName);
     setKuberneterInstanceConfigPath(activeInstanceId, configPath);
     setKuberneterInstanceNamespace(activeInstanceId, namespace || 'default');
+    setKuberneterInstanceResource(activeInstanceId, 'overview');
 
-    // 2. Add connection info to the Recents list
+    // 2. Open default Cluster Overview workspace tab
+    openTab({
+      id: `kuberneter-k8s-overview-${activeInstanceId}`,
+      title: 'Cluster Overview',
+      type: 'kuberneter',
+      instanceId: activeInstanceId,
+      meta: { resource: 'overview' },
+      isPreview: true
+    });
+
+    // 3. Add connection info to the Recents list
     addKuberneterRecentConnection(contextName, configPath, server);
   };
 
