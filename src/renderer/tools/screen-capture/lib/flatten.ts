@@ -7,14 +7,6 @@ import type {
   TextAnnotation
 } from '../types/editor';
 
-/**
- * Blur radius in `unit`s. The editor previews regions with CSS
- * `backdrop-filter: blur()` and the export bakes them with `ctx.filter =
- * 'blur()'` — the same Chromium Gaussian — so both must derive the pixel
- * radius from this one constant to look identical.
- */
-export const BLUR_RADIUS_UNITS = 8;
-
 /** Resolution-independent sizing unit — must match editor.store.ts's `unit`. */
 export function imageUnit(imageWidth: number): number {
   return Math.max(1, imageWidth / 1000);
@@ -104,17 +96,20 @@ export function clampRectToImage(rect: Rect, imageWidth: number, imageHeight: nu
   return { x, y, width: right - x, height: bottom - y };
 }
 
+// The editor previews regions with CSS `backdrop-filter: blur()` and this
+// bakes them with `ctx.filter = 'blur()'` — the same Chromium Gaussian — so
+// both read the pixel radius from the annotation to look identical.
 function drawBlur(
   ctx: CanvasRenderingContext2D,
   source: HTMLCanvasElement,
-  region: BlurAnnotation,
-  blurPx: number
+  region: BlurAnnotation
 ): void {
+  const blurPx = region.blurRadius;
   const x = Math.round(region.x);
   const y = Math.round(region.y);
   const width = Math.round(region.width);
   const height = Math.round(region.height);
-  if (width <= 0 || height <= 0) return;
+  if (width <= 0 || height <= 0 || blurPx <= 0) return;
 
   // Blur a padded copy of the region, then keep only the center: the
   // Gaussian needs surrounding context (like backdrop-filter has) and the
@@ -224,10 +219,10 @@ export async function flattenImage(
   // Draw in array order (last = topmost layer). A blur layer samples the
   // canvas as painted so far, so it also blurs annotations stacked below it
   // — the same stacking semantics as the CSS backdrop-filter preview.
-  const blurPx = BLUR_RADIUS_UNITS * imageUnit(bitmap.width);
   for (const a of annotations) {
+    if (a.hidden) continue;
     ctx.save();
-    if (a.kind === 'blur') drawBlur(ctx, canvas, a, blurPx);
+    if (a.kind === 'blur') drawBlur(ctx, canvas, a);
     else if (a.kind === 'rect') drawRect(ctx, a);
     else if (a.kind === 'arrow') drawArrow(ctx, a);
     else if (a.kind === 'label') drawLabel(ctx, a);

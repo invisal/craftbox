@@ -5,7 +5,6 @@ import { nextLabelValue, useCaptureEditorStore } from '../store/editor.store';
 import { Check, X } from 'lucide-react';
 import { Button } from '@renderer/components/ui/Button';
 import {
-  BLUR_RADIUS_UNITS,
   arrowHeadLength,
   arrowHeadPoints,
   clampRectToImage,
@@ -451,7 +450,12 @@ export function CaptureEditor({ dataUrl, onCropped }: CaptureEditorProps): JSX.E
         strokeWidth: s.strokeTier * unit
       });
     } else {
-      s.addAnnotation({ id: crypto.randomUUID(), kind: 'blur', ...rect });
+      s.addAnnotation({
+        id: crypto.randomUUID(),
+        kind: 'blur',
+        ...rect,
+        blurRadius: s.blurTier * unit
+      });
     }
   }
 
@@ -461,7 +465,6 @@ export function CaptureEditor({ dataUrl, onCropped }: CaptureEditorProps): JSX.E
     const isSelected = selectedId === annotation.id;
 
     if (annotation.kind === 'blur' || annotation.kind === 'rect') {
-      const isBlur = annotation.kind === 'blur';
       return (
         <div
           key={annotation.id}
@@ -480,10 +483,10 @@ export function CaptureEditor({ dataUrl, onCropped }: CaptureEditorProps): JSX.E
             top: annotation.y * scale,
             width: annotation.width * scale,
             height: annotation.height * scale,
-            ...(isBlur
+            ...(annotation.kind === 'blur'
               ? {
-                  backdropFilter: `blur(${BLUR_RADIUS_UNITS * unit * scale}px)`,
-                  WebkitBackdropFilter: `blur(${BLUR_RADIUS_UNITS * unit * scale}px)`
+                  backdropFilter: `blur(${annotation.blurRadius * scale}px)`,
+                  WebkitBackdropFilter: `blur(${annotation.blurRadius * scale}px)`
                 }
               : {
                   border: `${Math.max(1, annotation.strokeWidth * scale)}px solid ${annotation.color}`
@@ -721,7 +724,7 @@ export function CaptureEditor({ dataUrl, onCropped }: CaptureEditorProps): JSX.E
 
         {sized && (
           <div className="absolute inset-0">
-            {annotations.map(renderAnnotation)}
+            {annotations.filter((a) => !a.hidden).map(renderAnnotation)}
             {draft && renderDraft(draft)}
 
             {tool === 'crop' && cropRect && (

@@ -16,6 +16,13 @@ export const FONT_TIERS = [
   { label: 'Large text', value: 36 }
 ];
 
+/** Blur radius tiers in `unit`s (multiplied by `unit` into image px). */
+export const BLUR_TIERS = [
+  { label: 'Light blur', value: 4 },
+  { label: 'Medium blur', value: 8 },
+  { label: 'Strong blur', value: 16 }
+];
+
 /** Max corner radius as a multiple of `unit` (i.e. ~6.4% of image width). */
 export const MAX_CORNER_RADIUS_UNITS = 64;
 
@@ -40,6 +47,8 @@ interface EditorState {
   strokeTier: number;
   /** Text size in units (multiplied by `unit` at creation time). */
   fontTier: number;
+  /** Blur radius in units (multiplied by `unit` at creation time). */
+  blurTier: number;
   // ponytail: undo covers annotations only — cornerRadius is a slider the
   // user can just drag back; tracking it would spam the stack on every input
   // event. Upgrade path: begin/end gesture around slider drags.
@@ -48,9 +57,11 @@ interface EditorState {
   init: (imageWidth: number, imageHeight: number) => void;
   reset: () => void;
   setTool: (tool: EditorTool) => void;
-  setColor: (color: string) => void;
-  setStrokeTier: (tier: number) => void;
-  setFontTier: (tier: number) => void;
+  /** Setters below update the default for new annotations and patch the target annotation (explicit `id`, else the selection) when the property applies to its kind. */
+  setColor: (color: string, id?: string) => void;
+  setStrokeTier: (tier: number, id?: string) => void;
+  setFontTier: (tier: number, id?: string) => void;
+  setBlurTier: (tier: number, id?: string) => void;
   setCornerRadius: (radius: number) => void;
   setSelectedId: (id: string | null) => void;
   setEditingId: (id: string | null) => void;
@@ -97,6 +108,7 @@ const initialState = {
   editingId: null,
   strokeTier: STROKE_TIERS[1].value,
   fontTier: FONT_TIERS[1].value,
+  blurTier: BLUR_TIERS[1].value,
   past: [] as CaptureAnnotation[][],
   future: [] as CaptureAnnotation[][]
 };
@@ -114,6 +126,7 @@ export const useCaptureEditorStore = create<EditorState>((set, get) => ({
       color: state.color,
       strokeTier: state.strokeTier,
       fontTier: state.fontTier,
+      blurTier: state.blurTier,
       imageWidth,
       imageHeight,
       unit: imageUnit(imageWidth)
@@ -124,39 +137,39 @@ export const useCaptureEditorStore = create<EditorState>((set, get) => ({
       ...initialState,
       color: state.color,
       strokeTier: state.strokeTier,
-      fontTier: state.fontTier
+      fontTier: state.fontTier,
+      blurTier: state.blurTier
     })),
 
   setTool: (tool) => set({ tool, selectedId: null, editingId: null }),
 
-  setColor: (color) =>
+  setColor: (color, id) =>
     set((state) => {
-      const selected = state.annotations.find((a) => a.id === state.selectedId);
-      if (!selected || selected.kind === 'blur') return { color };
+      const target = state.annotations.find((a) => a.id === (id ?? state.selectedId));
+      if (!target || target.kind === 'blur') return { color };
       return {
         color,
         ...pushPast(state),
-        annotations: applyPatch(state.annotations, selected.id, { color })
+        annotations: applyPatch(state.annotations, target.id, { color })
       };
     }),
 
-  setStrokeTier: (strokeTier) =>
+  setStrokeTier: (strokeTier, id) =>
     set((state) => {
-      const selected = state.annotations.find((a) => a.id === state.selectedId);
-      if (!selected || (selected.kind !== 'rect' && selected.kind !== 'arrow'))
-        return { strokeTier };
+      const target = state.annotations.find((a) => a.id === (id ?? state.selectedId));
+      if (!target || (target.kind !== 'rect' && target.kind !== 'arrow')) return { strokeTier };
       return {
         strokeTier,
         ...pushPast(state),
-        annotations: applyPatch(state.annotations, selected.id, {
+        annotations: applyPatch(state.annotations, target.id, {
           strokeWidth: strokeTier * state.unit
         })
       };
     }),
 
-  setFontTier: (fontTier) =>
+  setFontTier: (fontTier, id) =>
     set((state) => {
-      const targetId = state.selectedId ?? state.editingId;
+      const targetId = id ?? state.selectedId ?? state.editingId;
       const target = state.annotations.find((a) => a.id === targetId);
       if (!target || target.kind !== 'text') return { fontTier };
       return {
@@ -164,6 +177,19 @@ export const useCaptureEditorStore = create<EditorState>((set, get) => ({
         ...pushPast(state),
         annotations: applyPatch(state.annotations, target.id, {
           fontSize: fontTier * state.unit
+        })
+      };
+    }),
+
+  setBlurTier: (blurTier, id) =>
+    set((state) => {
+      const target = state.annotations.find((a) => a.id === (id ?? state.selectedId));
+      if (!target || target.kind !== 'blur') return { blurTier };
+      return {
+        blurTier,
+        ...pushPast(state),
+        annotations: applyPatch(state.annotations, target.id, {
+          blurRadius: blurTier * state.unit
         })
       };
     }),

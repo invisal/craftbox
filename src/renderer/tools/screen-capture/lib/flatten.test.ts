@@ -7,7 +7,7 @@ import {
   normalizeRect,
   resizeRect
 } from './flatten';
-import { nextLabelValue, reorderById } from '../store/editor.store';
+import { nextLabelValue, reorderById, useCaptureEditorStore } from '../store/editor.store';
 import type { CaptureAnnotation } from '../types/editor';
 
 describe('normalizeRect', () => {
@@ -87,6 +87,45 @@ describe('reorderById', () => {
     expect(ids(reorderById(list, 'a', 99))).toBe('bcda');
     expect(reorderById(list, 'b', 1)).toBe(list);
     expect(reorderById(list, 'missing', 0)).toBe(list);
+  });
+});
+
+describe('per-annotation property setters', () => {
+  it('setBlurTier patches the targeted blur layer in image px and updates the default', () => {
+    const s = useCaptureEditorStore.getState();
+    s.init(2000, 1000); // unit = 2
+    s.addAnnotation({
+      id: 'blur1',
+      kind: 'blur',
+      x: 0,
+      y: 0,
+      width: 10,
+      height: 10,
+      blurRadius: 16
+    });
+    s.addAnnotation({
+      id: 'rect1',
+      kind: 'rect',
+      x: 0,
+      y: 0,
+      width: 10,
+      height: 10,
+      color: '#fff',
+      strokeWidth: 4
+    });
+
+    useCaptureEditorStore.getState().setBlurTier(16, 'blur1');
+    let state = useCaptureEditorStore.getState();
+    expect(state.blurTier).toBe(16);
+    expect(state.annotations.find((a) => a.id === 'blur1')).toMatchObject({ blurRadius: 32 });
+
+    // A non-blur target only moves the default.
+    useCaptureEditorStore.getState().setBlurTier(4, 'rect1');
+    state = useCaptureEditorStore.getState();
+    expect(state.blurTier).toBe(4);
+    expect(state.annotations.find((a) => a.id === 'blur1')).toMatchObject({ blurRadius: 32 });
+
+    useCaptureEditorStore.getState().reset();
   });
 });
 

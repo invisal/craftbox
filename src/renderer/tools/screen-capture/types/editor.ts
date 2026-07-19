@@ -1,8 +1,15 @@
 export type EditorTool = 'select' | 'text' | 'label' | 'rect' | 'arrow' | 'blur' | 'crop';
 
-/** All coordinates/sizes are in source-image pixel space (scaled for display, drawn 1:1 at export). */
-export interface TextAnnotation {
+interface AnnotationBase {
   id: string;
+  /** Custom layer name; falls back to a kind-based default in the panel. */
+  name?: string;
+  /** Hidden layers are excluded from the stage preview and the export. */
+  hidden?: boolean;
+}
+
+/** All coordinates/sizes are in source-image pixel space (scaled for display, drawn 1:1 at export). */
+export interface TextAnnotation extends AnnotationBase {
   kind: 'text';
   /** Top-left corner of the text box. */
   x: number;
@@ -12,11 +19,8 @@ export interface TextAnnotation {
   fontSize: number;
 }
 
-export interface LabelAnnotation {
-  id: string;
+export interface LabelAnnotation extends AnnotationBase {
   kind: 'label';
-  /** Custom layer name; falls back to a kind-based default in the panel. */
-  name?: string;
   /** Center of the numbered badge. */
   x: number;
   y: number;
@@ -25,10 +29,8 @@ export interface LabelAnnotation {
   color: string;
 }
 
-export interface RectAnnotation {
-  id: string;
+export interface RectAnnotation extends AnnotationBase {
   kind: 'rect';
-  name?: string;
   x: number;
   y: number;
   width: number;
@@ -37,10 +39,8 @@ export interface RectAnnotation {
   strokeWidth: number;
 }
 
-export interface ArrowAnnotation {
-  id: string;
+export interface ArrowAnnotation extends AnnotationBase {
   kind: 'arrow';
-  name?: string;
   x1: number;
   y1: number;
   x2: number;
@@ -49,14 +49,14 @@ export interface ArrowAnnotation {
   strokeWidth: number;
 }
 
-export interface BlurAnnotation {
-  id: string;
+export interface BlurAnnotation extends AnnotationBase {
   kind: 'blur';
-  name?: string;
   x: number;
   y: number;
   width: number;
   height: number;
+  /** Gaussian blur radius in image px — used by both the CSS backdrop-filter preview and the canvas export. */
+  blurRadius: number;
 }
 
 export type CaptureAnnotation =
