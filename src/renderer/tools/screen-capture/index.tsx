@@ -290,10 +290,6 @@ export function ScreenCaptureMain({}: ToolComponentProps<Props>): JSX.Element {
 
   const captureDisabled = usesOsPicker ? false : !selectedSource || loading;
 
-  const idleDescription = usesOsPicker
-    ? 'Click Capture to choose a screen, window, or region in the system dialog — or paste (Ctrl+V) or open an image to edit it.'
-    : undefined;
-
   const capturingMessage =
     captureMode === 'region' && captureStep === 'processing'
       ? 'Cropping screenshot…'
@@ -354,10 +350,6 @@ export function ScreenCaptureMain({}: ToolComponentProps<Props>): JSX.Element {
           )}
         >
           <ScreenRecordingPermissionBanner />
-
-          {phase === 'idle' && usesOsPicker && idleDescription && (
-            <p className="text-sm text-text-dim">{idleDescription}</p>
-          )}
 
           {phase === 'idle' && !usesOsPicker && (
             <div className="w-full min-w-0">
