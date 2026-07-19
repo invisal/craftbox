@@ -206,10 +206,6 @@ body {
   );
 }
 
-@utility shadow-panel-elevate {
-  box-shadow: var(--panel-elevate-shadow);
-}
-
 /* Titlebar dragging configurations */
 .titlebar-drag {
   -webkit-app-region: drag;

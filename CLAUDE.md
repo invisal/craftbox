@@ -26,5 +26,5 @@ npm run typecheck     # tsc --noEmit for both node and web targets
 Topic-specific reference docs live in `docs/receipts/`. Check the relevant one before
 touching that area of the code:
 
-- [colors.md](docs/receipts/colors.md) — Tailwind color tokens
+- [design.md](docs/receipts/design.md) — shared components (prefer reuse) and Tailwind color tokens
 - [tools.md](docs/receipts/tools.md) — folder structure for `renderer/tools/*`
