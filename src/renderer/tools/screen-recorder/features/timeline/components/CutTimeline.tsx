@@ -606,6 +606,13 @@ export function CutTimeline(): JSX.Element {
                 {segmentLayouts.map(({ segment, leftPercent, widthPercent }, index) => {
                   const isSelected = selectedSegmentId === segment.id;
                   const gapBeforeMs = gapBeforeSegmentMs(segments, index);
+                  // Any boundary with a previous kept clip is a cut, whether
+                  // or not it later grew a visible ripple gap -- a plain
+                  // split leaves `gapBeforeMs` at 0, but the cut itself still
+                  // happened and should keep marking the timeline. Only the
+                  // very first clip's own head trim needs the threshold
+                  // check, since an untrimmed recording start is never a cut.
+                  const hasCutBoundary = index > 0 || gapBeforeMs > MIN_CUT_MARKER_GAP_MS;
                   const dragHandlers = getDragHandlers(index);
                   return (
                     // ContextMenu.Root doesn't render a DOM node of its own,
@@ -685,41 +692,66 @@ export function CutTimeline(): JSX.Element {
                                   // A tool armed: leave the pointerdown alone
                                   // so it bubbles to the wrapper's onClick
                                   // above and cuts/places there instead of
-                                  // starting a resize.
-                                  if (isPointerToolActive) return;
+                                  // starting a resize. A split clip's range
+                                  // is locked (see `TimelineSegment.split`),
+                                  // so the drag never starts there either.
+                                  if (isPointerToolActive || segment.split) return;
                                   const width =
                                     e.currentTarget.parentElement?.getBoundingClientRect().width ??
                                     0;
                                   markEdgeResizeActive();
                                   startResizeHandler(segment, 'start', width)(e);
                                 }}
-                                className="absolute inset-y-0 left-0 w-1.5 cursor-ew-resize bg-black/10 hover:bg-black/25"
+                                title={segment.split ? 'Locked -- this edge is a cut' : undefined}
+                                className={cn(
+                                  'absolute inset-y-0 left-0 w-1.5 bg-black/10',
+                                  segment.split
+                                    ? 'cursor-default'
+                                    : 'cursor-ew-resize hover:bg-black/25'
+                                )}
                               />
                               <div
                                 onPointerDown={(e) => {
-                                  if (isPointerToolActive) return;
+                                  if (isPointerToolActive || segment.split) return;
                                   const width =
                                     e.currentTarget.parentElement?.getBoundingClientRect().width ??
                                     0;
                                   markEdgeResizeActive();
                                   startResizeHandler(segment, 'end', width)(e);
                                 }}
-                                className="absolute inset-y-0 right-0 w-1.5 cursor-ew-resize bg-black/10 hover:bg-black/25"
+                                title={segment.split ? 'Locked -- this edge is a cut' : undefined}
+                                className={cn(
+                                  'absolute inset-y-0 right-0 w-1.5 bg-black/10',
+                                  segment.split
+                                    ? 'cursor-default'
+                                    : 'cursor-ew-resize hover:bg-black/25'
+                                )}
                               />
                             </div>
 
                             {/*
-                              Cut marker for footage trimmed off just before
-                              this clip -- the head trim for the first clip,
-                              otherwise a ripple-closed gap to the previous
-                              one. Always centered exactly on the boundary
-                              it describes (via `CutMarker`'s anchor+translate
+                              Cut marker for the boundary just before this
+                              clip -- shown for every split, not just once a
+                              trim opens a visible gap, so the marker stays
+                              put as soon as the cut is made rather than
+                              appearing only after the user later drags an
+                              edge. Duration prefers the actual trimmed-away
+                              footage when there is any (a deleted or
+                              ripple-trimmed stretch); a plain split has none
+                              of that yet, so it falls back to this clip's
+                              own output duration instead of showing nothing.
+                              Always centered exactly on the boundary it
+                              describes (via `CutMarker`'s anchor+translate
                               pairing), including the first clip's own head
                               cut.
                             */}
-                            {gapBeforeMs > MIN_CUT_MARKER_GAP_MS && (
+                            {hasCutBoundary && (
                               <CutMarker
-                                durationMs={gapBeforeMs}
+                                durationMs={
+                                  gapBeforeMs > MIN_CUT_MARKER_GAP_MS
+                                    ? gapBeforeMs
+                                    : getSegmentOutputDurationMs(segment)
+                                }
                                 anchorClassName="-translate-x-1/2"
                               />
                             )}

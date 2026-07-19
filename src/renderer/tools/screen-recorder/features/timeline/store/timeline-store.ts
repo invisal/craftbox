@@ -204,7 +204,8 @@ export const useTimelineStore = create<TimelineStoreState>(
           speed: 1,
           sourceOffsetMs: 0,
           crop: null,
-          trimmed: false
+          trimmed: false,
+          split: false
         };
         set({
           sourceDurationMs: durationMs,
@@ -235,11 +236,16 @@ export const useTimelineStore = create<TimelineStoreState>(
             nextSegments.push(segment);
           } else {
             nextSegments.push(
-              { ...segment, range: { startMs: segment.range.startMs, endMs: splitSourceMs } },
+              {
+                ...segment,
+                range: { startMs: segment.range.startMs, endMs: splitSourceMs },
+                split: true
+              },
               {
                 ...segment,
                 id: crypto.randomUUID(),
-                range: { startMs: splitSourceMs, endMs: segment.range.endMs }
+                range: { startMs: splitSourceMs, endMs: segment.range.endMs },
+                split: true
               }
             );
           }

@@ -6,7 +6,7 @@ import {
   PRIMARY_VIDEO_TRACK_ID
 } from '../../features/timeline/store/timeline-store';
 import { resetHistory, useHistoryStore } from '../../features/history/store/history-store';
-import { PreviewStage } from './PreviewStage';
+import { PreviewStage, type PreviewVideoController } from './PreviewStage';
 import { EditorTransportBar } from './EditorTransportBar';
 import { EditorToolRail } from './EditorToolRail';
 import { EditorToolPanel } from './EditorToolPanel';
@@ -48,7 +48,7 @@ export function EditorPage(): JSX.Element {
     height: number;
   } | null>(null);
   const [videoError, setVideoError] = useState<string | null>(null);
-  const videoRef = useRef<HTMLVideoElement>(null);
+  const videoRef = useRef<PreviewVideoController>(null);
 
   // Default the crop tool's selection to the first clip once segments exist,
   // and drop the selection if that clip gets deleted/reordered away.
@@ -131,6 +131,11 @@ export function EditorPage(): JSX.Element {
     <div className="flex min-h-0 flex-1">
       <div className="flex min-h-0 min-w-0 flex-1 flex-col">
         <PreviewStage
+          // Remounts the whole stage (and both internal <video> elements,
+          // see PreviewStage's dual-buffer comment) on a genuinely new
+          // recording, so all of its playback bookkeeping starts fresh
+          // instead of needing a manual reset effect.
+          key={lastRecording.previewUrl}
           videoRef={videoRef}
           previewUrl={lastRecording.previewUrl}
           isPlaying={isPlaying}

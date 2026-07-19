@@ -23,6 +23,7 @@ import {
   MAX_TIMELINE_ZOOM
 } from '../../features/timeline/store/timeline-store';
 import { cn } from '../../lib/utils';
+import type { PreviewVideoController } from './PreviewStage';
 
 const ASPECT_LABELS: Record<AspectRatio, string> = {
   '16:9': 'Wide 16:9',
@@ -39,7 +40,7 @@ function formatTime(ms: number): string {
 }
 
 interface EditorTransportBarProps {
-  videoRef: RefObject<HTMLVideoElement | null>;
+  videoRef: RefObject<PreviewVideoController | null>;
   isPlaying: boolean;
   cropToolActive: boolean;
   onToggleCrop: () => void;
