@@ -11,6 +11,7 @@ import { CronJobs } from './cronjobs/CronJobs';
 import { WorkloadOverview } from './workload-overview/WorkloadOverview';
 import { Services } from './services/Services';
 import { PersistentVolumeClaims } from './pvcs/PersistentVolumeClaims';
+import { PersistentVolumes } from './pvs/PersistentVolumes';
 import { ConfigMaps } from './configmaps/ConfigMaps';
 import { Secrets } from './secrets/Secrets';
 import { ResourceQuotas } from './resourcequotas/ResourceQuotas';
@@ -74,6 +75,7 @@ export const KuberneterWorkspace: React.FC<KuberneterWorkspaceProps> = ({ resour
     ingressClassesData,
     networkPoliciesData,
     pvcsData,
+    pvsData,
     isLoading,
     errorMsg
   } = useWorkspaceResources(resource);
@@ -187,6 +189,8 @@ export const KuberneterWorkspace: React.FC<KuberneterWorkspaceProps> = ({ resour
               kuberneterSelectedNamespace={kuberneterSelectedNamespace}
             />
           )}
+
+          {resource === 'pvs' && <PersistentVolumes pvsData={pvsData} />}
 
           {resource === 'endpointslices' && (
             <EndpointSlices

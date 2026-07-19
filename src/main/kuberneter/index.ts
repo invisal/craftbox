@@ -72,9 +72,14 @@ export function registerKuberneterHandlers(): void {
         args.push('get', resource);
 
         // Namespace scoping (only apply if the resource is namespaced)
-        const isClusterScoped = ['nodes', 'namespaces', 'clusterroles', 'storageclasses'].includes(
-          resource.toLowerCase()
-        );
+        const isClusterScoped = [
+          'nodes',
+          'namespaces',
+          'clusterroles',
+          'storageclasses',
+          'persistentvolumes',
+          'pvs'
+        ].includes(resource.toLowerCase());
 
         if (!isClusterScoped) {
           if (namespace && namespace !== 'All Namespaces') {

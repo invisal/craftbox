@@ -27,6 +27,7 @@ import { useIngresses } from './useIngresses';
 import { useIngressClasses } from './useIngressClasses';
 import { useNetworkPolicies } from './useNetworkPolicies';
 import { usePersistentVolumeClaims } from './usePersistentVolumeClaims';
+import { usePersistentVolumes } from './usePersistentVolumes';
 
 export function useWorkspaceResources(resource: string) {
   const activeInstanceId = useLayoutStore((s) => s.activeInstanceId);
@@ -64,6 +65,7 @@ export function useWorkspaceResources(resource: string) {
   const ingressclasses = useIngressClasses(resource === 'ingressclasses');
   const networkpolicies = useNetworkPolicies(resource === 'networkpolicies');
   const pvcs = usePersistentVolumeClaims(resource === 'pvcs');
+  const pvs = usePersistentVolumes(resource === 'pvs');
 
   let activeQuery: { data: unknown[]; isLoading: boolean; errorMsg: string | null } | null = null;
   if (resource === 'pods') activeQuery = pods;
@@ -93,6 +95,7 @@ export function useWorkspaceResources(resource: string) {
   else if (resource === 'ingressclasses') activeQuery = ingressclasses;
   else if (resource === 'networkpolicies') activeQuery = networkpolicies;
   else if (resource === 'pvcs') activeQuery = pvcs;
+  else if (resource === 'pvs') activeQuery = pvs;
 
   return {
     kuberneterSelectedCluster,
@@ -124,6 +127,7 @@ export function useWorkspaceResources(resource: string) {
     ingressClassesData: ingressclasses.data,
     networkPoliciesData: networkpolicies.data,
     pvcsData: pvcs.data,
+    pvsData: pvs.data,
     isLoading: activeQuery ? activeQuery.isLoading : false,
     errorMsg: activeQuery ? activeQuery.errorMsg : null
   };

@@ -17,8 +17,10 @@ import { RuntimeClassDetail } from './RuntimeClassDetail';
 import { LeaseDetail } from './LeaseDetail';
 import { ServiceDetail } from './ServiceDetail';
 import { PersistentVolumeClaimDetail } from './PersistentVolumeClaimDetail';
+import { PersistentVolumeDetail } from './PersistentVolumeDetail';
 import { MutatingWebhookDetail } from './MutatingWebhookDetail';
 import { type PersistentVolumeClaimData } from '../../../types/PersistentVolumeClaimData';
+import { type PersistentVolumeData } from '../../../types/PersistentVolumeData';
 
 import { ValidatingWebhookDetail } from './ValidatingWebhookDetail';
 import { EndpointSliceDetail } from './EndpointSliceDetail';
@@ -109,6 +111,8 @@ export const DetailContent: React.FC<DetailContentProps> = ({
       return (
         <PersistentVolumeClaimDetail payload={payload as PersistentVolumeClaimData} isTab={isTab} />
       );
+    case 'persistentvolume':
+      return <PersistentVolumeDetail payload={payload as PersistentVolumeData} isTab={isTab} />;
     case 'endpointslice':
       return <EndpointSliceDetail payload={payload as EndpointSliceData} isTab={isTab} />;
     case 'endpoints':
