@@ -10,6 +10,11 @@ import { Jobs } from './jobs/Jobs';
 import { CronJobs } from './cronjobs/CronJobs';
 import { WorkloadOverview } from './workload-overview/WorkloadOverview';
 import { Services } from './services/Services';
+import { PersistentVolumeClaims } from './pvcs/PersistentVolumeClaims';
+import { PersistentVolumes } from './pvs/PersistentVolumes';
+import { StorageClasses } from './storageclasses/StorageClasses';
+import { Namespaces } from './namespaces/Namespaces';
+import { Events } from './events/Events';
 import { ConfigMaps } from './configmaps/ConfigMaps';
 import { Secrets } from './secrets/Secrets';
 import { ResourceQuotas } from './resourcequotas/ResourceQuotas';
@@ -72,6 +77,11 @@ export const KuberneterWorkspace: React.FC<KuberneterWorkspaceProps> = ({ resour
     ingressesData,
     ingressClassesData,
     networkPoliciesData,
+    pvcsData,
+    pvsData,
+    storageClassesData,
+    namespacesData,
+    eventsData,
     isLoading,
     errorMsg
   } = useWorkspaceResources(resource);
@@ -178,6 +188,23 @@ export const KuberneterWorkspace: React.FC<KuberneterWorkspaceProps> = ({ resour
               kuberneterSelectedNamespace={kuberneterSelectedNamespace}
             />
           )}
+
+          {resource === 'pvcs' && (
+            <PersistentVolumeClaims
+              pvcsData={pvcsData}
+              kuberneterSelectedNamespace={kuberneterSelectedNamespace}
+            />
+          )}
+
+          {resource === 'pvs' && <PersistentVolumes pvsData={pvsData} />}
+
+          {resource === 'storageclasses' && (
+            <StorageClasses storageClassesData={storageClassesData} />
+          )}
+
+          {resource === 'namespaces' && <Namespaces namespacesData={namespacesData} />}
+
+          {resource === 'events' && <Events eventsData={eventsData} />}
 
           {resource === 'endpointslices' && (
             <EndpointSlices

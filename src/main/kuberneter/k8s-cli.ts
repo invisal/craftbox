@@ -1,20 +1,51 @@
-import { exec } from 'child_process';
+import { spawn } from 'child_process';
 
 /**
  * Runs a kubectl command with arguments and optional custom kubeconfig path.
  */
 export function runKubectl(args: string[], kubeconfigPath?: string): Promise<string> {
   return new Promise((resolve, reject) => {
-    // Standard command: kubectl [args]
     const kubeArgs = kubeconfigPath ? ['--kubeconfig', kubeconfigPath, ...args] : args;
-    const cmd = `kubectl ${kubeArgs.map((a) => `"${a.replace(/"/g, '\\"')}"`).join(' ')}`;
 
-    exec(cmd, { maxBuffer: 1024 * 1024 * 10 }, (error, stdout, stderr) => {
-      if (error) {
-        reject(new Error(stderr || stdout || error.message));
+    const child = spawn('kubectl', kubeArgs, { shell: true });
+
+    let stdout = '';
+    let stderr = '';
+
+    if (child.stdout) {
+      child.stdout.on('data', (chunk) => {
+        stdout += chunk.toString();
+      });
+    }
+
+    if (child.stderr) {
+      child.stderr.on('data', (chunk) => {
+        stderr += chunk.toString();
+      });
+    }
+
+    child.on('close', (code) => {
+      if (code !== 0) {
+        try {
+          const firstBrace = stdout.indexOf('{');
+          const lastBrace = stdout.lastIndexOf('}');
+          if (firstBrace !== -1 && lastBrace !== -1 && firstBrace < lastBrace) {
+            const jsonCandidate = stdout.substring(firstBrace, lastBrace + 1);
+            JSON.parse(jsonCandidate);
+            resolve(jsonCandidate);
+            return;
+          }
+        } catch {
+          // ignore parsing error, proceed to reject
+        }
+        reject(new Error(stderr.trim() || stdout.trim() || `kubectl exited with code ${code}`));
         return;
       }
       resolve(stdout);
+    });
+
+    child.on('error', (err) => {
+      reject(err);
     });
   });
 }
