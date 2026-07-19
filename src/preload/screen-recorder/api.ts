@@ -14,7 +14,6 @@ import type {
   SelectCaptureRegionOptions,
   RegionSelectCompletePayload
 } from '@shared/capture-region';
-import type { OsPickerSource } from '@shared/os-picker-source';
 import type {
   RecorderToolbarOpenPayload,
   RecorderToolbarStartPayload,
@@ -143,8 +142,8 @@ export const screenRecorderApi = {
       ipcRenderer.invoke(IpcChannels.SaveScreenshot, data, defaultFileName),
     selectRegion: (options?: SelectCaptureRegionOptions): Promise<CaptureRegionSelection | null> =>
       ipcRenderer.invoke(IpcChannels.SelectCaptureRegion, options),
-    pickOsSource: (options?: { monitorOnly?: boolean }): Promise<OsPickerSource | null> =>
-      ipcRenderer.invoke(IpcChannels.PickOsCaptureSource, options)
+    capturePortal: (): Promise<ArrayBuffer | null> =>
+      ipcRenderer.invoke(IpcChannels.CaptureScreenshotPortal)
   },
   regionSelect: {
     getContentOrigin: (): Promise<ScreenRect | null> =>

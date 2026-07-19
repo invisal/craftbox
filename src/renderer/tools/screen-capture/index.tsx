@@ -13,7 +13,6 @@ import { useCaptureSources, type SourceTab } from './lib/use-capture-sources';
 import {
   blobToDataUrl,
   captureFromSource,
-  captureFromSystemPicker,
   selectAndCaptureRegion,
   screenshotFileName,
   type RegionCaptureStep
@@ -125,14 +124,14 @@ export function ScreenCaptureMain({}: ToolComponentProps<Props>): JSX.Element {
       await finishCapture(blob);
     } catch (err) {
       setPhase('idle');
-      if (err instanceof Error && err.message.includes('monitor')) {
-        notifyError(err.message);
-      }
+      notifyError(err instanceof Error ? err.message : 'Could not capture region.');
     }
   };
 
+  // macOS / Windows / Linux X11 only — Linux Wayland always goes through
+  // runRegionCapture's native picker instead (see the merged footer button).
   const runCapture = async (source = selectedSource): Promise<void> => {
-    if (!usesOsPicker && !source) return;
+    if (!source) return;
 
     setSelectedSource(source);
     setCaptureMode('source');
@@ -142,9 +141,7 @@ export function ScreenCaptureMain({}: ToolComponentProps<Props>): JSX.Element {
     setPreviewBlob(null);
 
     try {
-      const blob = usesOsPicker
-        ? await captureFromSystemPicker()
-        : await captureFromSource(source!);
+      const blob = await captureFromSource(source);
       await finishCapture(blob);
     } catch {
       setPhase('idle');
@@ -191,7 +188,7 @@ export function ScreenCaptureMain({}: ToolComponentProps<Props>): JSX.Element {
   const captureDisabled = usesOsPicker ? false : !selectedSource || loading;
 
   const idleDescription = usesOsPicker
-    ? 'Click Capture to choose a screen or window in the system dialog.'
+    ? 'Click Capture to choose a screen, window, or region in the system dialog.'
     : undefined;
 
   const capturingMessage =
@@ -200,12 +197,10 @@ export function ScreenCaptureMain({}: ToolComponentProps<Props>): JSX.Element {
       : captureMode === 'region' && captureStep === 'region'
         ? 'Drag a region on screen…'
         : captureMode === 'region' && usesOsPicker
-          ? 'Choose a monitor in the system dialog…'
+          ? 'Choose what to capture in the system dialog…'
           : captureMode === 'region'
             ? 'Capturing selected region…'
-            : usesOsPicker
-              ? 'Choose what to share in the system dialog…'
-              : 'Capturing…';
+            : 'Capturing…';
 
   return (
     <Tabs.Root
@@ -310,15 +305,19 @@ export function ScreenCaptureMain({}: ToolComponentProps<Props>): JSX.Element {
 
       {phase === 'idle' && (
         <footer className="flex shrink-0 items-center justify-end gap-2 border-t border-border-dark bg-surface px-6 py-4">
-          <Button variant="secondary" size="sm" onClick={() => void runRegionCapture()}>
-            <Scan size={14} />
-            Capture region
-          </Button>
+          {/* Linux Wayland: GNOME's native picker already offers screen / window /
+              selection in one UI, so a separate "Capture region" button is redundant. */}
+          {!usesOsPicker && (
+            <Button variant="secondary" size="sm" onClick={() => void runRegionCapture()}>
+              <Scan size={14} />
+              Capture region
+            </Button>
+          )}
           <Button
             variant="primary"
             size="sm"
             disabled={captureDisabled}
-            onClick={() => void runCapture()}
+            onClick={() => void (usesOsPicker ? runRegionCapture() : runCapture())}
           >
             <Camera size={14} />
             Capture

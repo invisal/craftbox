@@ -1,6 +1,5 @@
 import type { CaptureSource } from '@screen-recorder/types/recording';
 import type { CaptureRegionSelection, ScreenRect } from '@shared/capture-region';
-import type { OsPickerSource } from '@shared/os-picker-source';
 
 interface DesktopVideoConstraint {
   mandatory: {
@@ -9,28 +8,6 @@ interface DesktopVideoConstraint {
     maxWidth?: number;
     maxHeight?: number;
   };
-}
-
-function isMonitorCapture(stream: MediaStream): boolean {
-  const track = stream.getVideoTracks()[0];
-  if (!track) return false;
-
-  const settings = track.getSettings() as MediaTrackSettings & { displaySurface?: string };
-  if (settings.displaySurface === 'monitor') return true;
-  if (settings.displaySurface === 'window' || settings.displaySurface === 'application') {
-    return false;
-  }
-
-  // PipeWire sometimes omits displaySurface — treat near-full-display as monitor.
-  const scale = window.devicePixelRatio || 1;
-  const screenW = Math.round(window.screen.width * scale);
-  const screenH = Math.round(window.screen.height * scale);
-  const { width = 0, height = 0 } = settings;
-  return width >= screenW * 0.9 && height >= screenH * 0.9;
-}
-
-async function hideApp(): Promise<void> {
-  await window.screenRecorder?.window.hide();
 }
 
 async function hideMainWindow(): Promise<void> {
@@ -50,71 +27,6 @@ function canvasToPngBlob(canvas: HTMLCanvasElement): Promise<Blob> {
       else reject(new Error('Failed to encode screenshot'));
     }, 'image/png');
   });
-}
-
-function canvasToBlob(canvas: HTMLCanvasElement, type: string, quality?: number): Promise<Blob> {
-  return new Promise((resolve, reject) => {
-    canvas.toBlob(
-      (blob) => {
-        if (blob) resolve(blob);
-        else reject(new Error('Failed to encode screenshot'));
-      },
-      type,
-      quality
-    );
-  });
-}
-
-/** One PipeWire frame as a bitmap plus JPEG for the static region backdrop. */
-async function grabFrameFromStream(
-  stream: MediaStream,
-  options?: { skipFrames?: number; staleFrameMs?: number }
-): Promise<{ bitmap: ImageBitmap; jpeg: ArrayBuffer }> {
-  const track = stream.getVideoTracks()[0];
-  if (!track) throw new Error('No video track in capture stream.');
-  if (track.readyState === 'ended') throw new Error('Capture cancelled.');
-
-  const video = document.createElement('video');
-  video.muted = true;
-  video.playsInline = true;
-  video.srcObject = stream;
-  Object.assign(video.style, {
-    position: 'fixed',
-    opacity: '0',
-    width: '1px',
-    height: '1px',
-    pointerEvents: 'none'
-  });
-  document.body.appendChild(video);
-
-  try {
-    await video.play();
-    await waitForVideoFrame(video);
-
-    const skipFrames = options?.skipFrames ?? 1;
-    const staleFrameMs = options?.staleFrameMs ?? 150;
-    for (let i = 0; i < skipFrames; i += 1) {
-      await waitForNextVideoFrame(video, staleFrameMs);
-    }
-
-    const canvas = document.createElement('canvas');
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
-    const ctx = canvas.getContext('2d');
-    if (!ctx || canvas.width === 0 || canvas.height === 0) {
-      throw new Error('Captured screenshot is empty.');
-    }
-    ctx.drawImage(video, 0, 0);
-
-    const [bitmap, jpegBlob] = await Promise.all([
-      createImageBitmap(canvas),
-      canvasToBlob(canvas, 'image/jpeg', 0.92)
-    ]);
-    return { bitmap, jpeg: await jpegBlob.arrayBuffer() };
-  } finally {
-    stream.getTracks().forEach((item) => item.stop());
-    video.remove();
-  }
 }
 
 function waitForVideoFrame(video: HTMLVideoElement, timeoutMs = 2000): Promise<void> {
@@ -224,21 +136,6 @@ async function grabPngFromStream(
   }
 }
 
-async function pickOsCaptureSource(monitorOnly: boolean): Promise<OsPickerSource | null> {
-  return window.screenRecorder!.screenshot.pickOsSource({ monitorOnly });
-}
-
-function osPickerToCaptureSource(picked: OsPickerSource): CaptureSource {
-  return {
-    id: picked.id,
-    name: picked.type === 'screen' ? 'Screen' : 'Window',
-    type: picked.type,
-    thumbnailDataUrl: '',
-    displayId: picked.displayId,
-    displayBounds: picked.displayBounds
-  };
-}
-
 async function getDesktopVideoStream(
   source: CaptureSource,
   options?: { nativeResolution?: boolean }
@@ -311,42 +208,6 @@ export async function captureFromSource(
     return await grabPngFromStream(stream);
   } finally {
     if (shouldHideApp) await showApp();
-  }
-}
-
-async function openDisplayMediaStream(): Promise<MediaStream> {
-  try {
-    return await navigator.mediaDevices.getDisplayMedia({
-      audio: false,
-      video: {
-        width: { ideal: window.screen.width * (window.devicePixelRatio || 1) },
-        height: { ideal: window.screen.height * (window.devicePixelRatio || 1) }
-      }
-    });
-  } catch (err) {
-    if (err instanceof DOMException && err.name === 'NotAllowedError') {
-      throw new Error('Capture cancelled.');
-    }
-    throw err;
-  }
-}
-
-/** Opens the OS capture picker (PipeWire portal on Linux Wayland), then grabs one PNG frame. */
-export async function captureFromSystemPicker(): Promise<Blob> {
-  const stream = await openDisplayMediaStream();
-  const shouldHideApp = isMonitorCapture(stream);
-
-  if (shouldHideApp) {
-    await hideApp();
-  }
-
-  try {
-    return await grabPngFromStream(stream, {
-      skipFrames: shouldHideApp ? 1 : 0,
-      staleFrameMs: 150
-    });
-  } finally {
-    if (shouldHideApp) await showApp({ focus: true });
   }
 }
 
@@ -470,15 +331,6 @@ export async function selectAndCaptureRegion(
   usesOsPicker: boolean,
   onStep?: (step: RegionCaptureStep) => void
 ): Promise<Blob | null> {
-  let picked: OsPickerSource | null = null;
-  let portalStream: MediaStream | null = null;
-  let frameBitmap: ImageBitmap | null = null;
-
-  const stopPortalStream = (): void => {
-    portalStream?.getTracks().forEach((track) => track.stop());
-    portalStream = null;
-  };
-
   try {
     // macOS: dim the live desktop with the transparent overlay (no frozen
     // screenshot), then grab just the dragged rectangle natively. screencapture
@@ -500,35 +352,16 @@ export async function selectAndCaptureRegion(
     }
 
     if (usesOsPicker) {
-      // Wayland: grab one frame while hidden, show it as a static backdrop under
-      // the dim mask, then crop in image space (no live overlay in PipeWire).
+      // Wayland: GNOME's own picker UI (screen / window / selection) handles
+      // the pick-and-capture in one step and hands back the final pixels — no
+      // live overlay, no cropping. Hide here too so the compositor starts
+      // removing us during the IPC round-trip; main waits an extra settle
+      // before calling the portal (GNOME freezes the backdrop immediately).
       onStep?.('picker');
-      picked = await pickOsCaptureSource(true);
-      if (!picked) return null;
-      if (picked.type !== 'screen') {
-        throw new Error('Region capture requires a monitor. Choose a screen, not a window or tab.');
-      }
-
-      portalStream = await getDesktopVideoStream(osPickerToCaptureSource(picked), {
-        nativeResolution: true
-      });
-
       await hideMainWindow();
-      const frame = await grabFrameFromStream(portalStream, { skipFrames: 1, staleFrameMs: 150 });
-      stopPortalStream();
-      frameBitmap = frame.bitmap;
-
-      onStep?.('region');
-      const selection =
-        (await window.screenRecorder?.screenshot.selectRegion({
-          backdropJpeg: frame.jpeg,
-          bounds: picked.displayBounds
-        })) ?? null;
-      if (!selection) return null;
-
-      onStep?.('processing');
-      await showApp({ focus: true });
-      return await cropImageBitmap(frameBitmap, selection);
+      const buffer = await window.screenRecorder!.screenshot.capturePortal();
+      if (!buffer) return null;
+      return new Blob([buffer], { type: 'image/png' });
     }
 
     // Windows/X11 (macOS and Wayland handled above): both platforms give apps
@@ -552,12 +385,7 @@ export async function selectAndCaptureRegion(
     await new Promise<void>((resolve) => window.setTimeout(resolve, 80));
     const fullBlob = await captureFromSource(source, { hideApp: false });
     return await cropPngBlob(fullBlob, selection);
-  } catch (err) {
-    if (err instanceof Error && err.message.includes('monitor')) throw err;
-    return null;
   } finally {
-    frameBitmap?.close();
-    stopPortalStream();
     await showApp({ focus: true });
   }
 }
