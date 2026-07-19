@@ -75,7 +75,15 @@ export function ScreenCaptureMain({}: ToolComponentProps<Props>): JSX.Element {
   const [previewDataUrl, setPreviewDataUrl] = useState<string | null>(null);
   const [previewBlob, setPreviewBlob] = useState<Blob | null>(null);
   const [confirmed, setConfirmed] = useState<'copy' | 'save' | null>(null);
+  const [hideApp, setHideApp] = useState(
+    () => localStorage.getItem('screen-capture.hide-app') !== 'false'
+  );
   const confirmTimer = useRef<number | undefined>(undefined);
+
+  const toggleHideApp = (next: boolean): void => {
+    setHideApp(next);
+    localStorage.setItem('screen-capture.hide-app', String(next));
+  };
 
   const flashConfirm = (action: 'copy' | 'save'): void => {
     setConfirmed(action);
@@ -162,10 +170,15 @@ export function ScreenCaptureMain({}: ToolComponentProps<Props>): JSX.Element {
     setPreviewBlob(null);
 
     try {
-      const blob = await selectAndCaptureRegion(sources, usesOsPicker, (step) => {
-        setCaptureStep(step);
-        setPhase('capturing');
-      });
+      const blob = await selectAndCaptureRegion(
+        sources,
+        usesOsPicker,
+        (step) => {
+          setCaptureStep(step);
+          setPhase('capturing');
+        },
+        { hideApp }
+      );
       await finishCapture(blob);
     } catch (err) {
       setPhase('idle');
@@ -186,7 +199,9 @@ export function ScreenCaptureMain({}: ToolComponentProps<Props>): JSX.Element {
     setPreviewBlob(null);
 
     try {
-      const blob = await captureFromSource(source);
+      // Checked = platform default (hide for screen grabs, keep visible for
+      // window grabs); unchecked = never hide.
+      const blob = await captureFromSource(source, hideApp ? undefined : { hideApp: false });
       await finishCapture(blob);
     } catch {
       setPhase('idle');
@@ -373,6 +388,15 @@ export function ScreenCaptureMain({}: ToolComponentProps<Props>): JSX.Element {
 
       {phase === 'idle' && (
         <footer className="flex shrink-0 items-center justify-end gap-2 border-t border-border-dark bg-surface px-6 py-4">
+          <label className="mr-auto flex cursor-pointer items-center gap-2 text-xs text-text-dim select-none">
+            <input
+              type="checkbox"
+              checked={hideApp}
+              onChange={(e) => toggleHideApp(e.target.checked)}
+              className="accent-(--color-accent)"
+            />
+            Hide this app while capturing
+          </label>
           {/* Linux Wayland: GNOME's native picker already offers screen / window /
               selection in one UI, so a separate "Capture region" button is redundant. */}
           {!usesOsPicker && (
