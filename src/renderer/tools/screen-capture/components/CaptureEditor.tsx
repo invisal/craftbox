@@ -11,6 +11,7 @@ import {
   chipMetrics,
   clampRectToImage,
   labelTextColor,
+  lockDragEnd,
   normalizeRect,
   resizeRect,
   type Rect
@@ -385,20 +386,16 @@ export function CaptureEditor({ dataUrl }: CaptureEditorProps): JSX.Element {
     if (tool === 'crop') {
       event.preventDefault();
       const start = point;
-      const move = (e: PointerEvent): void => {
-        const p = toImagePoint(e);
-        setCropRect(
-          clampRectToImage(normalizeRect(start.x, start.y, p.x, p.y), imageWidth, imageHeight)
-        );
+      // Ctrl/Cmd locks the selection to a square, like the shape tools.
+      const cropDragRect = (e: PointerEvent): Rect => {
+        let p = toImagePoint(e);
+        if (e.ctrlKey || e.metaKey) p = lockDragEnd('rect', start.x, start.y, p.x, p.y);
+        return clampRectToImage(normalizeRect(start.x, start.y, p.x, p.y), imageWidth, imageHeight);
       };
+      const move = (e: PointerEvent): void => setCropRect(cropDragRect(e));
       const up = (e: PointerEvent): void => {
         window.removeEventListener('pointermove', move);
-        const p = toImagePoint(e);
-        const rect = clampRectToImage(
-          normalizeRect(start.x, start.y, p.x, p.y),
-          imageWidth,
-          imageHeight
-        );
+        const rect = cropDragRect(e);
         setCropRect(rect.width >= MIN_DRAG_PX && rect.height >= MIN_DRAG_PX ? rect : null);
       };
       window.addEventListener('pointermove', move);
@@ -406,8 +403,9 @@ export function CaptureEditor({ dataUrl }: CaptureEditorProps): JSX.Element {
       return;
     }
 
-    // rect / arrow / blur: drag-to-create via a local draft, committed to the
-    // store (one undo entry) only if the drag is big enough to be intentional.
+    // rect / circle / arrow / blur: drag-to-create via a local draft,
+    // committed to the store (one undo entry) only if the drag is big enough
+    // to be intentional. Ctrl/Cmd locks the drag: square shapes, 45° arrows.
     event.preventDefault();
     const start: Draft = {
       kind: tool,
@@ -418,14 +416,20 @@ export function CaptureEditor({ dataUrl }: CaptureEditorProps): JSX.Element {
     };
     setDraft(start);
 
+    const dragEnd = (e: PointerEvent): { x: number; y: number } => {
+      const p = toImagePoint(e);
+      return e.ctrlKey || e.metaKey
+        ? lockDragEnd(start.kind, start.startX, start.startY, p.x, p.y)
+        : p;
+    };
     const onMove = (moveEvent: PointerEvent): void => {
-      const p = toImagePoint(moveEvent);
+      const p = dragEnd(moveEvent);
       setDraft({ ...start, endX: p.x, endY: p.y });
     };
     const onUp = (upEvent: PointerEvent): void => {
       window.removeEventListener('pointermove', onMove);
       setDraft(null);
-      const end = toImagePoint(upEvent);
+      const end = dragEnd(upEvent);
       commitDraft({ ...start, endX: end.x, endY: end.y });
     };
     window.addEventListener('pointermove', onMove);

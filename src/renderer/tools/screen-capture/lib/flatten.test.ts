@@ -4,6 +4,7 @@ import {
   arrowHeadPoints,
   clampRectToImage,
   labelTextColor,
+  lockDragEnd,
   normalizeRect,
   resizeRect,
   shiftAnnotation
@@ -88,6 +89,22 @@ describe('reorderById', () => {
     expect(ids(reorderById(list, 'a', 99))).toBe('bcda');
     expect(reorderById(list, 'b', 1)).toBe(list);
     expect(reorderById(list, 'missing', 0)).toBe(list);
+  });
+});
+
+describe('lockDragEnd', () => {
+  it('locks box shapes to a square, keeping the drag direction', () => {
+    expect(lockDragEnd('rect', 10, 10, 110, 50)).toEqual({ x: 110, y: 110 });
+    expect(lockDragEnd('circle', 10, 10, -110, 50)).toEqual({ x: -110, y: 130 });
+  });
+
+  it('snaps arrows to 45-degree increments, preserving length', () => {
+    const nearHorizontal = lockDragEnd('arrow', 0, 0, 100, 10);
+    expect(nearHorizontal.x).toBeCloseTo(Math.hypot(100, 10));
+    expect(nearHorizontal.y).toBeCloseTo(0);
+
+    const nearDiagonal = lockDragEnd('arrow', 0, 0, 90, 100);
+    expect(nearDiagonal.x).toBeCloseTo(nearDiagonal.y);
   });
 });
 

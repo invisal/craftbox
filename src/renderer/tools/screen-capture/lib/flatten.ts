@@ -75,6 +75,29 @@ export function normalizeRect(ax: number, ay: number, bx: number, by: number): R
   };
 }
 
+/**
+ * Constrains a creation drag's end point while the modifier key is held:
+ * arrows snap to 45-degree increments (length preserved), box shapes lock to
+ * a square (larger axis wins, drag direction preserved).
+ */
+export function lockDragEnd(
+  kind: 'rect' | 'circle' | 'blur' | 'arrow',
+  startX: number,
+  startY: number,
+  endX: number,
+  endY: number
+): { x: number; y: number } {
+  const dx = endX - startX;
+  const dy = endY - startY;
+  if (kind === 'arrow') {
+    const length = Math.hypot(dx, dy);
+    const angle = Math.round(Math.atan2(dy, dx) / (Math.PI / 4)) * (Math.PI / 4);
+    return { x: startX + length * Math.cos(angle), y: startY + length * Math.sin(angle) };
+  }
+  const size = Math.max(Math.abs(dx), Math.abs(dy));
+  return { x: startX + Math.sign(dx || 1) * size, y: startY + Math.sign(dy || 1) * size };
+}
+
 export type RectCorner = 'nw' | 'ne' | 'sw' | 'se';
 
 /** Resize `start` by dragging `corner` by (dx, dy), keeping the opposite corner fixed and the size at least `minSize`. */
