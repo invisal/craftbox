@@ -80,6 +80,15 @@ interface TimelineStoreState {
    */
   isCutToolActive: boolean;
   /**
+   * True while the zoom-placement tool is armed (toggled from the ZoomIn
+   * button in EditorTransportBar) -- same shape as `isCutToolActive` above,
+   * for the same reason. While armed, CutTimeline shows a ghost preview of
+   * a new zoom keyframe in ZoomTrack's own row, following the cursor, and
+   * clicking the timeline places the real keyframe there (via
+   * `useZoomStore.addKeyframe`) instead of selecting/dragging a clip.
+   */
+  isZoomToolActive: boolean;
+  /**
    * One-shot seek command (source ms), separate from `playheadMs` to avoid a
    * feedback loop: CutTimeline (rendered independently of the `<video>`
    * element) can't imperatively set `videoRef.current.currentTime` itself,
@@ -96,6 +105,7 @@ interface TimelineStoreState {
   setTimelineZoom: (zoom: number) => void;
   setActiveTool: (tool: EditorTool | null) => void;
   setCutToolActive: (active: boolean) => void;
+  setZoomToolActive: (active: boolean) => void;
   requestSeek: (ms: number) => void;
   /**
    * Like `requestSeek`, but leaves `playheadMs` alone -- moves the actual
@@ -158,6 +168,7 @@ export const useTimelineStore = create<TimelineStoreState>(
       timelineZoom: 1,
       activeTool: 'background',
       isCutToolActive: false,
+      isZoomToolActive: false,
       seekRequestMs: null,
       setPlayhead: (playheadMs) => set({ playheadMs }),
       setIsPlaying: (isPlaying) => set({ isPlaying }),
@@ -166,7 +177,20 @@ export const useTimelineStore = create<TimelineStoreState>(
       setSelectedSegmentId: (selectedSegmentId) => set({ selectedSegmentId }),
       setTimelineZoom: (timelineZoom) => set({ timelineZoom }),
       setActiveTool: (activeTool) => set({ activeTool }),
-      setCutToolActive: (isCutToolActive) => set({ isCutToolActive }),
+      // Cut and zoom tools are mutually exclusive -- arming one disarms the
+      // other, so only one "click the timeline to do X" mode is ever live
+      // at once. Deactivating one leaves the other's state alone (it
+      // should already be false under this same invariant).
+      setCutToolActive: (isCutToolActive) =>
+        set((state) => ({
+          isCutToolActive,
+          isZoomToolActive: isCutToolActive ? false : state.isZoomToolActive
+        })),
+      setZoomToolActive: (isZoomToolActive) =>
+        set((state) => ({
+          isZoomToolActive,
+          isCutToolActive: isZoomToolActive ? false : state.isCutToolActive
+        })),
       requestSeek: (ms) => set({ seekRequestMs: ms, playheadMs: ms }),
       previewSeek: (ms) => set({ seekRequestMs: ms }),
       clearSeekRequest: () => set({ seekRequestMs: null }),

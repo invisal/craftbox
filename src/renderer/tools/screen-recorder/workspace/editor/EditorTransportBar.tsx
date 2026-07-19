@@ -22,7 +22,6 @@ import {
   MIN_TIMELINE_ZOOM,
   MAX_TIMELINE_ZOOM
 } from '../../features/timeline/store/timeline-store';
-import { useZoomStore } from '../../features/zoom/store/zoom-store';
 import { cn } from '../../lib/utils';
 
 const ASPECT_LABELS: Record<AspectRatio, string> = {
@@ -67,23 +66,17 @@ export function EditorTransportBar({
   const setAspectRatio = useExportStore((s) => s.setAspectRatio);
   const timelineZoom = useTimelineStore((s) => s.timelineZoom);
   const setTimelineZoom = useTimelineStore((s) => s.setTimelineZoom);
-  const setActiveTool = useTimelineStore((s) => s.setActiveTool);
-  const addZoomKeyframe = useZoomStore((s) => s.addKeyframe);
-  const setSelectedZoomKeyframeId = useZoomStore((s) => s.setSelectedKeyframeId);
+  // Self-contained (not prop-drilled through EditorPage, unlike
+  // cropToolActive/cutToolActive) -- mirrors how this button already read
+  // zoom-store directly before it was an arm-then-click tool. Actual
+  // placement (hover preview + click-to-commit) lives in CutTimeline.tsx,
+  // which reads this same store field.
+  const isZoomToolActive = useTimelineStore((s) => s.isZoomToolActive);
+  const setZoomToolActive = useTimelineStore((s) => s.setZoomToolActive);
   const canUndo = useHistoryStore((s) => s.past.length > 0);
   const canRedo = useHistoryStore((s) => s.future.length > 0);
   const undo = useHistoryStore((s) => s.undo);
   const redo = useHistoryStore((s) => s.redo);
-
-  // Drops a keyframe at the playhead with the default 'auto-cursor' target --
-  // no arm-and-click-the-preview step first, unlike the "Add keyframe"
-  // button in ZoomKeyframeEditor -- then opens the Zoom panel on it so it's
-  // immediately ready to tweak.
-  function addZoomKeyframeHere(): void {
-    const id = addZoomKeyframe(currentTimeMs);
-    setSelectedZoomKeyframeId(id);
-    setActiveTool('zoom');
-  }
 
   function togglePlay(): void {
     const video = videoRef.current;
@@ -190,9 +183,16 @@ export function EditorTransportBar({
       </button>
 
       <button
-        onClick={addZoomKeyframeHere}
-        title="Add a zoom keyframe at the playhead"
-        className="flex h-8 w-8 items-center justify-center rounded-lg hover:bg-white/10"
+        onClick={() => setZoomToolActive(!isZoomToolActive)}
+        title={
+          isZoomToolActive
+            ? 'Zoom tool active -- click the timeline to place a keyframe'
+            : 'Zoom tool -- click to arm, then click the timeline to place a keyframe'
+        }
+        className={cn(
+          'flex h-8 w-8 items-center justify-center rounded-lg transition-colors',
+          isZoomToolActive ? 'bg-accent/15 text-accent' : 'hover:bg-white/10'
+        )}
       >
         <ZoomIn size={14} />
       </button>

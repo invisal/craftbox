@@ -9,6 +9,7 @@ import { getSegmentOutputDurationMs, outputMsToSourceMs } from '../lib/segment-d
 import { CLIP_ROW_HEIGHT_PX } from '../lib/assign-lanes';
 import { useEdgeResize } from '../lib/use-edge-resize';
 import { useSegmentReorderDrag } from '../lib/use-segment-reorder-drag';
+import { useZoomStore } from '../../zoom/store/zoom-store';
 import { ZoomTrack } from '../../zoom/components/ZoomTrack';
 import { CropTrack } from '../../crop/components/CropTrack';
 import { CaptionTrack } from '../../captions/components/CaptionTrack';
@@ -163,6 +164,17 @@ export function CutTimeline(): JSX.Element {
   // the cursor instead of seeking/selecting, and the hover marker below
   // renders as a live cut-preview pin instead of the plain gray scrub line.
   const isCutToolActive = useTimelineStore((s) => s.isCutToolActive);
+  // Armed from the ZoomIn button -- same idea, but a click adds a zoom
+  // keyframe at the cursor instead of splitting; ZoomTrack (rendered below)
+  // gets the hovered position as a prop and draws its own ghost preview.
+  const isZoomToolActive = useTimelineStore((s) => s.isZoomToolActive);
+  const addZoomKeyframe = useZoomStore((s) => s.addKeyframe);
+  const setSelectedZoomKeyframeId = useZoomStore((s) => s.setSelectedKeyframeId);
+  const setActiveTool = useTimelineStore((s) => s.setActiveTool);
+  // Any "arm a tool, then click the timeline" mode currently active -- both
+  // suppress the clip row's normal select/drag/resize/double-click-to-split
+  // interactions the same way, so their guards share this one flag.
+  const isPointerToolActive = isCutToolActive || isZoomToolActive;
 
   const previewUrl = useAppStore((s) => s.lastRecording?.previewUrl);
   const waveformPeaks = useWaveformStore((s) => s.peaks);
@@ -236,6 +248,15 @@ export function CutTimeline(): JSX.Element {
   const totalDurationMs = segments.reduce((sum, s) => sum + getSegmentOutputDurationMs(s), 0);
   const clampedTotal = totalDurationMs > 0 ? totalDurationMs : 1;
 
+  // Zoom tool's hover position, mapped to source-ms (the coordinate zoom
+  // keyframes are authored in -- see PillTrack.tsx) -- passed down so
+  // ZoomTrack can draw its own ghost preview in its own row, following
+  // wherever the cursor is over the ruler/clip row above it.
+  const zoomPreviewSourceMs =
+    isZoomToolActive && effectiveHoverFraction !== null
+      ? outputMsToSourceMs(segments, effectiveHoverFraction * clampedTotal)
+      : null;
+
   // Each pill's left/width percent, laid out edge-to-edge in output order --
   // computed once here (rather than inline per-segment) since the cut
   // markers below need the same running cursor to find clip boundaries.
@@ -296,6 +317,25 @@ export function CutTimeline(): JSX.Element {
     [segments, clampedTotal, splitAt]
   );
 
+  // Zoom tool's click-to-place -- same shared whole-track-area fraction as
+  // `splitFromClientX`, just mapped to a *source*-ms position (zoom
+  // keyframes are authored against the source recording, not the output
+  // timeline -- see PillTrack.tsx) instead of handed to `splitAt` directly.
+  const placeZoomKeyframeFromClientX = useCallback(
+    (clientX: number) => {
+      const el = trackAreaRef.current;
+      if (!el || segments.length === 0) return;
+      const rect = el.getBoundingClientRect();
+      const fraction = Math.min(1, Math.max(0, (clientX - rect.left) / rect.width));
+      const sourceMs = outputMsToSourceMs(segments, fraction * clampedTotal);
+      if (sourceMs === null) return;
+      const id = addZoomKeyframe(sourceMs);
+      setSelectedZoomKeyframeId(id);
+      setActiveTool('zoom');
+    },
+    [segments, clampedTotal, addZoomKeyframe, setSelectedZoomKeyframeId, setActiveTool]
+  );
+
   const handlePlayheadDragMove = useCallback(
     (event: PointerEvent) => {
       if (!playheadDraggingRef.current) return;
@@ -323,6 +363,10 @@ export function CutTimeline(): JSX.Element {
   function handleRulerClick(event: React.MouseEvent<HTMLDivElement>): void {
     if (isCutToolActive) {
       splitFromClientX(event.clientX);
+      return;
+    }
+    if (isZoomToolActive) {
+      placeZoomKeyframeFromClientX(event.clientX);
       return;
     }
     preHoverPlayheadMsRef.current = null;
@@ -424,11 +468,12 @@ export function CutTimeline(): JSX.Element {
     index: number,
     event: React.MouseEvent<HTMLDivElement>
   ) {
-    // A single click already performs the cut while the tool is armed (see
-    // the segment wrapper's onClick below) -- without this guard, a real
-    // double-click would fire two clicks (two cuts) *and* this handler,
-    // attempting a third split against a since-stale segment/index.
-    if (isCutToolActive) return;
+    // A single click already performs the cut/zoom-place while a tool is
+    // armed (see the segment wrapper's onClick below) -- without this
+    // guard, a real double-click would fire two clicks (two cuts/keyframes)
+    // *and* this handler, attempting a third split against a since-stale
+    // segment/index.
+    if (isPointerToolActive) return;
     const bounds = event.currentTarget.getBoundingClientRect();
     const fraction = Math.min(1, Math.max(0, (event.clientX - bounds.left) / bounds.width));
     const outputStart = segments
@@ -498,11 +543,13 @@ export function CutTimeline(): JSX.Element {
                 title={
                   isCutToolActive
                     ? 'Click to trim at this position'
-                    : 'Click to scrub -- hover to preview a position'
+                    : isZoomToolActive
+                      ? 'Click to place a zoom keyframe here'
+                      : 'Click to scrub -- hover to preview a position'
                 }
                 className={cn(
                   'relative h-6 shrink-0 select-none mx-3',
-                  isCutToolActive ? 'cursor-crosshair' : 'cursor-pointer'
+                  isPointerToolActive ? 'cursor-crosshair' : 'cursor-pointer'
                 )}
               >
                 {ticks.map(({ atMs, major }) => (
@@ -552,15 +599,19 @@ export function CutTimeline(): JSX.Element {
                     <div
                       key={segment.id}
                       {...dragHandlers}
-                      draggable={!isCutToolActive && dragHandlers.draggable}
+                      draggable={!isPointerToolActive && dragHandlers.draggable}
                       onClick={(e) => {
-                        // Cut tool armed: a click anywhere on a clip cuts at
-                        // the exact cursor position (via the shared
-                        // whole-track-area calculation), rather than
+                        // A tool armed: a click anywhere on a clip cuts/places
+                        // a keyframe at the exact cursor position (via the
+                        // shared whole-track-area calculations), rather than
                         // selecting -- which segment was clicked doesn't
-                        // matter, `splitAt` finds it from the position alone.
+                        // matter, both helpers resolve position on their own.
                         if (isCutToolActive) {
                           splitFromClientX(e.clientX);
+                          return;
+                        }
+                        if (isZoomToolActive) {
+                          placeZoomKeyframeFromClientX(e.clientX);
                           return;
                         }
                         setSelectedSegmentId(segment.id);
@@ -568,7 +619,9 @@ export function CutTimeline(): JSX.Element {
                       onDoubleClick={(e) => handleDoubleClick(segment, index, e)}
                       className={cn(
                         'group absolute inset-y-0 min-w-12',
-                        isCutToolActive ? 'cursor-crosshair' : 'cursor-grab active:cursor-grabbing'
+                        isPointerToolActive
+                          ? 'cursor-crosshair'
+                          : 'cursor-grab active:cursor-grabbing'
                       )}
                       style={{
                         left: `calc(${leftPercent}% + ${CLIP_GAP_PX / 2}px)`,
@@ -618,10 +671,10 @@ export function CutTimeline(): JSX.Element {
 
                         <div
                           onPointerDown={(e) => {
-                            // Cut tool armed: leave the pointerdown alone so
-                            // it bubbles to the wrapper's onClick above and
-                            // cuts there instead of starting a resize drag.
-                            if (isCutToolActive) return;
+                            // A tool armed: leave the pointerdown alone so it
+                            // bubbles to the wrapper's onClick above and
+                            // cuts/places there instead of starting a resize.
+                            if (isPointerToolActive) return;
                             const width =
                               e.currentTarget.parentElement?.getBoundingClientRect().width ?? 0;
                             markEdgeResizeActive();
@@ -631,7 +684,7 @@ export function CutTimeline(): JSX.Element {
                         />
                         <div
                           onPointerDown={(e) => {
-                            if (isCutToolActive) return;
+                            if (isPointerToolActive) return;
                             const width =
                               e.currentTarget.parentElement?.getBoundingClientRect().width ?? 0;
                             markEdgeResizeActive();
@@ -694,7 +747,7 @@ export function CutTimeline(): JSX.Element {
               )}
             </div>
 
-            <ZoomTrack />
+            <ZoomTrack previewAtSourceMs={zoomPreviewSourceMs} />
             <CaptionTrack />
             <AnnotationTrack />
             <BlurMaskTrack />
