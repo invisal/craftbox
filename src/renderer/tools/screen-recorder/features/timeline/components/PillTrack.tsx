@@ -109,7 +109,7 @@ export function PillTrack<T extends { id: string }>({
                     }}
                     title={getTitle(item)}
                     className={cn(
-                      'group absolute flex cursor-grab items-center justify-center gap-1 overflow-hidden rounded-md border px-2 active:cursor-grabbing',
+                      'group absolute flex cursor-grab items-center justify-center gap-1 overflow-hidden rounded-xl border px-2 active:cursor-grabbing',
                       colorClassName,
                       isSelected?.(item) && 'ring-2 ring-purple-200'
                     )}

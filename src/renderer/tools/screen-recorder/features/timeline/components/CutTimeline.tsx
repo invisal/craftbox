@@ -120,7 +120,7 @@ function CutMarker({
       <div className="relative h-9 w-9">
         <div className="absolute inset-0 -rotate-45 rounded-[50%_50%_50%_0] border-2 border-blue-500 bg-neutral-900 shadow-sm" />
         <div className="absolute inset-0 flex flex-col items-center justify-center gap-px pt-0.5">
-          <Scissors size={13} className="text-white" />
+          <Scissors size={12} className="text-white" />
           {durationMs !== undefined && (
             <span className="whitespace-nowrap text-[9px] font-medium leading-none text-white/85">
               {formatShortDuration(durationMs)}
@@ -651,7 +651,7 @@ export function CutTimeline(): JSX.Element {
                           >
                             <div
                               className={cn(
-                                'relative flex h-full items-center justify-center overflow-hidden rounded-lg border border-orange-900/40',
+                                'relative flex h-full items-center justify-center overflow-hidden rounded-xl border border-orange-900/40',
                                 dragOverIndex === index && 'ring-2 ring-accent',
                                 dragOverIndex !== index && isSelected && 'ring-2 ring-accent'
                               )}
