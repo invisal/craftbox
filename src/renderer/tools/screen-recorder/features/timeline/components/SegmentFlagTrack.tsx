@@ -1,15 +1,23 @@
 import type { JSX, ReactNode } from 'react';
-import { Trash2 } from 'lucide-react';
 import type { TimelineSegment } from '@screen-recorder/types/timeline';
+import { ContextMenu } from '@renderer/components/ui/ContextMenu';
 import { useTimelineStore, PRIMARY_VIDEO_TRACK_ID } from '../store/timeline-store';
 import { getSegmentOutputDurationMs } from '../lib/segment-duration';
+import { CLIP_ROW_HEIGHT_PX } from '../lib/assign-lanes';
 import { useSegmentReorderDrag } from '../lib/use-segment-reorder-drag';
 import { cn } from '../../../lib/utils';
 
 export interface SegmentFlagTrackProps {
   hasFlag: (segment: TimelineSegment) => boolean;
   getTitle: (segment: TimelineSegment) => string;
-  /** Pill border/background/text color classes, e.g. `'border-amber-500/50 bg-amber-700/30 text-amber-100 hover:bg-amber-700/45'`. */
+  /**
+   * Pill border/text color classes only, e.g. `'border-amber-900/40
+   * text-amber-950'` -- no `bg-*`, matching PillTrack.tsx's own
+   * `colorClassName` contract: the fill is two absolutely-positioned
+   * gradient layers `renderContent` draws itself (a color gradient, then a
+   * shared white-to-black sheen), so this stays visually identical to
+   * ZoomTrack/CaptionTrack/etc.'s pills instead of a flat `bg-*` swatch.
+   */
   colorClassName: string;
   renderContent: (segment: TimelineSegment) => ReactNode;
   onReset: (segment: TimelineSegment) => void;
@@ -17,14 +25,21 @@ export interface SegmentFlagTrackProps {
 }
 
 /**
- * Shared shape behind Trim/Speed/Crop tracks: unlike PillTrack's
+ * Shared shape behind Speed/Crop tracks: unlike PillTrack's
  * independently-timed items, these pills mirror a clip that already exists
  * in CutTimeline's own row 1:1 -- same output-order width/position, no
  * independent start/duration of their own -- so there's nothing here to
  * drag-move or edge-resize. Only clips matching `hasFlag` get a pill; the
  * rest render as a same-width invisible spacer so every clip stays a drag
  * target for reordering (`useSegmentReorderDrag`, the same action
- * CutTimeline's own row uses).
+ * CutTimeline's own row uses). Right-click a pill for a context menu with
+ * `resetTitle` (`onReset`) -- same affordance as PillTrack.tsx's Delete,
+ * instead of a permanently-competing hover button.
+ *
+ * Sized and shaped to match PillTrack's pills exactly (`CLIP_ROW_HEIGHT_PX`
+ * tall, `rounded-md`, `overflow-hidden` so callers' gradient fill clips to
+ * the pill shape) -- these read as one consistent track-pill style across
+ * the whole per-tool track stack, not a visually distinct "flag" style.
  */
 export function SegmentFlagTrack({
   hasFlag,
@@ -48,8 +63,8 @@ export function SegmentFlagTrack({
   if (!hasAny) return null;
 
   return (
-    <div className="flex h-9 shrink-0 items-center">
-      <div className="flex h-7 flex-1 items-center gap-0.5">
+    <div className="flex shrink-0 items-center py-1 px-1">
+      <div className="flex flex-1 items-center gap-0.5" style={{ height: CLIP_ROW_HEIGHT_PX }}>
         {segments.map((segment, index) => {
           const widthPercent = (getSegmentOutputDurationMs(segment) / clampedTotal) * 100;
           if (!hasFlag(segment)) {
@@ -66,32 +81,29 @@ export function SegmentFlagTrack({
             );
           }
           return (
-            <div
-              key={segment.id}
-              {...getDragHandlers(index)}
-              onClick={() => setSelectedSegmentId(segment.id)}
-              title={getTitle(segment)}
-              style={{ width: `${widthPercent}%` }}
-              className={cn(
-                'group flex h-7 min-w-9 cursor-grab items-center justify-center gap-1 rounded-md border px-1.5 active:cursor-grabbing',
-                colorClassName,
-                selectedSegmentId === segment.id && 'ring-2 ring-white/70',
-                dragOverIndex === index && 'ring-2 ring-accent'
-              )}
-            >
-              {renderContent(segment)}
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onReset(segment);
-                }}
-                title={resetTitle}
-                draggable={false}
-                className="ml-auto hidden h-4 w-4 shrink-0 items-center justify-center rounded-full bg-black/70 text-white/70 hover:text-red-400 group-hover:flex"
-              >
-                <Trash2 size={9} />
-              </button>
-            </div>
+            <ContextMenu.Root key={segment.id}>
+              <ContextMenu.Trigger
+                render={
+                  <div
+                    {...getDragHandlers(index)}
+                    onClick={() => setSelectedSegmentId(segment.id)}
+                    title={getTitle(segment)}
+                    style={{ width: `${widthPercent}%`, height: CLIP_ROW_HEIGHT_PX }}
+                    className={cn(
+                      'group relative flex min-w-9 cursor-grab items-center justify-center gap-1 overflow-hidden rounded-md border px-2 active:cursor-grabbing',
+                      colorClassName,
+                      selectedSegmentId === segment.id && 'ring-2 ring-white/70',
+                      dragOverIndex === index && 'ring-2 ring-accent'
+                    )}
+                  >
+                    {renderContent(segment)}
+                  </div>
+                }
+              />
+              <ContextMenu.Content>
+                <ContextMenu.Item onClick={() => onReset(segment)}>{resetTitle}</ContextMenu.Item>
+              </ContextMenu.Content>
+            </ContextMenu.Root>
           );
         })}
       </div>

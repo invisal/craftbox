@@ -1,7 +1,8 @@
 import type { JSX } from 'react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Clapperboard, Gauge, Scissors, Trash2 } from 'lucide-react';
+import { Clapperboard, Gauge, Scissors } from 'lucide-react';
 import type { TimelineSegment } from '@screen-recorder/types/timeline';
+import { ContextMenu } from '@renderer/components/ui/ContextMenu';
 import { useAppStore } from '../../../app/app-store';
 import { useTimelineStore } from '../store/timeline-store';
 import { useWaveformStore } from '../store/waveform-store';
@@ -606,127 +607,133 @@ export function CutTimeline(): JSX.Element {
                   const gapBeforeMs = gapBeforeSegmentMs(segments, index);
                   const dragHandlers = getDragHandlers(index);
                   return (
-                    // Outer element owns position/interaction only (no
-                    // `overflow-hidden`) -- a trim badge is `absolute -top-*`
-                    // from *this* box, so it must live outside the inner
+                    // ContextMenu.Root doesn't render a DOM node of its own,
+                    // so it's a transparent wrapper around the same element
+                    // structure this used to return directly -- the outer
+                    // element still owns position/interaction only (no
+                    // `overflow-hidden`), since a trim badge is `absolute
+                    // -top-*` from *this* box and must live outside the inner
                     // pill's own `overflow-hidden`, or it'd clip its own badge.
-                    <div
-                      key={segment.id}
-                      {...dragHandlers}
-                      draggable={!isPointerToolActive && dragHandlers.draggable}
-                      onClick={(e) => {
-                        // A tool armed: a click anywhere on a clip cuts/places
-                        // a keyframe at the exact cursor position (via the
-                        // shared whole-track-area calculations), rather than
-                        // selecting -- which segment was clicked doesn't
-                        // matter, both helpers resolve position on their own.
-                        if (isCutToolActive) {
-                          splitFromClientX(e.clientX);
-                          return;
+                    <ContextMenu.Root key={segment.id}>
+                      <ContextMenu.Trigger
+                        render={
+                          <div
+                            {...dragHandlers}
+                            draggable={!isPointerToolActive && dragHandlers.draggable}
+                            onClick={(e) => {
+                              // A tool armed: a click anywhere on a clip
+                              // cuts/places a keyframe at the exact cursor
+                              // position (via the shared whole-track-area
+                              // calculations), rather than selecting --
+                              // which segment was clicked doesn't matter,
+                              // both helpers resolve position on their own.
+                              if (isCutToolActive) {
+                                splitFromClientX(e.clientX);
+                                return;
+                              }
+                              if (isZoomToolActive) {
+                                placeZoomKeyframeFromClientX(e.clientX);
+                                return;
+                              }
+                              setSelectedSegmentId(segment.id);
+                            }}
+                            onDoubleClick={(e) => handleDoubleClick(segment, index, e)}
+                            className={cn(
+                              'group absolute inset-y-0 min-w-12',
+                              isPointerToolActive
+                                ? 'cursor-crosshair'
+                                : 'cursor-grab active:cursor-grabbing'
+                            )}
+                            style={{
+                              left: `calc(${leftPercent}% + ${CLIP_GAP_PX / 2}px)`,
+                              width: `calc(${widthPercent}% - ${CLIP_GAP_PX}px)`
+                            }}
+                          >
+                            <div
+                              className={cn(
+                                'relative flex h-full items-center justify-center overflow-hidden rounded-lg border border-orange-900/40',
+                                dragOverIndex === index && 'ring-2 ring-accent',
+                                dragOverIndex !== index && isSelected && 'ring-2 ring-accent'
+                              )}
+                            >
+                              <div className="pointer-events-none absolute inset-0 bg-linear-to-b from-blue-500 via-blue-400 to-blue-400" />
+                              <div className="pointer-events-none absolute inset-0 bg-linear-to-t from-white/35 via-white/5 to-black/15" />
+
+                              {waveformPeaks && (
+                                <SegmentWaveform
+                                  segment={segment}
+                                  peaks={waveformPeaks}
+                                  sourceDurationMs={sourceDurationMs}
+                                />
+                              )}
+
+                              <div className="pointer-events-none relative flex flex-col items-center gap-0.5 px-2 text-orange-950/70">
+                                <span className="flex items-center gap-1 truncate text-[10px] font-semibold">
+                                  <Clapperboard size={10} className="shrink-0" />
+                                  Clip
+                                </span>
+                                <span className="flex items-center gap-1 truncate text-[10px] text-orange-950/60">
+                                  {formatShortDuration(getSegmentOutputDurationMs(segment))}
+                                  <Gauge size={9} className="shrink-0" />
+                                  {segment.speed}x
+                                </span>
+                              </div>
+
+                              <div
+                                onPointerDown={(e) => {
+                                  // A tool armed: leave the pointerdown alone
+                                  // so it bubbles to the wrapper's onClick
+                                  // above and cuts/places there instead of
+                                  // starting a resize.
+                                  if (isPointerToolActive) return;
+                                  const width =
+                                    e.currentTarget.parentElement?.getBoundingClientRect().width ??
+                                    0;
+                                  markEdgeResizeActive();
+                                  startResizeHandler(segment, 'start', width)(e);
+                                }}
+                                className="absolute inset-y-0 left-0 w-1.5 cursor-ew-resize bg-black/10 hover:bg-black/25"
+                              />
+                              <div
+                                onPointerDown={(e) => {
+                                  if (isPointerToolActive) return;
+                                  const width =
+                                    e.currentTarget.parentElement?.getBoundingClientRect().width ??
+                                    0;
+                                  markEdgeResizeActive();
+                                  startResizeHandler(segment, 'end', width)(e);
+                                }}
+                                className="absolute inset-y-0 right-0 w-1.5 cursor-ew-resize bg-black/10 hover:bg-black/25"
+                              />
+                            </div>
+
+                            {/*
+                              Cut marker for footage trimmed off just before
+                              this clip -- the head trim for the first clip,
+                              otherwise a ripple-closed gap to the previous
+                              one. Always centered exactly on the boundary
+                              it describes (via `CutMarker`'s anchor+translate
+                              pairing), including the first clip's own head
+                              cut.
+                            */}
+                            {gapBeforeMs > MIN_CUT_MARKER_GAP_MS && (
+                              <CutMarker
+                                durationMs={gapBeforeMs}
+                                anchorClassName="-translate-x-1/2"
+                              />
+                            )}
+                          </div>
                         }
-                        if (isZoomToolActive) {
-                          placeZoomKeyframeFromClientX(e.clientX);
-                          return;
-                        }
-                        setSelectedSegmentId(segment.id);
-                      }}
-                      onDoubleClick={(e) => handleDoubleClick(segment, index, e)}
-                      className={cn(
-                        'group absolute inset-y-0 min-w-12',
-                        isPointerToolActive
-                          ? 'cursor-crosshair'
-                          : 'cursor-grab active:cursor-grabbing'
-                      )}
-                      style={{
-                        left: `calc(${leftPercent}% + ${CLIP_GAP_PX / 2}px)`,
-                        width: `calc(${widthPercent}% - ${CLIP_GAP_PX}px)`
-                      }}
-                    >
-                      <div
-                        className={cn(
-                          'relative flex h-full items-center justify-center overflow-hidden rounded-lg border border-orange-900/40',
-                          dragOverIndex === index && 'ring-2 ring-accent',
-                          dragOverIndex !== index && isSelected && 'ring-2 ring-accent'
-                        )}
-                      >
-                        <div className="pointer-events-none absolute inset-0 bg-linear-to-b from-blue-500 via-blue-400 to-blue-400" />
-                        <div className="pointer-events-none absolute inset-0 bg-linear-to-t from-white/35 via-white/5 to-black/15" />
-
-                        {waveformPeaks && (
-                          <SegmentWaveform
-                            segment={segment}
-                            peaks={waveformPeaks}
-                            sourceDurationMs={sourceDurationMs}
-                          />
-                        )}
-
-                        <div className="pointer-events-none relative flex flex-col items-center gap-0.5 px-2 text-orange-950/70">
-                          <span className="flex items-center gap-1 truncate text-[10px] font-semibold">
-                            <Clapperboard size={10} className="shrink-0" />
-                            Clip
-                          </span>
-                          <span className="flex items-center gap-1 truncate text-[10px] text-orange-950/60">
-                            {formatShortDuration(getSegmentOutputDurationMs(segment))}
-                            <Gauge size={9} className="shrink-0" />
-                            {segment.speed}x
-                          </span>
-                        </div>
-
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            deleteSegment(segment.id);
-                          }}
+                      />
+                      <ContextMenu.Content>
+                        <ContextMenu.Item
+                          onClick={() => deleteSegment(segment.id)}
                           disabled={segments.length <= 1}
-                          className="absolute right-1 top-1 hidden h-4 w-4 items-center justify-center rounded-full bg-black/70 text-white/70 hover:text-red-400 disabled:opacity-30 group-hover:flex"
                         >
-                          <Trash2 size={10} />
-                        </button>
-
-                        <div
-                          onPointerDown={(e) => {
-                            // A tool armed: leave the pointerdown alone so it
-                            // bubbles to the wrapper's onClick above and
-                            // cuts/places there instead of starting a resize.
-                            if (isPointerToolActive) return;
-                            const width =
-                              e.currentTarget.parentElement?.getBoundingClientRect().width ?? 0;
-                            markEdgeResizeActive();
-                            startResizeHandler(segment, 'start', width)(e);
-                          }}
-                          className="absolute inset-y-0 left-0 w-1.5 cursor-ew-resize bg-black/10 hover:bg-black/25"
-                        />
-                        <div
-                          onPointerDown={(e) => {
-                            if (isPointerToolActive) return;
-                            const width =
-                              e.currentTarget.parentElement?.getBoundingClientRect().width ?? 0;
-                            markEdgeResizeActive();
-                            startResizeHandler(segment, 'end', width)(e);
-                          }}
-                          className="absolute inset-y-0 right-0 w-1.5 cursor-ew-resize bg-black/10 hover:bg-black/25"
-                        />
-                      </div>
-
-                      {/*
-                        Cut marker for footage trimmed off just before this
-                        clip -- the head trim for the first clip, otherwise a
-                        ripple-closed gap to the previous one. Always
-                        centered exactly on the boundary it describes (via
-                        `CutMarker`'s anchor+translate pairing), including
-                        the first clip's own head cut.
-                      */}
-                      {gapBeforeMs > MIN_CUT_MARKER_GAP_MS && (
-                        <CutMarker durationMs={gapBeforeMs} anchorClassName="-translate-x-1/2" />
-                      )}
-                      {/* Same, for the tail trim -- only ever the last clip's own right edge. */}
-                      {/* {gapAfterMs > MIN_CUT_MARKER_GAP_MS && (
-                        <CutMarker
-                          durationMs={gapAfterMs}
-                          anchorClassName="right-0 translate-x-1/2"
-                        />
-                      )} */}
-                    </div>
+                          Delete
+                        </ContextMenu.Item>
+                      </ContextMenu.Content>
+                    </ContextMenu.Root>
                   );
                 })}
 
