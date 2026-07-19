@@ -18,4 +18,7 @@ export interface EventData {
   involvedNamespace?: string;
   involvedFieldPath?: string;
   rawItem?: K8sResource;
+  creationTimestamp?: string;
+  firstTimestamp?: string;
+  lastTimestamp?: string;
 }

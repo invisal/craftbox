@@ -3,6 +3,7 @@ import { type EventData } from '../../../types/EventData';
 import { useLayoutStore } from '../../../../../src/store/layout.store';
 import { useKuberneterStore } from '../../../store/kuberneter.store';
 import { KubePropertiesTable, type PropertyItem } from './KubePropertiesTable';
+import { Age } from '../../Age';
 
 interface EventDetailProps {
   payload: EventData;
@@ -83,7 +84,7 @@ export const EventDetail: React.FC<EventDetailProps> = ({ payload, isTab = false
       name: 'Created',
       value: (
         <span>
-          {payload.age} ago ({payload.lastSeen || '—'})
+          <Age timestamp={payload.creationTimestamp || ''} /> ago
         </span>
       )
     },
@@ -121,12 +122,12 @@ export const EventDetail: React.FC<EventDetailProps> = ({ payload, isTab = false
     {
       id: 'firstSeen',
       name: 'First seen',
-      value: payload.firstSeen || '—'
+      value: payload.firstTimestamp ? <Age timestamp={payload.firstTimestamp} /> : '—'
     },
     {
       id: 'lastSeen',
       name: 'Last seen',
-      value: payload.lastSeen || '—'
+      value: payload.lastTimestamp ? <Age timestamp={payload.lastTimestamp} /> : '—'
     },
     {
       id: 'count',

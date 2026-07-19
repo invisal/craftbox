@@ -1,6 +1,7 @@
 import type React from 'react';
 import { useMemo, useCallback } from 'react';
 import { KubeTable, type Column } from '../../kubeTable';
+import { Age } from '../../Age';
 import { MoreVertical } from 'lucide-react';
 import { type EventData } from '../../../types/EventData';
 import { useLayoutStore } from '../../../../../src/store/layout.store';
@@ -176,14 +177,20 @@ export const EventsTable: React.FC<EventsTableProps> = ({
       {
         key: 'age',
         header: 'Age',
-        render: (row) => <span className="text-zinc-500 font-mono text-[11px]">{row.age}</span>,
+        render: (row) => (
+          <span className="text-zinc-500 font-mono text-[11px]">
+            <Age timestamp={row.creationTimestamp || ''} />
+          </span>
+        ),
         initialWidth: 80
       },
       {
         key: 'lastSeen',
         header: 'Last Seen',
         render: (row) => (
-          <span className="text-zinc-500 font-mono text-[11px]">{row.lastSeen}</span>
+          <span className="text-zinc-500 font-mono text-[11px]">
+            <Age timestamp={row.lastTimestamp || ''} />
+          </span>
         ),
         initialWidth: 100
       },

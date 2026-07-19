@@ -55,7 +55,10 @@ export function useEvents(enabled: boolean) {
           firstSeen: formatAge(firstTs),
           involvedNamespace: raw.involvedObject?.namespace || '',
           involvedFieldPath: raw.involvedObject?.fieldPath || '—',
-          rawItem: item
+          rawItem: item,
+          creationTimestamp: raw.metadata?.creationTimestamp || '',
+          firstTimestamp: firstTs || '',
+          lastTimestamp: lastTs || ''
         };
       });
     },
