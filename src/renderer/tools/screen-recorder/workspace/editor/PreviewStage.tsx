@@ -313,8 +313,18 @@ export function PreviewStage({
           } else {
             // Nothing left to ripple to -- past the end of the last kept
             // clip, so stop instead of continuing to play trimmed-away
-            // source footage.
+            // source footage. Also rewind to the very start (the first kept
+            // segment's own startMs, not necessarily raw 0 if the head is
+            // trimmed) rather than leaving playback sitting past the last
+            // frame -- same "reached the end, ready to play again from the
+            // top" behavior as any other player, and it keeps the Playhead
+            // marker (see Playhead.tsx) pinned at a real, visible position
+            // instead of one just past the last segment's own range.
             active.pause();
+            active.currentTime = segs[0].range.startMs / 1000;
+            activeSegmentIdRef.current = segs[0].id;
+            standbySegmentIdRef.current = null;
+            sourceMs = segs[0].range.startMs;
           }
         }
 
