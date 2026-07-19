@@ -5,7 +5,6 @@ import { Camera, ClipboardCopy, Download, Scan } from 'lucide-react';
 import { cn } from 'cnfast';
 import { type ToolComponentProps } from '@renderer/components/providers/createTabProvider';
 import { Button } from '@renderer/components/ui/Button';
-import { notifyError, notifySuccess } from '@renderer/lib/notify';
 import type { CaptureSource } from '@screen-recorder/types/recording';
 import { ScreenRecordingPermissionBanner } from '@screen-recorder/features/recording/components/ScreenRecordingPermissionBanner';
 import { SourcePickerPanels } from './components/SourcePicker';
@@ -100,12 +99,7 @@ export function ScreenCaptureMain({}: ToolComponentProps<Props>): JSX.Element {
     setPhase('result');
 
     void copyAfterCapture(blob).then((copied) => {
-      if (copied) {
-        notifySuccess('Screenshot captured and copied to clipboard.');
-      } else {
-        notifySuccess('Screenshot captured.');
-        notifyError('Could not copy to clipboard.');
-      }
+      if (!copied) console.error('Could not copy screenshot to clipboard.');
     });
   };
 
@@ -124,7 +118,7 @@ export function ScreenCaptureMain({}: ToolComponentProps<Props>): JSX.Element {
       await finishCapture(blob);
     } catch (err) {
       setPhase('idle');
-      notifyError(err instanceof Error ? err.message : 'Could not capture region.');
+      console.error('Could not capture region.', err);
     }
   };
 
@@ -161,10 +155,8 @@ export function ScreenCaptureMain({}: ToolComponentProps<Props>): JSX.Element {
 
   const handleCopy = async (): Promise<void> => {
     if (!previewBlob) return;
-    if (await copyToClipboard(previewBlob)) {
-      notifySuccess('Copied to clipboard.');
-    } else {
-      notifyError('Could not copy to clipboard.');
+    if (!(await copyToClipboard(previewBlob))) {
+      console.error('Could not copy screenshot to clipboard.');
     }
   };
 
@@ -173,15 +165,9 @@ export function ScreenCaptureMain({}: ToolComponentProps<Props>): JSX.Element {
 
     try {
       const arrayBuffer = await previewBlob.arrayBuffer();
-      const filePath = await window.screenRecorder.screenshot.save(
-        arrayBuffer,
-        screenshotFileName()
-      );
-      if (filePath) {
-        notifySuccess(`Saved to ${filePath}.`);
-      }
+      await window.screenRecorder.screenshot.save(arrayBuffer, screenshotFileName());
     } catch (err) {
-      notifyError(err instanceof Error ? err.message : 'Could not save screenshot.');
+      console.error('Could not save screenshot.', err);
     }
   };
 
