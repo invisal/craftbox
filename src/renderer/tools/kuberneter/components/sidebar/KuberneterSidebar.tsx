@@ -238,7 +238,7 @@ export const KuberneterSidebar: React.FC = () => {
       label: 'Storage',
       icon: Database,
       subItems: [
-        { id: 'pvcs', label: 'PVCs' },
+        { id: 'pvcs', label: 'Persistent Volume Claims' },
         { id: 'pvs', label: 'PVs' },
         { id: 'storageclasses', label: 'Storage Classes' }
       ]

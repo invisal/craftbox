@@ -55,7 +55,6 @@ export const WarningsFeed: React.FC<WarningsFeedProps> = ({ events, namespace })
       ) {
         return false;
       }
-      // 2. Only show Warning type events, matching Lens IDE Warnings list
       return e.type?.toLowerCase() === 'warning';
     })
     // 3. Sort by timestamp descending (newest first)

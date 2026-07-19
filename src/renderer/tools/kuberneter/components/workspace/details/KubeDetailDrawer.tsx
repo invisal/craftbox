@@ -96,6 +96,7 @@ export const KubeDetailDrawer: React.FC<KubeDetailDrawerProps> = ({ tabId }) => 
     statefulset: 'Stateful Set Details',
     replicaset: 'Replica Set Details',
     service: 'Service Details',
+    persistentvolumeclaim: 'Persistent Volume Claim Details',
     endpointslice: 'Endpoint Slice Details',
     job: 'Job Details',
     cronjob: 'Cron Job Details',
@@ -141,7 +142,9 @@ export const KubeDetailDrawer: React.FC<KubeDetailDrawerProps> = ({ tabId }) => 
                 ? `Ingress Class: ${resourceName}`
                 : contentType === 'networkpolicies'
                   ? `Network Policy: ${resourceName}`
-                  : titleNames[contentType] || 'Details'}
+                  : contentType === 'persistentvolumeclaim'
+                    ? `PersistentVolumeClaim: ${resourceName}`
+                    : titleNames[contentType] || 'Details'}
         </span>
         <div className="flex items-center gap-2">
           {contentType === 'ingressclasses' && (
