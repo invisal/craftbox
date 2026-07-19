@@ -28,7 +28,7 @@ async function waitForWindowShown(win: BrowserWindow): Promise<void> {
 
 export async function hideCaptureWindow(
   win: BrowserWindow | null,
-  options?: { mainOnly?: boolean }
+  options?: { mainOnly?: boolean; settleMs?: number }
 ): Promise<void> {
   if (!win) return;
 
@@ -40,15 +40,25 @@ export async function hideCaptureWindow(
     return;
   }
 
-  if (!win.isVisible()) return;
+  // Already hidden (e.g. renderer hid first): still wait so the compositor
+  // finishes removing us before the caller freezes a screenshot backdrop.
+  if (!win.isVisible()) {
+    if (process.platform === 'linux') {
+      await new Promise<void>((resolve) => setTimeout(resolve, options?.settleMs ?? 100));
+    }
+    return;
+  }
+
+  if (win.isFocused()) win.blur();
+
   const hidden = waitForWindowHidden(win);
   win.hide();
   await hidden;
 
   // Wayland/X11: window hide is async in the compositor — give capture a beat
-  // so the next PipeWire/desktopCapturer frame does not still include us.
+  // so the next frame / portal backdrop does not still include us.
   if (process.platform === 'linux') {
-    await new Promise<void>((resolve) => setTimeout(resolve, 100));
+    await new Promise<void>((resolve) => setTimeout(resolve, options?.settleMs ?? 100));
   }
 }
 

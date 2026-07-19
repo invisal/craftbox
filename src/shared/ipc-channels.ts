@@ -18,6 +18,7 @@ export const IpcChannels = {
   SaveScreenshot: 'screenshot:save',
   CopyScreenshot: 'screenshot:copy',
   CaptureScreenshot: 'screenshot:capture',
+  CaptureScreenshotPortal: 'screenshot:capture-portal',
   CaptureRegion: 'screenshot:capture-region',
   SelectCaptureRegion: 'screenshot:select-region',
   RegionSelectComplete: 'region-select:complete',
@@ -45,6 +46,5 @@ export const IpcChannels = {
   TrayRegister: 'tray:register',
   TrayUnregister: 'tray:unregister',
   ShowNotification: 'notification:show',
-  PickOsCaptureSource: 'screenshot:pick-os-source',
   FileExplorerTransferProgress: 'file-explorer:transfer-progress'
 } as const;
