@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   useReactTable,
   getCoreRowModel,
@@ -150,6 +150,12 @@ export function FileTable({ entries, currentPath, onNavigate, onSelectionChange 
     getSortedRowModel: getSortedRowModel()
   });
 
+  // Stable references (not inline arrow functions) so ListView's internal
+  // useMemo/useCallback hooks that depend on getRowId/getRowLabel don't
+  // recompute on every FileTable render.
+  const getRowId = useCallback((entry: FileEntry) => entry.path, []);
+  const getRowLabel = useCallback((entry: FileEntry) => entry.name, []);
+
   const activateEntry = (entry: FileEntry) => {
     if (entry.isDirectory) {
       onNavigate(entry.path);
@@ -231,13 +237,7 @@ export function FileTable({ entries, currentPath, onNavigate, onSelectionChange 
 
   const handleDelete = (paths: string[]) => {
     if (paths.length === 0) return;
-    // No trash for this location -- deletion is permanent, so confirm first
-    // instead of firing it immediately like the recoverable-trash path does.
-    if (!capabilities.trash) {
-      setPendingDeletePaths(paths);
-      return;
-    }
-    runDelete(paths);
+    setPendingDeletePaths(paths);
   };
 
   const confirmDelete = () => {
@@ -326,7 +326,8 @@ export function FileTable({ entries, currentPath, onNavigate, onSelectionChange 
     <div className="relative flex-1 flex flex-col min-h-0">
       <ListView
         table={table}
-        getRowId={(entry) => entry.path}
+        getRowId={getRowId}
+        getRowLabel={getRowLabel}
         selectedIds={selectedPaths}
         onSelectionChange={setSelectedPaths}
         onRowDoubleClick={activateEntry}
@@ -489,12 +490,14 @@ export function FileTable({ entries, currentPath, onNavigate, onSelectionChange 
         onOpenChange={(open) => !open && setPendingDeletePaths(null)}
       >
         <Dialog.Content className="max-w-sm">
-          <Dialog.Title>Permanently delete?</Dialog.Title>
+          <Dialog.Title>{capabilities.trash ? 'Delete?' : 'Permanently delete?'}</Dialog.Title>
           <Dialog.Description>
             {pendingDeletePaths && pendingDeletePaths.length > 1
               ? `${pendingDeletePaths.length} items`
               : 'This item'}{' '}
-            will be permanently deleted. This can&apos;t be undone.
+            {capabilities.trash
+              ? 'will be moved to trash.'
+              : "will be permanently deleted. This can't be undone."}
           </Dialog.Description>
           <div className="mt-4 flex justify-end gap-2">
             <Button variant="secondary" size="sm" onClick={() => setPendingDeletePaths(null)}>

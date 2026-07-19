@@ -18,6 +18,10 @@ import { ContextMenu } from './ContextMenu';
 // height below (row cell padding + line height).
 const ROW_HEIGHT = 28;
 
+// How long to wait after the last keypress before the accumulated
+// type-ahead search query resets (classic Explorer/Finder timing).
+const TYPEAHEAD_RESET_MS = 300;
+
 interface ListViewContextMenuArgs<TData> {
   /** null when the right-click landed on background rather than a row (empty folder, or space below the last row). */
   row: TData | null;
@@ -27,6 +31,14 @@ interface ListViewContextMenuArgs<TData> {
 interface ListViewProps<TData> {
   table: Table<TData>;
   getRowId: (row: TData) => string;
+  /**
+   * Extracts a searchable label from a row, enabling type-ahead:
+   * pressing a printable key jumps focus/selection to the first row whose
+   * label starts with what's typed (Explorer/Finder-style). Omit this prop
+   * to disable type-ahead entirely -- unmodified letter/digit keypresses
+   * remain a no-op, same as today.
+   */
+  getRowLabel?: (row: TData) => string;
   selectedIds: Set<string>;
   onSelectionChange: (ids: Set<string>) => void;
   onRowClick?: (row: TData) => void;
@@ -43,6 +55,7 @@ interface ListViewProps<TData> {
 export function ListView<TData>({
   table,
   getRowId,
+  getRowLabel,
   selectedIds,
   onSelectionChange,
   onRowClick,
@@ -87,9 +100,20 @@ export function ListView<TData>({
   const pendingMoveRef = useRef<{ baseIndex: number; delta: number; extend: boolean } | null>(null);
   const rafIdRef = useRef<number | null>(null);
 
+  // Buffers consecutive printable keypresses into a search query for
+  // type-ahead jump-to-item. Repeating the *same* single character (e.g.
+  // mashing "s") doesn't grow the query to "sss" (which would rarely match
+  // anything) -- it instead cycles forward through every row starting with
+  // "s". Typing different characters within TYPEAHEAD_RESET_MS grows a
+  // multi-char prefix (e.g. "d" then "o" -> searches for names starting
+  // with "do").
+  const typeaheadQueryRef = useRef('');
+  const typeaheadTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   useEffect(() => {
     return () => {
       if (rafIdRef.current !== null) cancelAnimationFrame(rafIdRef.current);
+      if (typeaheadTimeoutRef.current !== null) clearTimeout(typeaheadTimeoutRef.current);
     };
   }, []);
 
@@ -153,6 +177,52 @@ export function ListView<TData>({
       onSelectionChange(new Set([id]));
       anchorIdRef.current = id;
     }
+  };
+
+  // Resolves the type-ahead query for a newly typed character and returns
+  // the row index to jump to, or -1 if nothing matches. Mutates
+  // typeaheadQueryRef/typeaheadTimeoutRef as a side effect (query buffering
+  // + reset timer) -- callers just act on the returned index.
+  const resolveTypeaheadMatch = (key: string, currentIndex: number): number => {
+    if (!getRowLabel) return -1;
+
+    // toLocaleLowerCase (not toLowerCase) so case-folding respects the
+    // user's locale (e.g. Turkish dotted/dotless I). This does not do
+    // accent-folding (e.g. "e" won't match "é") -- unlike the list's sort
+    // order, which uses localeCompare with sensitivity: 'base'. Matching
+    // and sort-ordering are different concerns; Explorer/Finder's own
+    // type-ahead has the same limitation.
+    const typedChar = key.toLocaleLowerCase();
+    const prevQuery = typeaheadQueryRef.current;
+    const isRepeatOfSameKey =
+      prevQuery.length > 0 && prevQuery === typedChar.repeat(prevQuery.length);
+
+    const query = isRepeatOfSameKey ? prevQuery : prevQuery + typedChar;
+    typeaheadQueryRef.current = query;
+
+    if (typeaheadTimeoutRef.current !== null) clearTimeout(typeaheadTimeoutRef.current);
+    typeaheadTimeoutRef.current = setTimeout(() => {
+      typeaheadQueryRef.current = '';
+      typeaheadTimeoutRef.current = null;
+    }, TYPEAHEAD_RESET_MS);
+
+    if (isRepeatOfSameKey) {
+      // Cycle forward from just past the current row, wrapping around, so
+      // repeated presses advance through every match and wrap back to the
+      // first after the last.
+      for (let offset = 1; offset <= rows.length; offset++) {
+        const index = (currentIndex + offset) % rows.length;
+        if (getRowLabel(rows[index].original).toLocaleLowerCase().startsWith(query)) return index;
+      }
+      return -1;
+    }
+
+    // Fresh/growing query: always search from the top, not from the
+    // current position -- the list is already meaningfully sorted
+    // (dirs-first/alphabetical), so "first match from the top" is the
+    // predictable, expected result rather than depending on where focus
+    // currently is.
+    return rows.findIndex((r) => getRowLabel(r.original).toLocaleLowerCase().startsWith(query));
   };
 
   const cancelPendingMove = () => {
@@ -231,6 +301,23 @@ export function ListView<TData>({
     if (rows.length === 0 || effectiveFocusedId === null) return;
     const currentIndex = rows.findIndex((r) => getRowId(r.original) === effectiveFocusedId);
 
+    // Type-ahead must be checked before the switch: unmodified 'c'/'x'/'a'
+    // already have dedicated case labels below (for their mod+key
+    // shortcuts), so an unmodified press of one of those letters would hit
+    // its case, find `mod` false, and `break` without ever reaching
+    // `default` -- silently swallowing the letter instead of jumping to
+    // it. Checking here intercepts all unmodified single-character keys up
+    // front, while modifier-held presses still fall through to the switch
+    // below for copy/cut/select-all. ' ' is explicitly excluded so it
+    // keeps its existing "toggle selection of focused row" behavior.
+    if (getRowLabel && !mod && !e.altKey && e.key.length === 1 && e.key !== ' ') {
+      e.preventDefault();
+      cancelPendingMove();
+      const matchIndex = resolveTypeaheadMatch(e.key, currentIndex);
+      if (matchIndex >= 0) moveFocus(matchIndex, false);
+      return;
+    }
+
     switch (e.key) {
       case 'c':
       case 'C':
@@ -247,7 +334,6 @@ export function ListView<TData>({
         }
         break;
       case 'Delete':
-      case 'Backspace':
         if (onDelete) {
           e.preventDefault();
           onDelete();
