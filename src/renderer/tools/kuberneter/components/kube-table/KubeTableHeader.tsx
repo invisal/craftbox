@@ -11,7 +11,7 @@ interface KubeTableHeaderProps<T> {
   dataLength: number;
   resizable: boolean;
   startResize: (e: React.MouseEvent, colKey: string) => void;
-  isColResizable: () => boolean;
+  isColResizable: (colKey: string) => boolean;
   sortCol: string | null;
   sortDir: 'asc' | 'desc' | null;
   onSort: (colKey: string) => void;
@@ -43,7 +43,7 @@ export function KubeTableHeader<T>({
               : col.align === 'right'
                 ? 'text-right'
                 : 'text-left';
-          const canResize = isColResizable();
+          const canResize = isColResizable(col.key);
           const colWidth = colWidths[col.key];
           const isSortable = col.sortable !== false;
           const isSorted = sortCol === col.key;

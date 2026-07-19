@@ -149,6 +149,8 @@ export function KubeTable<T>({
 
   const startResize = useCallback(
     (e: React.MouseEvent, colKey: string) => {
+      const col = columns.find((c) => c.key === colKey);
+      if (col?.resizable === false) return;
       e.preventDefault();
       e.stopPropagation();
       resizingRef.current = {
@@ -159,10 +161,16 @@ export function KubeTable<T>({
       document.body.style.cursor = 'col-resize';
       document.body.style.userSelect = 'none';
     },
-    [colWidths]
+    [columns, colWidths]
   );
 
-  const isColResizable = () => true;
+  const isColResizable = useCallback(
+    (colKey: string) => {
+      const col = columns.find((c) => c.key === colKey);
+      return col?.resizable !== false;
+    },
+    [columns]
+  );
 
   // Windowing calculation
   const buffer = 8;
