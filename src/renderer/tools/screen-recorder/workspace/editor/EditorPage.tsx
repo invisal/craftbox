@@ -5,9 +5,8 @@ import {
   useTimelineStore,
   PRIMARY_VIDEO_TRACK_ID
 } from '../../features/timeline/store/timeline-store';
-import { getSegmentOutputDurationMs } from '../../features/timeline/lib/segment-duration';
 import { resetHistory, useHistoryStore } from '../../features/history/store/history-store';
-import { PreviewStage } from './PreviewStage';
+import { PreviewStage, type PreviewVideoController } from './PreviewStage';
 import { EditorTransportBar } from './EditorTransportBar';
 import { EditorToolRail } from './EditorToolRail';
 import { EditorToolPanel } from './EditorToolPanel';
@@ -19,7 +18,6 @@ export function EditorPage(): JSX.Element {
     (s) => s.tracks.find((t) => t.id === PRIMARY_VIDEO_TRACK_ID)?.segments ?? []
   );
   const initializeFromDuration = useTimelineStore((s) => s.initializeFromDuration);
-  const splitAt = useTimelineStore((s) => s.splitAt);
   // Selection/active-tool live in the timeline store (not local state) so
   // they're shared with CutTimeline and its per-tool tracks, which are
   // rendered independently in ScreenRecorderApp rather than nested inside
@@ -29,6 +27,8 @@ export function EditorPage(): JSX.Element {
   const setSelectedSegmentId = useTimelineStore((s) => s.setSelectedSegmentId);
   const activeTool = useTimelineStore((s) => s.activeTool);
   const setActiveTool = useTimelineStore((s) => s.setActiveTool);
+  const isCutToolActive = useTimelineStore((s) => s.isCutToolActive);
+  const setCutToolActive = useTimelineStore((s) => s.setCutToolActive);
   const seekRequestMs = useTimelineStore((s) => s.seekRequestMs);
   const clearSeekRequest = useTimelineStore((s) => s.clearSeekRequest);
   // Lives in the timeline store (not local state) for the same reason
@@ -48,7 +48,7 @@ export function EditorPage(): JSX.Element {
     height: number;
   } | null>(null);
   const [videoError, setVideoError] = useState<string | null>(null);
-  const videoRef = useRef<HTMLVideoElement>(null);
+  const videoRef = useRef<PreviewVideoController>(null);
 
   // Default the crop tool's selection to the first clip once segments exist,
   // and drop the selection if that clip gets deleted/reordered away.
@@ -127,20 +127,15 @@ export function EditorPage(): JSX.Element {
     setSourceResolution({ width: video.videoWidth, height: video.videoHeight });
   }
 
-  function handleSplitSelected(): void {
-    if (!selectedSegment) return;
-    const index = segments.findIndex((s) => s.id === selectedSegment.id);
-    const outputStart = segments
-      .slice(0, index)
-      .reduce((sum, s) => sum + getSegmentOutputDurationMs(s), 0);
-    const outputDurationMs = getSegmentOutputDurationMs(selectedSegment);
-    splitAt(outputStart + outputDurationMs / 2);
-  }
-
   return (
     <div className="flex min-h-0 flex-1">
       <div className="flex min-h-0 min-w-0 flex-1 flex-col">
         <PreviewStage
+          // Remounts the whole stage (and both internal <video> elements,
+          // see PreviewStage's dual-buffer comment) on a genuinely new
+          // recording, so all of its playback bookkeeping starts fresh
+          // instead of needing a manual reset effect.
+          key={lastRecording.previewUrl}
           videoRef={videoRef}
           previewUrl={lastRecording.previewUrl}
           isPlaying={isPlaying}
@@ -169,8 +164,8 @@ export function EditorPage(): JSX.Element {
           isPlaying={isPlaying}
           cropToolActive={cropToolActive}
           onToggleCrop={() => setCropToolActive((v) => !v)}
-          onSplitSelected={handleSplitSelected}
-          canSplitSelected={Boolean(selectedSegment)}
+          cutToolActive={isCutToolActive}
+          onToggleCutTool={() => setCutToolActive(!isCutToolActive)}
           currentTimeMs={currentTimeMs}
           durationMs={duration * 1000}
         />

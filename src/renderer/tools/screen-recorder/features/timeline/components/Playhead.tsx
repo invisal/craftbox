@@ -26,7 +26,7 @@ export function Playhead({
   clampedTotal,
   onPointerDown,
   scrollContainerRef
-}: PlayheadProps): JSX.Element | null {
+}: PlayheadProps): JSX.Element {
   const playheadMs = useTimelineStore((s) => s.playheadMs);
   const markerRef = useRef<HTMLDivElement>(null);
 
@@ -59,11 +59,15 @@ export function Playhead({
     }
   }, [playheadMs, scrollContainerRef]);
 
-  // `null` while scrubbing through a cut-out gap (the preview still plays
-  // the raw source continuously; see PreviewStage), so the playhead just
-  // isn't shown until playback re-enters a kept segment.
-  const outputPlayheadMs = sourceMsToOutputMs(segments, playheadMs);
-  if (outputPlayheadMs === null) return null;
+  // `sourceMsToOutputMs` returns `null` for any source position that isn't
+  // inside a kept segment's range -- normally transient (a mid-scrub frame,
+  // or the instant before `initializeFromDuration` has populated `segments`
+  // on a fresh editor open) since PreviewStage's own playback loop ripples
+  // over real gaps and rewinds to the first kept segment once it reaches
+  // the end. Falls back to the very start rather than disappearing for
+  // whatever moment it doesn't resolve, so the marker stays visible (and in
+  // a meaningful place) instead of flickering in and out.
+  const outputPlayheadMs = sourceMsToOutputMs(segments, playheadMs) ?? 0;
 
   return (
     <div

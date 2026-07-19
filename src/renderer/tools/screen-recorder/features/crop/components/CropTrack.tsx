@@ -15,14 +15,22 @@ export function CropTrack(): JSX.Element | null {
           ? `${Math.round(segment.crop.width * 100)}% × ${Math.round(segment.crop.height * 100)}% -- drag to reorder`
           : ''
       }
-      colorClassName="border-sky-500/50 bg-sky-700/30 text-sky-100 hover:bg-sky-700/45"
+      colorClassName="border-sky-900/40 text-sky-950"
       renderContent={(segment) =>
         segment.crop && (
           <>
-            <Crop size={10} className="shrink-0" />
-            <span className="truncate text-[10px] font-medium">
-              {Math.round(segment.crop.width * 100)}%
-            </span>
+            {/* Same two-layer gradient as ZoomTrack's pills (ZoomTrack.tsx) --
+                a base color fill, then a light-at-bottom-fading-to-dark-at-top
+                highlight on top, just sky instead of purple. */}
+            <div className="pointer-events-none absolute inset-0 bg-linear-to-t from-sky-400 via-sky-500 to-sky-600" />
+            <div className="pointer-events-none absolute inset-0 bg-linear-to-t from-white/40 via-white/5 to-black/15" />
+            <div className="relative flex flex-col items-center justify-center gap-0.5 leading-none">
+              <span className="text-[9px] font-semibold text-sky-950">Crop</span>
+              <span className="flex items-center gap-1 text-[10px] font-semibold text-sky-950">
+                <Crop size={11} className="shrink-0" />
+                {Math.round(segment.crop.width * 100)}%
+              </span>
+            </div>
           </>
         )
       }
