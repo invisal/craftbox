@@ -34,7 +34,7 @@ export function KubeTableHeader<T>({
   }
 
   return (
-    <thead className="sticky top-0 z-10 bg-sidebar-bg text-zinc-455 text-[10px] font-bold uppercase tracking-wider">
+    <thead className="sticky top-0 z-10 bg-surface-2 text-zinc-455 text-[10px] font-bold uppercase tracking-wider">
       <tr>
         {columns.map((col) => {
           const alignClass =
@@ -52,7 +52,7 @@ export function KubeTableHeader<T>({
             <th
               key={col.key}
               className={cn(
-                'font-sans select-none relative group bg-sidebar-bg text-zinc-400 font-semibold',
+                'font-sans select-none relative group bg-surface-2 text-zinc-400 font-semibold',
                 canResize ? 'px-3' : 'px-2',
                 alignClass,
                 col.headerClassName

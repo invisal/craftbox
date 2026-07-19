@@ -227,7 +227,12 @@ export function KubeTable<T>({
     >
       {/* 1. Dedicated Header Container (fixed vertical position) */}
       {showHeader && (!hideHeaderWhenEmpty || sortedData.length > 0) && (
-        <div ref={headerRef} className={cn('shrink-0 overflow-hidden select-none bg-sidebar-bg')}>
+        <div
+          ref={headerRef}
+          className={cn(
+            'shrink-0 overflow-hidden select-none bg-surface-2 border-b border-border-dark/60'
+          )}
+        >
           <table className="text-left text-xs bg-transparent" style={tableStyle}>
             <colgroup>
               {columns.map((col, idx) => {
