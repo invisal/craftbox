@@ -1,7 +1,7 @@
 import type { JSX } from 'react';
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Tabs } from '@base-ui/react/tabs';
-import { Camera, CircleCheck, ClipboardCopy, Download, Scan } from 'lucide-react';
+import { Camera, CircleCheck, ClipboardCopy, Download, ImageUp, Scan } from 'lucide-react';
 import { cn } from 'cnfast';
 import { type ToolComponentProps } from '@renderer/components/providers/createTabProvider';
 import { Button } from '@renderer/components/ui/Button';
@@ -19,6 +19,7 @@ import {
   captureFromSource,
   selectAndCaptureRegion,
   screenshotFileName,
+  toPngBlob,
   type RegionCaptureStep
 } from './lib/capture-frame';
 
@@ -79,6 +80,21 @@ export function ScreenCaptureMain({}: ToolComponentProps<Props>): JSX.Element {
     () => localStorage.getItem('screen-capture.hide-app') !== 'false'
   );
   const confirmTimer = useRef<number | undefined>(undefined);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  /** Import a pasted / opened image straight into the editor. Unlike a fresh capture, this does not auto-copy — the image likely came from the clipboard. */
+  const openImage = useCallback(async (source: Blob): Promise<void> => {
+    try {
+      const blob = await toPngBlob(source);
+      const dataUrl = await blobToDataUrl(blob);
+      useCaptureEditorStore.getState().reset();
+      setPreviewBlob(blob);
+      setPreviewDataUrl(dataUrl);
+      setPhase('result');
+    } catch (err) {
+      console.error('Could not open image.', err);
+    }
+  }, []);
 
   const toggleHideApp = (next: boolean): void => {
     setHideApp(next);
@@ -95,6 +111,22 @@ export function ScreenCaptureMain({}: ToolComponentProps<Props>): JSX.Element {
     setSelectedSource,
     { enabled: !usesOsPicker }
   );
+
+  // Pasting an image on the main screen opens it in the editor.
+  useEffect(() => {
+    if (phase !== 'idle') return;
+    function onPaste(event: ClipboardEvent): void {
+      const item = Array.from(event.clipboardData?.items ?? []).find((i) =>
+        i.type.startsWith('image/')
+      );
+      const file = item?.getAsFile();
+      if (!file) return;
+      event.preventDefault();
+      void openImage(file);
+    }
+    window.addEventListener('paste', onPaste);
+    return () => window.removeEventListener('paste', onPaste);
+  }, [phase, openImage]);
 
   // Keeps the clipboard in sync with the editor: every annotation or
   // corner-radius change re-flattens and copies, debounced so a drag doesn't
@@ -397,6 +429,27 @@ export function ScreenCaptureMain({}: ToolComponentProps<Props>): JSX.Element {
             />
             Hide this app while capturing
           </label>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              // Reset so picking the same file again still fires onChange.
+              e.target.value = '';
+              if (file) void openImage(file);
+            }}
+          />
+          <Button
+            variant="secondary"
+            size="sm"
+            title="Open an image to edit — you can also paste one (Ctrl+V)"
+            onClick={() => fileInputRef.current?.click()}
+          >
+            <ImageUp size={14} />
+            Open image
+          </Button>
           {/* Linux Wayland: GNOME's native picker already offers screen / window /
               selection in one UI, so a separate "Capture region" button is redundant. */}
           {!usesOsPicker && (
