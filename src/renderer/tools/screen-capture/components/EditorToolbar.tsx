@@ -1,5 +1,6 @@
 import type { JSX } from 'react';
 import {
+  ALargeSmall,
   Droplets,
   MousePointer2,
   MoveUpRight,
@@ -16,6 +17,7 @@ import { Popover } from '@renderer/components/ui/Popover';
 import { Tooltip } from '@renderer/components/ui/Tooltip';
 import {
   EDITOR_COLORS,
+  FONT_TIERS,
   MAX_CORNER_RADIUS_UNITS,
   STROKE_TIERS,
   useCaptureEditorStore
@@ -62,6 +64,8 @@ export function EditorToolbar(): JSX.Element {
   const setColor = useCaptureEditorStore((s) => s.setColor);
   const strokeTier = useCaptureEditorStore((s) => s.strokeTier);
   const setStrokeTier = useCaptureEditorStore((s) => s.setStrokeTier);
+  const fontTier = useCaptureEditorStore((s) => s.fontTier);
+  const setFontTier = useCaptureEditorStore((s) => s.setFontTier);
   const cornerRadius = useCaptureEditorStore((s) => s.cornerRadius);
   const setCornerRadius = useCaptureEditorStore((s) => s.setCornerRadius);
   const unit = useCaptureEditorStore((s) => s.unit);
@@ -108,22 +112,72 @@ export function EditorToolbar(): JSX.Element {
 
         <div className="my-1.5 h-px w-6 bg-border-dark" />
 
-        {STROKE_TIERS.map(({ label, value }) => (
-          <RailTooltip key={value} label={`${label} stroke`}>
-            <button
-              type="button"
-              aria-label={`${label} stroke`}
-              aria-pressed={strokeTier === value}
-              onClick={() => setStrokeTier(value)}
-              className={railButtonClass(strokeTier === value)}
-            >
+        <Popover.Root>
+          <RailTooltip label="Stroke width">
+            <Popover.Trigger aria-label="Stroke width" className={railButtonClass(false)}>
               <span
                 className="w-3.5 rounded-full bg-current"
-                style={{ height: Math.max(1.5, value) }}
+                style={{ height: Math.max(1.5, strokeTier) }}
               />
-            </button>
+            </Popover.Trigger>
           </RailTooltip>
-        ))}
+          <Popover.Content side="right" align="start" className="min-w-0">
+            <div className="flex items-center gap-1">
+              {STROKE_TIERS.map(({ label, value }) => (
+                <button
+                  key={value}
+                  type="button"
+                  aria-label={`${label} stroke`}
+                  aria-pressed={strokeTier === value}
+                  onClick={() => setStrokeTier(value)}
+                  className={cn(
+                    'flex h-9 w-9 cursor-pointer items-center justify-center rounded-md transition-colors',
+                    strokeTier === value
+                      ? 'bg-surface-4 text-accent'
+                      : 'text-text-dim hover:bg-surface-3 hover:text-text-base'
+                  )}
+                >
+                  <span
+                    className="w-3.5 rounded-full bg-current"
+                    style={{ height: Math.max(1.5, value) }}
+                  />
+                </button>
+              ))}
+            </div>
+          </Popover.Content>
+        </Popover.Root>
+
+        <div className="my-1.5 h-px w-6 bg-border-dark" />
+
+        <Popover.Root>
+          <RailTooltip label="Text size">
+            <Popover.Trigger aria-label="Text size" className={railButtonClass(false)}>
+              <ALargeSmall size={16} strokeWidth={1.75} />
+            </Popover.Trigger>
+          </RailTooltip>
+          <Popover.Content side="right" align="start" className="min-w-0">
+            <div className="flex items-end gap-1">
+              {FONT_TIERS.map(({ label, value }, index) => (
+                <button
+                  key={value}
+                  type="button"
+                  aria-label={label}
+                  aria-pressed={fontTier === value}
+                  onClick={() => setFontTier(value)}
+                  className={cn(
+                    'flex h-9 w-9 cursor-pointer items-end justify-center rounded-md pb-1 font-medium transition-colors',
+                    fontTier === value
+                      ? 'bg-surface-4 text-accent'
+                      : 'text-text-dim hover:bg-surface-3 hover:text-text-base'
+                  )}
+                  style={{ fontSize: 12 + index * 4 }}
+                >
+                  A
+                </button>
+              ))}
+            </div>
+          </Popover.Content>
+        </Popover.Root>
 
         <div className="my-1.5 h-px w-6 bg-border-dark" />
 

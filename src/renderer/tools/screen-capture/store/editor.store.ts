@@ -9,6 +9,12 @@ export const STROKE_TIERS = [
   { label: 'Thick', value: 7 }
 ];
 
+export const FONT_TIERS = [
+  { label: 'Small text', value: 16 },
+  { label: 'Medium text', value: 24 },
+  { label: 'Large text', value: 36 }
+];
+
 /** Max corner radius as a multiple of `unit` (i.e. ~6.4% of image width). */
 export const MAX_CORNER_RADIUS_UNITS = 64;
 
@@ -31,6 +37,8 @@ interface EditorState {
   color: string;
   /** Stroke width in units (multiplied by `unit` at creation time). */
   strokeTier: number;
+  /** Text size in units (multiplied by `unit` at creation time). */
+  fontTier: number;
   // ponytail: undo covers annotations only — cornerRadius is a slider the
   // user can just drag back; tracking it would spam the stack on every input
   // event. Upgrade path: begin/end gesture around slider drags.
@@ -41,6 +49,7 @@ interface EditorState {
   setTool: (tool: EditorTool) => void;
   setColor: (color: string) => void;
   setStrokeTier: (tier: number) => void;
+  setFontTier: (tier: number) => void;
   setCornerRadius: (radius: number) => void;
   setSelectedId: (id: string | null) => void;
   setEditingId: (id: string | null) => void;
@@ -82,6 +91,7 @@ const initialState = {
   selectedId: null,
   editingId: null,
   strokeTier: STROKE_TIERS[1].value,
+  fontTier: FONT_TIERS[1].value,
   past: [] as CaptureAnnotation[][],
   future: [] as CaptureAnnotation[][]
 };
@@ -98,13 +108,19 @@ export const useCaptureEditorStore = create<EditorState>((set, get) => ({
       ...initialState,
       color: state.color,
       strokeTier: state.strokeTier,
+      fontTier: state.fontTier,
       imageWidth,
       imageHeight,
       unit: Math.max(1, imageWidth / 1000)
     })),
 
   reset: () =>
-    set((state) => ({ ...initialState, color: state.color, strokeTier: state.strokeTier })),
+    set((state) => ({
+      ...initialState,
+      color: state.color,
+      strokeTier: state.strokeTier,
+      fontTier: state.fontTier
+    })),
 
   setTool: (tool) => set({ tool, selectedId: null, editingId: null }),
 
@@ -129,6 +145,20 @@ export const useCaptureEditorStore = create<EditorState>((set, get) => ({
         ...pushPast(state),
         annotations: applyPatch(state.annotations, selected.id, {
           strokeWidth: strokeTier * state.unit
+        })
+      };
+    }),
+
+  setFontTier: (fontTier) =>
+    set((state) => {
+      const targetId = state.selectedId ?? state.editingId;
+      const target = state.annotations.find((a) => a.id === targetId);
+      if (!target || target.kind !== 'text') return { fontTier };
+      return {
+        fontTier,
+        ...pushPast(state),
+        annotations: applyPatch(state.annotations, target.id, {
+          fontSize: fontTier * state.unit
         })
       };
     }),

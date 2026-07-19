@@ -279,7 +279,7 @@ export function CaptureEditor({ dataUrl }: CaptureEditorProps): JSX.Element {
         y: point.y,
         text: '',
         color: s.color,
-        fontSize: 24 * unit
+        fontSize: s.fontTier * unit
       });
       s.setEditingId(id);
       return;
