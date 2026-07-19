@@ -15,6 +15,8 @@ export interface TextAnnotation {
 export interface LabelAnnotation {
   id: string;
   kind: 'label';
+  /** Custom layer name; falls back to a kind-based default in the panel. */
+  name?: string;
   /** Center of the numbered badge. */
   x: number;
   y: number;
@@ -26,6 +28,7 @@ export interface LabelAnnotation {
 export interface RectAnnotation {
   id: string;
   kind: 'rect';
+  name?: string;
   x: number;
   y: number;
   width: number;
@@ -37,6 +40,7 @@ export interface RectAnnotation {
 export interface ArrowAnnotation {
   id: string;
   kind: 'arrow';
+  name?: string;
   x1: number;
   y1: number;
   x2: number;
@@ -48,6 +52,7 @@ export interface ArrowAnnotation {
 export interface BlurAnnotation {
   id: string;
   kind: 'blur';
+  name?: string;
   x: number;
   y: number;
   width: number;
