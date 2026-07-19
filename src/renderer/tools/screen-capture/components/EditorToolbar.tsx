@@ -1,6 +1,7 @@
 import type { JSX } from 'react';
 import {
   ALargeSmall,
+  Crop,
   Droplets,
   MousePointer2,
   MoveUpRight,
@@ -30,7 +31,8 @@ const TOOLS: { id: EditorTool; label: string; icon: typeof MousePointer2 }[] = [
   { id: 'label', label: 'Numbered label', icon: Tag },
   { id: 'rect', label: 'Rectangle', icon: Square },
   { id: 'arrow', label: 'Arrow', icon: MoveUpRight },
-  { id: 'blur', label: 'Blur', icon: Droplets }
+  { id: 'blur', label: 'Blur', icon: Droplets },
+  { id: 'crop', label: 'Crop', icon: Crop }
 ];
 
 function railButtonClass(active: boolean): string {

@@ -1,4 +1,4 @@
-export type EditorTool = 'select' | 'text' | 'label' | 'rect' | 'arrow' | 'blur';
+export type EditorTool = 'select' | 'text' | 'label' | 'rect' | 'arrow' | 'blur' | 'crop';
 
 /** All coordinates/sizes are in source-image pixel space (scaled for display, drawn 1:1 at export). */
 export interface TextAnnotation {

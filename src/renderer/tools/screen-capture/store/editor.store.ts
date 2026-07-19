@@ -62,6 +62,8 @@ interface EditorState {
   removeAnnotation: (id: string) => void;
   /** Untracked removal — for discarding an empty text annotation whose creation entry already restores this exact state. */
   discardAnnotation: (id: string) => void;
+  /** Rebase the editor onto a cropped image: shift annotations into the new coordinate space and adopt the new dimensions. */
+  applyCrop: (x: number, y: number, width: number, height: number) => void;
   beginGesture: () => void;
   endGesture: () => void;
   undo: () => void;
@@ -196,6 +198,26 @@ export const useCaptureEditorStore = create<EditorState>((set, get) => ({
       annotations: state.annotations.filter((a) => a.id !== id),
       selectedId: state.selectedId === id ? null : state.selectedId,
       editingId: state.editingId === id ? null : state.editingId
+    })),
+
+  applyCrop: (x, y, width, height) =>
+    set((state) => ({
+      imageWidth: width,
+      imageHeight: height,
+      unit: imageUnit(width),
+      annotations: state.annotations.map((a) => {
+        if (a.kind === 'arrow') {
+          return { ...a, x1: a.x1 - x, y1: a.y1 - y, x2: a.x2 - x, y2: a.y2 - y };
+        }
+        return { ...a, x: a.x - x, y: a.y - y };
+      }),
+      tool: 'select' as EditorTool,
+      selectedId: null,
+      editingId: null,
+      // ponytail: crop is destructive — past snapshots reference pre-crop
+      // pixels and coordinates, so history is cleared instead of rebased.
+      past: [],
+      future: []
     })),
 
   beginGesture: () => {

@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { arrowHeadLength, arrowHeadPoints, labelTextColor, normalizeRect } from './flatten';
+import {
+  arrowHeadLength,
+  arrowHeadPoints,
+  clampRectToImage,
+  labelTextColor,
+  normalizeRect,
+  resizeRect
+} from './flatten';
 import { nextLabelValue } from '../store/editor.store';
 import type { CaptureAnnotation } from '../types/editor';
 
@@ -10,6 +17,48 @@ describe('normalizeRect', () => {
 
   it('normalizes a backwards (up-left) drag to a positive-size rect', () => {
     expect(normalizeRect(110, 220, 10, 20)).toEqual({ x: 10, y: 20, width: 100, height: 200 });
+  });
+});
+
+describe('resizeRect', () => {
+  const start = { x: 100, y: 100, width: 200, height: 100 };
+
+  it('keeps the opposite corner fixed when dragging se', () => {
+    expect(resizeRect(start, 'se', 50, 20, 10)).toEqual({
+      x: 100,
+      y: 100,
+      width: 250,
+      height: 120
+    });
+  });
+
+  it('moves the origin when dragging nw and enforces the minimum size', () => {
+    expect(resizeRect(start, 'nw', 195, 95, 10)).toEqual({
+      x: 290,
+      y: 190,
+      width: 10,
+      height: 10
+    });
+  });
+});
+
+describe('clampRectToImage', () => {
+  it('preserves edges that were already inside the image', () => {
+    expect(clampRectToImage({ x: -20, y: 10, width: 100, height: 100 }, 500, 300)).toEqual({
+      x: 0,
+      y: 10,
+      width: 80,
+      height: 100
+    });
+  });
+
+  it('clips the far edges to the image bounds', () => {
+    expect(clampRectToImage({ x: 450, y: 250, width: 100, height: 100 }, 500, 300)).toEqual({
+      x: 450,
+      y: 250,
+      width: 50,
+      height: 50
+    });
   });
 });
 

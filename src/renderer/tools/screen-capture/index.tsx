@@ -205,6 +205,19 @@ export function ScreenCaptureMain({}: ToolComponentProps<Props>): JSX.Element {
     setConfirmed(null);
   };
 
+  const handleCropped = (blob: Blob, dataUrl: string): void => {
+    setPreviewBlob(blob);
+    setPreviewDataUrl(dataUrl);
+    // The auto-copy subscription is re-created for the new blob, so it won't
+    // see the crop itself — sync the clipboard explicitly.
+    const { annotations, cornerRadius } = useCaptureEditorStore.getState();
+    void flattenImage(blob, annotations, cornerRadius)
+      .then(copyAfterCapture)
+      .then((copied) => {
+        if (!copied) console.error('Could not copy cropped screenshot to clipboard.');
+      });
+  };
+
   /** Copy/Save export what's on the editor stage, not the raw capture. */
   const editedBlob = async (): Promise<Blob | null> => {
     if (!previewBlob) return null;
@@ -333,7 +346,7 @@ export function ScreenCaptureMain({}: ToolComponentProps<Props>): JSX.Element {
           {phase === 'result' && previewDataUrl && (
             <div className="flex min-h-0 flex-1 gap-3">
               <EditorToolbar />
-              <CaptureEditor dataUrl={previewDataUrl} />
+              <CaptureEditor dataUrl={previewDataUrl} onCropped={handleCropped} />
             </div>
           )}
         </div>

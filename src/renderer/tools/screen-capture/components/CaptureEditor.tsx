@@ -2,12 +2,17 @@ import type { JSX } from 'react';
 import { useEffect, useRef, useState } from 'react';
 import { cn } from 'cnfast';
 import { nextLabelValue, useCaptureEditorStore } from '../store/editor.store';
+import { Check, X } from 'lucide-react';
+import { Button } from '@renderer/components/ui/Button';
 import {
   BLUR_RADIUS_UNITS,
   arrowHeadLength,
   arrowHeadPoints,
+  clampRectToImage,
   labelTextColor,
-  normalizeRect
+  normalizeRect,
+  resizeRect,
+  type Rect
 } from '../lib/flatten';
 import type {
   BlurAnnotation,
@@ -18,6 +23,8 @@ import type {
 
 interface CaptureEditorProps {
   dataUrl: string;
+  /** Called after a crop is applied with the newly encoded preview image. */
+  onCropped: (blob: Blob, dataUrl: string) => void;
 }
 
 type Corner = 'nw' | 'ne' | 'sw' | 'se';
@@ -128,7 +135,7 @@ function TextEditInput({
  * `scale` (displayed px per image px) for rendering, so flatten.ts can draw
  * the exact same numbers 1:1 at export.
  */
-export function CaptureEditor({ dataUrl }: CaptureEditorProps): JSX.Element {
+export function CaptureEditor({ dataUrl, onCropped }: CaptureEditorProps): JSX.Element {
   const store = useCaptureEditorStore;
   const annotations = useCaptureEditorStore((s) => s.annotations);
   const imageWidth = useCaptureEditorStore((s) => s.imageWidth);
@@ -141,8 +148,10 @@ export function CaptureEditor({ dataUrl }: CaptureEditorProps): JSX.Element {
 
   const containerRef = useRef<HTMLDivElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
+  const imgRef = useRef<HTMLImageElement>(null);
   const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
   const [draft, setDraft] = useState<Draft | null>(null);
+  const [cropRect, setCropRect] = useState<Rect | null>(null);
   const activeDrag = useRef<{ move: (e: PointerEvent) => void; up: () => void } | null>(null);
 
   // Fit the stage inside the container preserving aspect ratio, never
@@ -189,6 +198,19 @@ export function CaptureEditor({ dataUrl }: CaptureEditorProps): JSX.Element {
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
   }, [store]);
+
+  // Enter applies / Escape cancels the pending crop. Separate from the main
+  // shortcut effect because it needs the current cropRect in scope.
+  useEffect(() => {
+    if (tool !== 'crop' || !cropRect) return;
+    function onKeyDown(event: KeyboardEvent): void {
+      if (event.key === 'Enter') void applyCropRect(cropRect!);
+      if (event.key === 'Escape') setCropRect(null);
+    }
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tool, cropRect]);
 
   // Guards against the pointerup listener never firing (editor unmounts
   // mid-drag) -- otherwise the window pointermove listener and the open
@@ -239,19 +261,65 @@ export function CaptureEditor({ dataUrl }: CaptureEditorProps): JSX.Element {
       width: annotation.width,
       height: annotation.height
     };
-    const minSize = MIN_DRAG_PX * 2;
-    return (dx, dy) => {
-      const movesLeft = corner === 'nw' || corner === 'sw';
-      const movesTop = corner === 'nw' || corner === 'ne';
-      const width = Math.max(minSize, movesLeft ? start.width - dx : start.width + dx);
-      const height = Math.max(minSize, movesTop ? start.height - dy : start.height + dy);
+    return (dx, dy) =>
       store.getState().moveAnnotation(annotation.id, {
-        x: movesLeft ? start.x + start.width - width : start.x,
-        y: movesTop ? start.y + start.height - height : start.y,
-        width,
-        height
+        ...resizeRect(start, corner, dx, dy, MIN_DRAG_PX * 2)
       });
+  }
+
+  /** Move or resize the pending crop selection (local state, not the store). */
+  function startCropAdjust(mode: Corner | 'move') {
+    return (event: React.PointerEvent): void => {
+      if (event.button !== 0 || !cropRect) return;
+      event.preventDefault();
+      event.stopPropagation();
+      const start = cropRect;
+      const startClientX = event.clientX;
+      const startClientY = event.clientY;
+      const move = (e: PointerEvent): void => {
+        const dx = (e.clientX - startClientX) / scale;
+        const dy = (e.clientY - startClientY) / scale;
+        const next =
+          mode === 'move'
+            ? {
+                ...start,
+                x: Math.min(Math.max(0, start.x + dx), imageWidth - start.width),
+                y: Math.min(Math.max(0, start.y + dy), imageHeight - start.height)
+              }
+            : resizeRect(start, mode, dx, dy, MIN_DRAG_PX * 2);
+        setCropRect(clampRectToImage(next, imageWidth, imageHeight));
+      };
+      const up = (): void => window.removeEventListener('pointermove', move);
+      window.addEventListener('pointermove', move);
+      window.addEventListener('pointerup', up, { once: true });
     };
+  }
+
+  async function applyCropRect(rect: Rect): Promise<void> {
+    const img = imgRef.current;
+    if (!img) return;
+    const clamped = clampRectToImage(rect, imageWidth, imageHeight);
+    const sx = Math.round(clamped.x);
+    const sy = Math.round(clamped.y);
+    const sw = Math.max(1, Math.round(clamped.width));
+    const sh = Math.max(1, Math.round(clamped.height));
+
+    const canvas = document.createElement('canvas');
+    canvas.width = sw;
+    canvas.height = sh;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    // drawImage source coordinates are in the image's natural resolution,
+    // which is exactly the editor's image pixel space.
+    ctx.drawImage(img, sx, sy, sw, sh, 0, 0, sw, sh);
+
+    const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/png'));
+    if (!blob) return;
+    // Rebase the store first so the img onLoad init-check (imageWidth ===
+    // naturalWidth) sees matching dimensions and keeps the annotations.
+    store.getState().applyCrop(sx, sy, sw, sh);
+    setCropRect(null);
+    onCropped(blob, canvas.toDataURL('image/png'));
   }
 
   function handleStagePointerDown(event: React.PointerEvent): void {
@@ -301,6 +369,30 @@ export function CaptureEditor({ dataUrl }: CaptureEditorProps): JSX.Element {
         radius: 14 * unit,
         color: s.color
       });
+      return;
+    }
+
+    if (tool === 'crop') {
+      event.preventDefault();
+      const start = point;
+      const move = (e: PointerEvent): void => {
+        const p = toImagePoint(e);
+        setCropRect(
+          clampRectToImage(normalizeRect(start.x, start.y, p.x, p.y), imageWidth, imageHeight)
+        );
+      };
+      const up = (e: PointerEvent): void => {
+        window.removeEventListener('pointermove', move);
+        const p = toImagePoint(e);
+        const rect = clampRectToImage(
+          normalizeRect(start.x, start.y, p.x, p.y),
+          imageWidth,
+          imageHeight
+        );
+        setCropRect(rect.width >= MIN_DRAG_PX && rect.height >= MIN_DRAG_PX ? rect : null);
+      };
+      window.addEventListener('pointermove', move);
+      window.addEventListener('pointerup', up, { once: true });
       return;
     }
 
@@ -615,6 +707,7 @@ export function CaptureEditor({ dataUrl }: CaptureEditorProps): JSX.Element {
         }}
       >
         <img
+          ref={imgRef}
           src={dataUrl}
           alt="Captured screenshot"
           draggable={false}
@@ -631,6 +724,46 @@ export function CaptureEditor({ dataUrl }: CaptureEditorProps): JSX.Element {
           <div className="absolute inset-0">
             {annotations.map(renderAnnotation)}
             {draft && renderDraft(draft)}
+
+            {tool === 'crop' && cropRect && (
+              <div
+                onPointerDown={startCropAdjust('move')}
+                className="absolute z-20 cursor-move"
+                style={{
+                  left: cropRect.x * scale,
+                  top: cropRect.y * scale,
+                  width: cropRect.width * scale,
+                  height: cropRect.height * scale,
+                  // Dims everything outside the selection; the stage's
+                  // overflow-hidden clips the giant shadow to the image.
+                  boxShadow: '0 0 0 100000px rgba(0, 0, 0, 0.55)'
+                }}
+              >
+                <div className="pointer-events-none absolute -inset-px border border-dashed border-accent" />
+                {CORNERS.map((corner) => (
+                  <div
+                    key={corner}
+                    onPointerDown={startCropAdjust(corner)}
+                    className={cn(
+                      'absolute h-3 w-3 rounded-full border-2 border-accent bg-surface',
+                      CORNER_CLASSES[corner]
+                    )}
+                  />
+                ))}
+                <div
+                  className="absolute bottom-1 right-1 flex gap-1"
+                  onPointerDown={(e) => e.stopPropagation()}
+                >
+                  <Button variant="secondary" size="sm" onClick={() => setCropRect(null)}>
+                    <X size={14} />
+                  </Button>
+                  <Button variant="primary" size="sm" onClick={() => void applyCropRect(cropRect)}>
+                    <Check size={14} />
+                    Crop
+                  </Button>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>

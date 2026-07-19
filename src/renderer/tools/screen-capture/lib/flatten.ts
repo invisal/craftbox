@@ -56,19 +56,52 @@ export function labelTextColor(fill: string): string {
   return fill === '#ffffff' ? '#111111' : '#ffffff';
 }
 
+export interface Rect {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
 /** Normalizes a drag from (ax, ay) to (bx, by) into a positive-size rect. */
-export function normalizeRect(
-  ax: number,
-  ay: number,
-  bx: number,
-  by: number
-): { x: number; y: number; width: number; height: number } {
+export function normalizeRect(ax: number, ay: number, bx: number, by: number): Rect {
   return {
     x: Math.min(ax, bx),
     y: Math.min(ay, by),
     width: Math.abs(bx - ax),
     height: Math.abs(by - ay)
   };
+}
+
+export type RectCorner = 'nw' | 'ne' | 'sw' | 'se';
+
+/** Resize `start` by dragging `corner` by (dx, dy), keeping the opposite corner fixed and the size at least `minSize`. */
+export function resizeRect(
+  start: Rect,
+  corner: RectCorner,
+  dx: number,
+  dy: number,
+  minSize: number
+): Rect {
+  const movesLeft = corner === 'nw' || corner === 'sw';
+  const movesTop = corner === 'nw' || corner === 'ne';
+  const width = Math.max(minSize, movesLeft ? start.width - dx : start.width + dx);
+  const height = Math.max(minSize, movesTop ? start.height - dy : start.height + dy);
+  return {
+    x: movesLeft ? start.x + start.width - width : start.x,
+    y: movesTop ? start.y + start.height - height : start.y,
+    width,
+    height
+  };
+}
+
+/** Clamps a rect into the bounds of an image, preserving the edges that were already inside. */
+export function clampRectToImage(rect: Rect, imageWidth: number, imageHeight: number): Rect {
+  const x = Math.min(Math.max(0, rect.x), imageWidth);
+  const y = Math.min(Math.max(0, rect.y), imageHeight);
+  const right = Math.min(Math.max(x, rect.x + rect.width), imageWidth);
+  const bottom = Math.min(Math.max(y, rect.y + rect.height), imageHeight);
+  return { x, y, width: right - x, height: bottom - y };
 }
 
 function drawBlur(
