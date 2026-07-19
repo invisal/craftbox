@@ -99,6 +99,7 @@ export const KubeDetailDrawer: React.FC<KubeDetailDrawerProps> = ({ tabId }) => 
     persistentvolumeclaim: 'Persistent Volume Claim Details',
     persistentvolume: 'Persistent Volume Details',
     storageclass: 'Storage Class Details',
+    namespace: 'Namespace Details',
     endpointslice: 'Endpoint Slice Details',
     job: 'Job Details',
     cronjob: 'Cron Job Details',
@@ -150,7 +151,9 @@ export const KubeDetailDrawer: React.FC<KubeDetailDrawerProps> = ({ tabId }) => 
                       ? `PersistentVolume: ${resourceName}`
                       : contentType === 'storageclass'
                         ? `StorageClass: ${resourceName}`
-                        : titleNames[contentType] || 'Details'}
+                        : contentType === 'namespace'
+                          ? `Namespace: ${resourceName}`
+                          : titleNames[contentType] || 'Details'}
         </span>
         <div className="flex items-center gap-2">
           {contentType === 'ingressclasses' && (
