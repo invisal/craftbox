@@ -14,7 +14,6 @@ import type {
   SelectCaptureRegionOptions,
   RegionSelectCompletePayload
 } from '@shared/capture-region';
-import type { OsPickerSource } from '@shared/os-picker-source';
 import type {
   RecorderToolbarOpenPayload,
   RecorderToolbarStartPayload,
@@ -33,7 +32,9 @@ export const screenRecorderApi = {
       ipcRenderer.invoke(IpcChannels.StartRecording, request),
     stop: (): Promise<void> => ipcRenderer.invoke(IpcChannels.StopRecording),
     saveFile: (fileName: string, data: ArrayBuffer): Promise<string> =>
-      ipcRenderer.invoke(IpcChannels.SaveRecordingFile, fileName, data)
+      ipcRenderer.invoke(IpcChannels.SaveRecordingFile, fileName, data),
+    deleteFile: (filePath: string): Promise<void> =>
+      ipcRenderer.invoke(IpcChannels.DeleteRecordingFile, filePath)
   },
   cursor: {
     startTracking: (
@@ -143,8 +144,8 @@ export const screenRecorderApi = {
       ipcRenderer.invoke(IpcChannels.SaveScreenshot, data, defaultFileName),
     selectRegion: (options?: SelectCaptureRegionOptions): Promise<CaptureRegionSelection | null> =>
       ipcRenderer.invoke(IpcChannels.SelectCaptureRegion, options),
-    pickOsSource: (options?: { monitorOnly?: boolean }): Promise<OsPickerSource | null> =>
-      ipcRenderer.invoke(IpcChannels.PickOsCaptureSource, options)
+    capturePortal: (options?: { hideApp?: boolean }): Promise<ArrayBuffer | null> =>
+      ipcRenderer.invoke(IpcChannels.CaptureScreenshotPortal, options)
   },
   regionSelect: {
     getContentOrigin: (): Promise<ScreenRect | null> =>
@@ -172,6 +173,12 @@ export const screenRecorderApi = {
     /** Called by the main window once stop/save/editor-navigate finishes. */
     reportRecordingStopped: (): void =>
       ipcRenderer.send(IpcChannels.RecorderToolbarRecordingStopped),
+    /** Main window: the toolbar has actually closed (cancelled or stopped) -- see ScreenRecorderSidebar.tsx's "Launch Recorder" disabled state. */
+    onClosed: (callback: () => void): (() => void) => {
+      const listener = (): void => callback();
+      ipcRenderer.on(IpcChannels.RecorderToolbarClosed, listener);
+      return () => ipcRenderer.removeListener(IpcChannels.RecorderToolbarClosed, listener);
+    },
     /** Main window: the toolbar wants a recording started with this config. */
     onStartRequested: (callback: (payload: RecorderToolbarStartPayload) => void): (() => void) => {
       const listener = (_event: unknown, payload: RecorderToolbarStartPayload): void =>

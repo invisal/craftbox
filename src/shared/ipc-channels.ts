@@ -7,6 +7,7 @@ export const IpcChannels = {
   ResumeRecording: 'recording:resume',
   RecordingStateChanged: 'recording:state-changed',
   SaveRecordingFile: 'recording:save-file',
+  DeleteRecordingFile: 'recording:delete-file',
   StartCursorTracking: 'cursor:start-tracking',
   StopCursorTracking: 'cursor:stop-tracking',
   CursorPositionSample: 'cursor:position-sample',
@@ -19,6 +20,7 @@ export const IpcChannels = {
   SaveScreenshot: 'screenshot:save',
   CopyScreenshot: 'screenshot:copy',
   CaptureScreenshot: 'screenshot:capture',
+  CaptureScreenshotPortal: 'screenshot:capture-portal',
   CaptureRegion: 'screenshot:capture-region',
   SelectCaptureRegion: 'screenshot:select-region',
   RegionSelectComplete: 'region-select:complete',
@@ -54,11 +56,10 @@ export const IpcChannels = {
   RecorderToolbarStopRequested: 'recorder-toolbar:stop-requested',
   RecorderToolbarRecordingStarted: 'recorder-toolbar:recording-started',
   RecorderToolbarRecordingStopped: 'recorder-toolbar:recording-stopped',
+  RecorderToolbarClosed: 'recorder-toolbar:closed',
   SourcePickerOverlayOpen: 'source-picker-overlay:open',
   SourcePickerOverlayPick: 'source-picker-overlay:pick',
   SourcePickerOverlayCancel: 'source-picker-overlay:cancel',
   SourcePickerOverlayPicked: 'source-picker-overlay:picked',
-  ShowNotification: 'notification:show',
-  PickOsCaptureSource: 'screenshot:pick-os-source',
   FileExplorerTransferProgress: 'file-explorer:transfer-progress'
 } as const;

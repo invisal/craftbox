@@ -21,7 +21,6 @@ import { destroySourcePickerOverlay } from './screen-recorder/windows/source-pic
 import { registerDisplayMediaHandler } from './screen-recorder/security/display-media-handler';
 import { registerKuberneterHandlers } from './kuberneter';
 import { registerFileExplorerHandlers } from './file-explorer';
-import { registerNotificationHandlers } from './notification-handlers';
 
 function createWindow(): BrowserWindow {
   // Create the browser window.
@@ -90,7 +89,7 @@ app.whenReady().then(() => {
   // (Vite HMR needs 'unsafe-eval' + a websocket connect-src) and production,
   // and needs media-src blob: for ScreenRecorder's recording preview.
   applyContentSecurityPolicy();
-  // Screen Capture (Wayland): PipeWire portal for getDisplayMedia. No-op on other platforms.
+  // Screen Recorder: macOS 15+ ScreenCaptureKit system picker. No-op elsewhere.
   registerDisplayMediaHandler();
 
   // Default open or close DevTools by F12 in development
@@ -197,7 +196,6 @@ app.whenReady().then(() => {
   // controls, screen-recording permissions, and export-path dialogs for the
   // ScreenRecorder tool (src/main/screen-recorder/ipc/*-handlers.ts).
   registerScreenRecorderHandlers();
-  registerNotificationHandlers();
 
   // Kuberneter contexts selection and live resources query handlers
   registerKuberneterHandlers();

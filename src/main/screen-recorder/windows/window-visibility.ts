@@ -13,6 +13,19 @@ async function waitForWindowHidden(win: BrowserWindow): Promise<void> {
   });
 }
 
+async function waitForWindowMinimized(win: BrowserWindow): Promise<void> {
+  if (win.isMinimized()) return;
+
+  await new Promise<void>((resolve) => {
+    const done = (): void => {
+      win.removeListener('minimize', done);
+      resolve();
+    };
+    win.on('minimize', done);
+    if (win.isMinimized()) done();
+  });
+}
+
 async function waitForWindowShown(win: BrowserWindow): Promise<void> {
   if (win.isVisible()) return;
 
@@ -28,7 +41,7 @@ async function waitForWindowShown(win: BrowserWindow): Promise<void> {
 
 export async function hideCaptureWindow(
   win: BrowserWindow | null,
-  options?: { mainOnly?: boolean }
+  options?: { mainOnly?: boolean; settleMs?: number }
 ): Promise<void> {
   if (!win) return;
 
@@ -40,16 +53,44 @@ export async function hideCaptureWindow(
     return;
   }
 
-  if (!win.isVisible()) return;
+  // Already hidden (e.g. renderer hid first): still wait so the compositor
+  // finishes removing us before the caller freezes a screenshot backdrop.
+  if (!win.isVisible()) {
+    if (process.platform === 'linux') {
+      await new Promise<void>((resolve) => setTimeout(resolve, options?.settleMs ?? 100));
+    }
+    return;
+  }
+
+  if (win.isFocused()) win.blur();
+
   const hidden = waitForWindowHidden(win);
   win.hide();
   await hidden;
 
   // Wayland/X11: window hide is async in the compositor — give capture a beat
-  // so the next PipeWire/desktopCapturer frame does not still include us.
+  // so the next frame / portal backdrop does not still include us.
   if (process.platform === 'linux') {
-    await new Promise<void>((resolve) => setTimeout(resolve, 100));
+    await new Promise<void>((resolve) => setTimeout(resolve, options?.settleMs ?? 100));
   }
+}
+
+/**
+ * Minimizes `win` to the Dock instead of fully hiding it -- unlike
+ * `hideCaptureWindow`, this leaves a clickable Dock icon/thumbnail behind so
+ * there's an obvious, discoverable way back to it. Removes it from the
+ * screen just as effectively as a hide for the one thing that matters to a
+ * caller like recorder-toolbar-window.ts (not showing up in a 'Display'
+ * capture) -- `restoreCaptureWindow` already un-minimizes on every platform
+ * (see its `isMinimized()` checks below), so no separate restore path is
+ * needed for callers that use this instead of `hideCaptureWindow`.
+ */
+export async function minimizeCaptureWindow(win: BrowserWindow | null): Promise<void> {
+  if (!win || win.isMinimized()) return;
+  if (win.isFocused()) win.blur();
+  const minimized = waitForWindowMinimized(win);
+  win.minimize();
+  await minimized;
 }
 
 export async function restoreCaptureWindow(

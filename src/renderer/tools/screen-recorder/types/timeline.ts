@@ -37,6 +37,15 @@ export interface TimelineSegment {
    * when something's actually been done" pattern as `SpeedTrack`/`CropTrack`.
    */
   trimmed: boolean;
+  /**
+   * Set on both halves produced by `splitAt` (never on a freshly-loaded
+   * recording's single starting segment). Once true, the clip's in/out
+   * points are locked -- the cut that created it is final, so neither
+   * timeline edge-drag nor the settings panel's Start/End fields may move
+   * its range further. Re-splitting a locked segment is still allowed (the
+   * resulting pieces are locked too); only trimming is blocked.
+   */
+  split: boolean;
 }
 
 export interface TimelineTrack {

@@ -1,5 +1,4 @@
 import { session } from 'electron';
-import { usesOsCapturePicker } from '@shared/uses-os-capture-picker';
 
 /**
  * macOS 15+ can hand `getDisplayMedia()` off to the real ScreenCaptureKit
@@ -15,25 +14,14 @@ export function supportsNativeSystemPicker(): boolean {
 }
 
 /**
- * Routes getDisplayMedia to a native OS picker: the PipeWire portal on
- * Linux Wayland (Screen Capture tool), or ScreenCaptureKit's picker on
- * macOS 15+ (Screen Recorder's "Use System Picker" button). Screen
- * Recorder's main flow uses getUserMedia(chromeMediaSourceId), not
- * getDisplayMedia -- this only covers the opt-in native-picker path.
+ * Routes getDisplayMedia to ScreenCaptureKit's picker on macOS 15+ (Screen
+ * Recorder's "Use System Picker" button). Screen Recorder's main flow uses
+ * getUserMedia(chromeMediaSourceId), not getDisplayMedia -- this only covers
+ * the opt-in native-picker path. Linux Wayland no longer registers anything
+ * here: Screen Capture goes through the xdg-desktop-portal Screenshot D-Bus
+ * call (capture/portal-screenshot.ts) instead of getDisplayMedia/PipeWire.
  */
 export function registerDisplayMediaHandler(): void {
-  if (usesOsCapturePicker()) {
-    session.defaultSession.setDisplayMediaRequestHandler(
-      async (_request, callback) => {
-        // PipeWire shows its own picker when capture starts — getSources() would
-        // open a redundant portal session that can't be reused for the stream.
-        callback({ video: { id: 'screen:0:0', name: 'Entire Screen' } });
-      },
-      { useSystemPicker: true }
-    );
-    return;
-  }
-
   if (!supportsNativeSystemPicker()) return;
 
   session.defaultSession.setDisplayMediaRequestHandler(

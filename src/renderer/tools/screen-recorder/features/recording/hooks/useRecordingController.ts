@@ -5,6 +5,7 @@ import { startCapture, fileExtensionForBlob, type CaptureHandle } from '../engin
 import { startCursorCapture, type CursorCaptureHandle } from '../../cursor/engine/cursor-capture';
 import { generateAutoZoomKeyframes } from '../../zoom/engine/auto-zoom-engine';
 import { useZoomStore } from '../../zoom/store/zoom-store';
+import { useWebcamStore } from '../../webcam/store/webcam-store';
 
 export interface LiveCounts {
   cursorCount: number;
@@ -44,7 +45,7 @@ export function useRecordingController(): RecordingController {
     // toolbar applies its chosen source/audio to the store and calls
     // `start()` in the same synchronous handler, before React has a chance
     // to re-render this hook with the new values.
-    const { selectedSource, audio, cropRegion } = useRecordingStore.getState();
+    const { selectedSource, audio, cropRegion, autoZoomEnabled } = useRecordingStore.getState();
     if (!selectedSource) {
       const message = 'Pick a screen or window first.';
       setError(message);
@@ -81,7 +82,8 @@ export function useRecordingController(): RecordingController {
         source,
         audio,
         existingVideoStream: nativePickerStream ?? undefined,
-        cropRegion: cropRegion ?? undefined
+        cropRegion: cropRegion ?? undefined,
+        webcam: useWebcamStore.getState()
       });
       // Cursor samples are normalized against `displayBounds` (see
       // cursor-capture.ts) -- when a crop region is active, the *recorded*
@@ -100,12 +102,19 @@ export function useRecordingController(): RecordingController {
           }
         : source;
       // Uses the recorder's *actual* startedAt (not a pre-call guess) so
-      // cursor samples line up exactly with the video's own t=0.
-      cursorCaptureRef.current = await startCursorCapture(
-        cursorTrackingSource,
-        captureRef.current.startedAt,
-        setLiveCounts
-      );
+      // cursor samples line up exactly with the video's own t=0. Skipped
+      // entirely (not just discarded afterward) when the "Auto Zoom"
+      // sidebar checkbox is off -- see `autoZoomEnabled` in
+      // recording-store.ts -- so there's no tracking overhead and the
+      // recording ends up with an empty cursor/click path, same as a
+      // source with no resolvable bounds.
+      cursorCaptureRef.current = autoZoomEnabled
+        ? await startCursorCapture(
+            cursorTrackingSource,
+            captureRef.current.startedAt,
+            setLiveCounts
+          )
+        : null;
       if (!cursorCaptureRef.current) setLiveCounts(null);
       setIsRecording(true);
       return { ok: true };
@@ -128,7 +137,7 @@ export function useRecordingController(): RecordingController {
     if (!capture) return;
     setIsRecording(false);
 
-    const blob = await capture.stop();
+    const { blob, webcamBlob, webcamStartedAt } = await capture.stop();
     captureRef.current = null;
 
     const { cursorPath, clickPath } = (await cursorCaptureRef.current?.stop()) ?? {
@@ -146,7 +155,8 @@ export function useRecordingController(): RecordingController {
 
     const previewUrl = URL.createObjectURL(blob);
     const extension = fileExtensionForBlob(blob);
-    const fileName = `recording-${Date.now()}.${extension}`;
+    const timestamp = Date.now();
+    const fileName = `recording-${timestamp}.${extension}`;
 
     let filePath: string | null = null;
     try {
@@ -156,13 +166,32 @@ export function useRecordingController(): RecordingController {
       console.error('[useRecordingController] failed to save recording to disk:', err);
     }
 
+    let webcamPreviewUrl: string | null = null;
+    let webcamFilePath: string | null = null;
+    if (webcamBlob) {
+      webcamPreviewUrl = URL.createObjectURL(webcamBlob);
+      const webcamFileName = `recording-${timestamp}-webcam.${fileExtensionForBlob(webcamBlob)}`;
+      try {
+        const webcamArrayBuffer = await webcamBlob.arrayBuffer();
+        webcamFilePath = await window.screenRecorder.recording.saveFile(
+          webcamFileName,
+          webcamArrayBuffer
+        );
+      } catch (err) {
+        console.error('[useRecordingController] failed to save webcam recording to disk:', err);
+      }
+    }
+
     setLastRecording({
       previewUrl,
       filePath,
       sizeBytes: blob.size,
       createdAt: Date.now(),
       cursorPath,
-      clickPath
+      clickPath,
+      webcamPreviewUrl,
+      webcamFilePath,
+      webcamOffsetMs: webcamStartedAt !== null ? webcamStartedAt - capture.startedAt : 0
     });
     setRoute('editor');
     // eslint-disable-next-line react-hooks/exhaustive-deps

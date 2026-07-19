@@ -69,6 +69,26 @@ interface TimelineStoreState {
    */
   activeTool: EditorTool | null;
   /**
+   * True while the timeline's cut/blade tool is armed (toggled from the
+   * Scissors button in EditorTransportBar). Lives here, not local state, so
+   * CutTimeline (rendered independently of EditorPage/EditorTransportBar --
+   * see `activeTool` above) can read it too: while armed, hovering the
+   * timeline shows a cut-marker preview that follows the cursor instead of
+   * just live-scrubbing, and clicking performs the split there instead of
+   * selecting/dragging a clip. Stays armed across multiple cuts until
+   * toggled off again, matching a typical NLE blade-tool workflow.
+   */
+  isCutToolActive: boolean;
+  /**
+   * True while the zoom-placement tool is armed (toggled from the ZoomIn
+   * button in EditorTransportBar) -- same shape as `isCutToolActive` above,
+   * for the same reason. While armed, CutTimeline shows a ghost preview of
+   * a new zoom keyframe in ZoomTrack's own row, following the cursor, and
+   * clicking the timeline places the real keyframe there (via
+   * `useZoomStore.addKeyframe`) instead of selecting/dragging a clip.
+   */
+  isZoomToolActive: boolean;
+  /**
    * One-shot seek command (source ms), separate from `playheadMs` to avoid a
    * feedback loop: CutTimeline (rendered independently of the `<video>`
    * element) can't imperatively set `videoRef.current.currentTime` itself,
@@ -84,6 +104,8 @@ interface TimelineStoreState {
   setSelectedSegmentId: (segmentId: string | null) => void;
   setTimelineZoom: (zoom: number) => void;
   setActiveTool: (tool: EditorTool | null) => void;
+  setCutToolActive: (active: boolean) => void;
+  setZoomToolActive: (active: boolean) => void;
   requestSeek: (ms: number) => void;
   /**
    * Like `requestSeek`, but leaves `playheadMs` alone -- moves the actual
@@ -145,6 +167,8 @@ export const useTimelineStore = create<TimelineStoreState>(
       selectedSegmentId: null,
       timelineZoom: 1,
       activeTool: 'background',
+      isCutToolActive: false,
+      isZoomToolActive: false,
       seekRequestMs: null,
       setPlayhead: (playheadMs) => set({ playheadMs }),
       setIsPlaying: (isPlaying) => set({ isPlaying }),
@@ -153,6 +177,20 @@ export const useTimelineStore = create<TimelineStoreState>(
       setSelectedSegmentId: (selectedSegmentId) => set({ selectedSegmentId }),
       setTimelineZoom: (timelineZoom) => set({ timelineZoom }),
       setActiveTool: (activeTool) => set({ activeTool }),
+      // Cut and zoom tools are mutually exclusive -- arming one disarms the
+      // other, so only one "click the timeline to do X" mode is ever live
+      // at once. Deactivating one leaves the other's state alone (it
+      // should already be false under this same invariant).
+      setCutToolActive: (isCutToolActive) =>
+        set((state) => ({
+          isCutToolActive,
+          isZoomToolActive: isCutToolActive ? false : state.isZoomToolActive
+        })),
+      setZoomToolActive: (isZoomToolActive) =>
+        set((state) => ({
+          isZoomToolActive,
+          isCutToolActive: isZoomToolActive ? false : state.isCutToolActive
+        })),
       requestSeek: (ms) => set({ seekRequestMs: ms, playheadMs: ms }),
       previewSeek: (ms) => set({ seekRequestMs: ms }),
       clearSeekRequest: () => set({ seekRequestMs: null }),
@@ -166,7 +204,8 @@ export const useTimelineStore = create<TimelineStoreState>(
           speed: 1,
           sourceOffsetMs: 0,
           crop: null,
-          trimmed: false
+          trimmed: false,
+          split: false
         };
         set({
           sourceDurationMs: durationMs,
@@ -197,11 +236,16 @@ export const useTimelineStore = create<TimelineStoreState>(
             nextSegments.push(segment);
           } else {
             nextSegments.push(
-              { ...segment, range: { startMs: segment.range.startMs, endMs: splitSourceMs } },
+              {
+                ...segment,
+                range: { startMs: segment.range.startMs, endMs: splitSourceMs },
+                split: true
+              },
               {
                 ...segment,
                 id: crypto.randomUUID(),
-                range: { startMs: splitSourceMs, endMs: segment.range.endMs }
+                range: { startMs: splitSourceMs, endMs: segment.range.endMs },
+                split: true
               }
             );
           }

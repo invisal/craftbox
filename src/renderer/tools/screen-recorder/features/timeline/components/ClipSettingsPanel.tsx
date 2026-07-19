@@ -18,11 +18,14 @@ function TimeField({
   label,
   valueMs,
   maxSec,
+  disabled,
   onCommit
 }: {
   label: string;
   valueMs: number;
   maxSec: number;
+  /** Locked once the clip is a cut result (`TimelineSegment.split`) -- see the timeline's own edge-resize handles, which lock the same way. */
+  disabled?: boolean;
   onCommit: (ms: number) => void;
 }): JSX.Element {
   return (
@@ -35,6 +38,7 @@ function TimeField({
         step={0.1}
         defaultValue={(valueMs / 1000).toFixed(2)}
         key={valueMs}
+        disabled={disabled}
         onBlur={(e) => {
           const next = Number(e.target.value);
           if (Number.isFinite(next)) onCommit(Math.round(next * 1000));
@@ -42,7 +46,7 @@ function TimeField({
         onKeyDown={(e) => {
           if (e.key === 'Enter') e.currentTarget.blur();
         }}
-        className="w-full rounded-md border border-line bg-transparent px-1.5 py-1 text-[11px] text-white/80 outline-none focus:border-accent"
+        className="w-full rounded-md border border-line bg-transparent px-1.5 py-1 text-[11px] text-white/80 outline-none focus:border-accent disabled:cursor-not-allowed disabled:opacity-40"
       />
     </label>
   );
@@ -72,12 +76,14 @@ export function ClipSettingsPanel({ segment }: ClipSettingsPanelProps): JSX.Elem
             label="Start"
             valueMs={segment.range.startMs}
             maxSec={sourceDurationMs / 1000}
+            disabled={segment.split}
             onCommit={(ms) => resizeSegmentEdge(segment.id, 'start', ms)}
           />
           <TimeField
             label="End"
             valueMs={segment.range.endMs}
             maxSec={sourceDurationMs / 1000}
+            disabled={segment.split}
             onCommit={(ms) => resizeSegmentEdge(segment.id, 'end', ms)}
           />
         </div>
@@ -86,6 +92,7 @@ export function ClipSettingsPanel({ segment }: ClipSettingsPanelProps): JSX.Elem
           {segment.speed !== 1
             ? ` (source is ${formatTime(segment.range.endMs - segment.range.startMs)})`
             : ''}
+          {segment.split ? ' -- locked, this clip is a cut result' : ''}
         </p>
       </div>
 

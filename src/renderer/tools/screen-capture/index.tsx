@@ -1,21 +1,25 @@
 import type { JSX } from 'react';
-import { useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Tabs } from '@base-ui/react/tabs';
-import { Camera, ClipboardCopy, Download, Scan } from 'lucide-react';
+import { Camera, CircleCheck, ClipboardCopy, Download, ImageUp, Scan } from 'lucide-react';
 import { cn } from 'cnfast';
 import { type ToolComponentProps } from '@renderer/components/providers/createTabProvider';
 import { Button } from '@renderer/components/ui/Button';
-import { notifyError, notifySuccess } from '@renderer/lib/notify';
 import type { CaptureSource } from '@screen-recorder/types/recording';
 import { ScreenRecordingPermissionBanner } from '@screen-recorder/features/recording/components/ScreenRecordingPermissionBanner';
 import { SourcePickerPanels } from './components/SourcePicker';
+import { CaptureEditor } from './components/CaptureEditor';
+import { EditorToolbar } from './components/EditorToolbar';
+import { LayerPanel } from './components/LayerPanel';
+import { useCaptureEditorStore } from './store/editor.store';
+import { flattenImage } from './lib/flatten';
 import { useCaptureSources, type SourceTab } from './lib/use-capture-sources';
 import {
   blobToDataUrl,
   captureFromSource,
-  captureFromSystemPicker,
   selectAndCaptureRegion,
   screenshotFileName,
+  toPngBlob,
   type RegionCaptureStep
 } from './lib/capture-frame';
 
@@ -71,11 +75,97 @@ export function ScreenCaptureMain({}: ToolComponentProps<Props>): JSX.Element {
   const [selectedSource, setSelectedSource] = useState<CaptureSource | null>(null);
   const [previewDataUrl, setPreviewDataUrl] = useState<string | null>(null);
   const [previewBlob, setPreviewBlob] = useState<Blob | null>(null);
+  const [confirmed, setConfirmed] = useState<'copy' | 'save' | null>(null);
+  const [hideApp, setHideApp] = useState(
+    () => localStorage.getItem('screen-capture.hide-app') !== 'false'
+  );
+  const confirmTimer = useRef<number | undefined>(undefined);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  /** Import a pasted / opened image straight into the editor. Unlike a fresh capture, this does not auto-copy — the image likely came from the clipboard. */
+  const openImage = useCallback(async (source: Blob): Promise<void> => {
+    try {
+      const blob = await toPngBlob(source);
+      const dataUrl = await blobToDataUrl(blob);
+      useCaptureEditorStore.getState().reset();
+      setPreviewBlob(blob);
+      setPreviewDataUrl(dataUrl);
+      setPhase('result');
+    } catch (err) {
+      console.error('Could not open image.', err);
+    }
+  }, []);
+
+  const toggleHideApp = (next: boolean): void => {
+    setHideApp(next);
+    localStorage.setItem('screen-capture.hide-app', String(next));
+  };
+
+  const flashConfirm = (action: 'copy' | 'save'): void => {
+    setConfirmed(action);
+    window.clearTimeout(confirmTimer.current);
+    confirmTimer.current = window.setTimeout(() => setConfirmed(null), 1500);
+  };
 
   const { screens, windows, sources, activeTab, setActiveTab, loading } = useCaptureSources(
     setSelectedSource,
     { enabled: !usesOsPicker }
   );
+
+  // Pasting an image on the main screen opens it in the editor.
+  useEffect(() => {
+    if (phase !== 'idle') return;
+    function onPaste(event: ClipboardEvent): void {
+      const item = Array.from(event.clipboardData?.items ?? []).find((i) =>
+        i.type.startsWith('image/')
+      );
+      const file = item?.getAsFile();
+      if (!file) return;
+      event.preventDefault();
+      void openImage(file);
+    }
+    window.addEventListener('paste', onPaste);
+    return () => window.removeEventListener('paste', onPaste);
+  }, [phase, openImage]);
+
+  // Keeps the clipboard in sync with the editor: every annotation or
+  // corner-radius change re-flattens and copies, debounced so a drag doesn't
+  // re-encode a full-resolution PNG on every pointermove frame.
+  useEffect(() => {
+    if (phase !== 'result' || !previewBlob) return;
+
+    let timer: number | undefined;
+    // Guards against an older, slower flatten finishing after a newer one
+    // and overwriting the clipboard with stale content.
+    let generation = 0;
+
+    const unsubscribe = useCaptureEditorStore.subscribe((state, previous) => {
+      if (
+        state.annotations === previous.annotations &&
+        state.cornerRadius === previous.cornerRadius &&
+        state.crop === previous.crop &&
+        state.background === previous.background
+      ) {
+        return;
+      }
+      window.clearTimeout(timer);
+      timer = window.setTimeout(() => {
+        generation += 1;
+        const current = generation;
+        const { annotations, cornerRadius, crop, background } = useCaptureEditorStore.getState();
+        void flattenImage(previewBlob, annotations, cornerRadius, crop, background)
+          .then((blob) => (current === generation ? copyAfterCapture(blob) : true))
+          .then((copied) => {
+            if (!copied) console.error('Could not copy edited screenshot to clipboard.');
+          });
+      }, 600);
+    });
+
+    return () => {
+      unsubscribe();
+      window.clearTimeout(timer);
+    };
+  }, [phase, previewBlob]);
 
   const handleTabChange = (value: string): void => {
     const tab = value as SourceTab;
@@ -96,17 +186,13 @@ export function ScreenCaptureMain({}: ToolComponentProps<Props>): JSX.Element {
       return;
     }
     const dataUrl = await blobToDataUrl(blob);
+    useCaptureEditorStore.getState().reset();
     setPreviewBlob(blob);
     setPreviewDataUrl(dataUrl);
     setPhase('result');
 
     void copyAfterCapture(blob).then((copied) => {
-      if (copied) {
-        notifySuccess('Screenshot captured and copied to clipboard.');
-      } else {
-        notifySuccess('Screenshot captured.');
-        notifyError('Could not copy to clipboard.');
-      }
+      if (!copied) console.error('Could not copy screenshot to clipboard.');
     });
   };
 
@@ -118,21 +204,26 @@ export function ScreenCaptureMain({}: ToolComponentProps<Props>): JSX.Element {
     setPreviewBlob(null);
 
     try {
-      const blob = await selectAndCaptureRegion(sources, usesOsPicker, (step) => {
-        setCaptureStep(step);
-        setPhase('capturing');
-      });
+      const blob = await selectAndCaptureRegion(
+        sources,
+        usesOsPicker,
+        (step) => {
+          setCaptureStep(step);
+          setPhase('capturing');
+        },
+        { hideApp }
+      );
       await finishCapture(blob);
     } catch (err) {
       setPhase('idle');
-      if (err instanceof Error && err.message.includes('monitor')) {
-        notifyError(err.message);
-      }
+      console.error('Could not capture region.', err);
     }
   };
 
+  // macOS / Windows / Linux X11 only — Linux Wayland always goes through
+  // runRegionCapture's native picker instead (see the merged footer button).
   const runCapture = async (source = selectedSource): Promise<void> => {
-    if (!usesOsPicker && !source) return;
+    if (!source) return;
 
     setSelectedSource(source);
     setCaptureMode('source');
@@ -142,9 +233,9 @@ export function ScreenCaptureMain({}: ToolComponentProps<Props>): JSX.Element {
     setPreviewBlob(null);
 
     try {
-      const blob = usesOsPicker
-        ? await captureFromSystemPicker()
-        : await captureFromSource(source!);
+      // Checked = platform default (hide for screen grabs, keep visible for
+      // window grabs); unchecked = never hide.
+      const blob = await captureFromSource(source, hideApp ? undefined : { hideApp: false });
       await finishCapture(blob);
     } catch {
       setPhase('idle');
@@ -157,42 +248,48 @@ export function ScreenCaptureMain({}: ToolComponentProps<Props>): JSX.Element {
   };
 
   const handleCaptureAgain = (): void => {
+    useCaptureEditorStore.getState().reset();
     setPhase('idle');
     setPreviewDataUrl(null);
     setPreviewBlob(null);
+    setConfirmed(null);
+  };
+
+  /** Copy/Save export what's on the editor stage, not the raw capture. */
+  const editedBlob = async (): Promise<Blob | null> => {
+    if (!previewBlob) return null;
+    const { annotations, cornerRadius, crop, background } = useCaptureEditorStore.getState();
+    return flattenImage(previewBlob, annotations, cornerRadius, crop, background);
   };
 
   const handleCopy = async (): Promise<void> => {
-    if (!previewBlob) return;
-    if (await copyToClipboard(previewBlob)) {
-      notifySuccess('Copied to clipboard.');
+    const blob = await editedBlob();
+    if (!blob) return;
+    if (await copyToClipboard(blob)) {
+      flashConfirm('copy');
     } else {
-      notifyError('Could not copy to clipboard.');
+      console.error('Could not copy screenshot to clipboard.');
     }
   };
 
   const handleSave = async (): Promise<void> => {
-    if (!previewBlob || !window.screenRecorder) return;
+    if (!window.screenRecorder) return;
 
     try {
-      const arrayBuffer = await previewBlob.arrayBuffer();
+      const blob = await editedBlob();
+      if (!blob) return;
+      const arrayBuffer = await blob.arrayBuffer();
       const filePath = await window.screenRecorder.screenshot.save(
         arrayBuffer,
         screenshotFileName()
       );
-      if (filePath) {
-        notifySuccess(`Saved to ${filePath}.`);
-      }
+      if (filePath) flashConfirm('save');
     } catch (err) {
-      notifyError(err instanceof Error ? err.message : 'Could not save screenshot.');
+      console.error('Could not save screenshot.', err);
     }
   };
 
   const captureDisabled = usesOsPicker ? false : !selectedSource || loading;
-
-  const idleDescription = usesOsPicker
-    ? 'Click Capture to choose a screen or window in the system dialog.'
-    : undefined;
 
   const capturingMessage =
     captureMode === 'region' && captureStep === 'processing'
@@ -200,12 +297,10 @@ export function ScreenCaptureMain({}: ToolComponentProps<Props>): JSX.Element {
       : captureMode === 'region' && captureStep === 'region'
         ? 'Drag a region on screen…'
         : captureMode === 'region' && usesOsPicker
-          ? 'Choose a monitor in the system dialog…'
+          ? 'Choose what to capture in the system dialog…'
           : captureMode === 'region'
             ? 'Capturing selected region…'
-            : usesOsPicker
-              ? 'Choose what to share in the system dialog…'
-              : 'Capturing…';
+            : 'Capturing…';
 
   return (
     <Tabs.Root
@@ -220,7 +315,8 @@ export function ScreenCaptureMain({}: ToolComponentProps<Props>): JSX.Element {
               <div>
                 <h1 className="text-base font-medium">Screen Capture</h1>
                 <p className="mt-0.5 text-xs text-text-dim">
-                  Capture a full screen or window, or drag a region.
+                  Capture a full screen or window, or drag a region. You can also paste (Ctrl+V) or
+                  open an image to edit it.
                 </p>
               </div>
             ) : (
@@ -236,7 +332,9 @@ export function ScreenCaptureMain({}: ToolComponentProps<Props>): JSX.Element {
           ) : (
             <div>
               <h1 className="text-base font-medium">Preview</h1>
-              <p className="mt-0.5 text-xs text-text-dim">Save your screenshot or capture again.</p>
+              <p className="mt-0.5 text-xs text-text-dim">
+                Annotate your screenshot, then copy or save it — or capture again.
+              </p>
             </div>
           )}
         </header>
@@ -246,15 +344,13 @@ export function ScreenCaptureMain({}: ToolComponentProps<Props>): JSX.Element {
         <div
           className={cn(
             'flex min-h-0 flex-1 flex-col gap-2',
-            phase === 'result' ? 'px-6 py-6' : 'p-6 pb-4',
+            // Result phase goes edge-to-edge so the dotted editor canvas
+            // fills the space between header and footer.
+            phase !== 'result' && 'p-6 pb-4',
             phase === 'idle' && 'overflow-y-auto'
           )}
         >
           <ScreenRecordingPermissionBanner />
-
-          {phase === 'idle' && usesOsPicker && idleDescription && (
-            <p className="text-sm text-text-dim">{idleDescription}</p>
-          )}
 
           {phase === 'idle' && !usesOsPicker && (
             <div className="w-full min-w-0">
@@ -280,12 +376,10 @@ export function ScreenCaptureMain({}: ToolComponentProps<Props>): JSX.Element {
           )}
 
           {phase === 'result' && previewDataUrl && (
-            <div className="flex min-h-0 flex-1 items-center justify-center overflow-hidden">
-              <img
-                src={previewDataUrl}
-                alt="Captured screenshot"
-                className="max-h-full max-w-full object-contain"
-              />
+            <div className="bg-dotted flex min-h-0 flex-1 gap-3 px-6 py-6">
+              <EditorToolbar />
+              <CaptureEditor dataUrl={previewDataUrl} />
+              <LayerPanel />
             </div>
           )}
         </div>
@@ -294,11 +388,11 @@ export function ScreenCaptureMain({}: ToolComponentProps<Props>): JSX.Element {
       {phase === 'result' && (
         <footer className="flex shrink-0 flex-wrap items-center justify-end gap-2 border-t border-border-dark bg-surface px-6 py-4">
           <Button variant="secondary" size="sm" onClick={() => void handleCopy()}>
-            <ClipboardCopy size={14} />
+            {confirmed === 'copy' ? <CircleCheck size={14} /> : <ClipboardCopy size={14} />}
             Copy to clipboard
           </Button>
           <Button variant="secondary" size="sm" onClick={() => void handleSave()}>
-            <Download size={14} />
+            {confirmed === 'save' ? <CircleCheck size={14} /> : <Download size={14} />}
             Save to file
           </Button>
           <Button variant="primary" size="sm" onClick={handleCaptureAgain}>
@@ -310,15 +404,49 @@ export function ScreenCaptureMain({}: ToolComponentProps<Props>): JSX.Element {
 
       {phase === 'idle' && (
         <footer className="flex shrink-0 items-center justify-end gap-2 border-t border-border-dark bg-surface px-6 py-4">
-          <Button variant="secondary" size="sm" onClick={() => void runRegionCapture()}>
-            <Scan size={14} />
-            Capture region
+          <label className="mr-auto flex cursor-pointer items-center gap-2 text-xs text-text-dim select-none">
+            <input
+              type="checkbox"
+              checked={hideApp}
+              onChange={(e) => toggleHideApp(e.target.checked)}
+              className="accent-(--color-accent)"
+            />
+            Hide this app while capturing
+          </label>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              // Reset so picking the same file again still fires onChange.
+              e.target.value = '';
+              if (file) void openImage(file);
+            }}
+          />
+          <Button
+            variant="secondary"
+            size="sm"
+            title="Open an image to edit — you can also paste one (Ctrl+V)"
+            onClick={() => fileInputRef.current?.click()}
+          >
+            <ImageUp size={14} />
+            Open image
           </Button>
+          {/* Linux Wayland: GNOME's native picker already offers screen / window /
+              selection in one UI, so a separate "Capture region" button is redundant. */}
+          {!usesOsPicker && (
+            <Button variant="secondary" size="sm" onClick={() => void runRegionCapture()}>
+              <Scan size={14} />
+              Capture region
+            </Button>
+          )}
           <Button
             variant="primary"
             size="sm"
             disabled={captureDisabled}
-            onClick={() => void runCapture()}
+            onClick={() => void (usesOsPicker ? runRegionCapture() : runCapture())}
           >
             <Camera size={14} />
             Capture
