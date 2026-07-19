@@ -180,6 +180,13 @@ async function openRecorderToolbar(
   if (!owner) return;
   ownerWindow = owner;
 
+  // Area-crop recording relays frames through a canvas driven by
+  // requestAnimationFrame in this (owner) window's renderer -- Chromium
+  // throttles/suspends rAF once the window is hidden below, which starved
+  // the canvas of frames and produced an unplayable recording. Disabling
+  // background throttling keeps that loop running at full rate while hidden.
+  owner.webContents.setBackgroundThrottling(false);
+
   // `mainOnly` -- only the owning window hides. The toolbar is a separate
   // window and must stay visible; the darwin `app.hide()` path (no
   // `mainOnly`) would take it down too.
@@ -191,6 +198,9 @@ async function openRecorderToolbar(
 
 /** Tears down the toolbar and brings the owning window back. */
 function closeRecorderToolbar(): void {
+  if (ownerWindow && !ownerWindow.isDestroyed()) {
+    ownerWindow.webContents.setBackgroundThrottling(true);
+  }
   void restoreCaptureWindow(ownerWindow, { focus: true });
   lastTargetBounds = null;
 
