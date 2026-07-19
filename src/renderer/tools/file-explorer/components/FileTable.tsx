@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { type DragEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   useReactTable,
   getCoreRowModel,
@@ -16,9 +16,13 @@ import { columns, compareEntries, extensionKey, type FileEntry, type FileRow } f
 import { useFileExplorerStore } from '../store/fileExplorer.store';
 import { dispatchMutation } from '../lib/syncDispatcher';
 import { getCapabilitiesForLocation } from '../lib/capabilities';
+import { getParentPath } from '../lib/paths';
 
 const DEFAULT_NEW_TEXT_FILE_NAME = 'New Text Document.txt';
 const DEFAULT_NEW_FOLDER_NAME = 'New Folder';
+
+/** Identifies drags that originated from a FileTable's own rows, so drop targets ignore unrelated drags (e.g. dragged text). */
+const FILE_DRAG_MIME_TYPE = 'application/x-craftbox-file-entries';
 
 /** Progress for a copy/move that streams bytes between local disk and R2. */
 interface TransferProgress {
@@ -195,6 +199,32 @@ export function FileTable({ entries, currentPath, onNavigate, onSelectionChange 
     }
   };
 
+  // Shared by paste and drag-drop-copy. Only relevant when the copy/move
+  // streams bytes between local disk and R2 (same-scheme ops are fast enough
+  // that a progress UI would just flash).
+  const runTransfer = async (
+    paths: string[],
+    destDirUri: string,
+    move: boolean,
+    onSuccess?: () => void
+  ) => {
+    const unsubscribe = window.fileExplorer.onTransferProgress(setTransferProgress);
+    try {
+      await dispatchMutation({
+        locationUri: destDirUri,
+        run: () =>
+          move
+            ? window.fileExplorer.moveEntries(paths, destDirUri)
+            : window.fileExplorer.copyEntries(paths, destDirUri),
+        onSuccess,
+        onRefetch: bumpRefresh
+      });
+    } finally {
+      unsubscribe();
+      setTransferProgress(null);
+    }
+  };
+
   const handlePaste = async () => {
     // Prefer the in-app clipboard (authoritative for cross-panel copies,
     // including R2 sources the native clipboard can't represent). Only fall
@@ -203,25 +233,49 @@ export function FileTable({ entries, currentPath, onNavigate, onSelectionChange 
     const files = clipboard ?? (await window.fileExplorer.readClipboardFiles());
     if (!files || files.paths.length === 0) return;
 
-    // Only relevant when the copy/move streams bytes between local disk and
-    // R2 (same-scheme ops are fast enough that a progress UI would just flash).
-    const unsubscribe = window.fileExplorer.onTransferProgress(setTransferProgress);
+    await runTransfer(files.paths, currentPath, files.mode === 'cut', () => {
+      if (files.mode === 'cut') setClipboard(null);
+    });
+  };
+
+  const handleRowDragStart = (
+    _entry: FileEntry,
+    draggedEntries: FileEntry[],
+    e: DragEvent<HTMLDivElement>
+  ) => {
+    e.dataTransfer.effectAllowed = 'copy';
+    e.dataTransfer.setData(
+      FILE_DRAG_MIME_TYPE,
+      JSON.stringify(draggedEntries.map((dragged) => dragged.path))
+    );
+  };
+
+  const readDragPaths = (e: DragEvent<HTMLDivElement>): string[] => {
+    const raw = e.dataTransfer.getData(FILE_DRAG_MIME_TYPE);
+    if (!raw) return [];
     try {
-      await dispatchMutation({
-        locationUri: currentPath,
-        run: () =>
-          files.mode === 'cut'
-            ? window.fileExplorer.moveEntries(files.paths, currentPath)
-            : window.fileExplorer.copyEntries(files.paths, currentPath),
-        onSuccess: () => {
-          if (files.mode === 'cut') setClipboard(null);
-        },
-        onRefetch: bumpRefresh
-      });
-    } finally {
-      unsubscribe();
-      setTransferProgress(null);
+      const parsed: unknown = JSON.parse(raw);
+      return Array.isArray(parsed) ? parsed.filter((p): p is string => typeof p === 'string') : [];
+    } catch {
+      return [];
     }
+  };
+
+  const handleDropCopy = (destDirUri: string, paths: string[]) => {
+    if (paths.length === 0) return;
+    void runTransfer(paths, destDirUri, false);
+  };
+
+  const handleDropOnRow = (row: FileEntry, e: DragEvent<HTMLDivElement>) => {
+    handleDropCopy(row.path, readDragPaths(e));
+  };
+
+  const handleDropBackground = (e: DragEvent<HTMLDivElement>) => {
+    const paths = readDragPaths(e);
+    // No-op guard: dropping back into the same folder the items already live
+    // in would just create redundant "copy" duplicates.
+    if (paths.length > 0 && paths.every((p) => getParentPath(p) === currentPath)) return;
+    handleDropCopy(currentPath, paths);
   };
 
   const runDelete = (paths: string[]) => {
@@ -335,6 +389,11 @@ export function FileTable({ entries, currentPath, onNavigate, onSelectionChange 
         onCut={() => handleCut(selectedEntries.map((entry) => entry.path))}
         onPaste={handlePaste}
         onDelete={() => handleDelete(selectedEntries.map((entry) => entry.path))}
+        onRowDragStart={handleRowDragStart}
+        dragMimeType={FILE_DRAG_MIME_TYPE}
+        canDropOnRow={(entry) => entry.isDirectory}
+        onDropOnRow={handleDropOnRow}
+        onDropBackground={handleDropBackground}
         renderContextMenu={({ row, selectedRows }) => {
           if (!row) {
             return (
