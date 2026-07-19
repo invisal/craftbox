@@ -1,4 +1,5 @@
 import {
+  type DragEvent,
   type KeyboardEvent,
   type MouseEvent,
   type ReactNode,
@@ -18,6 +19,10 @@ import { ContextMenu } from './ContextMenu';
 // height below (row cell padding + line height).
 const ROW_HEIGHT = 28;
 
+// How long to wait after the last keypress before the accumulated
+// type-ahead search query resets (classic Explorer/Finder timing).
+const TYPEAHEAD_RESET_MS = 300;
+
 interface ListViewContextMenuArgs<TData> {
   /** null when the right-click landed on background rather than a row (empty folder, or space below the last row). */
   row: TData | null;
@@ -27,6 +32,14 @@ interface ListViewContextMenuArgs<TData> {
 interface ListViewProps<TData> {
   table: Table<TData>;
   getRowId: (row: TData) => string;
+  /**
+   * Extracts a searchable label from a row, enabling type-ahead:
+   * pressing a printable key jumps focus/selection to the first row whose
+   * label starts with what's typed (Explorer/Finder-style). Omit this prop
+   * to disable type-ahead entirely -- unmodified letter/digit keypresses
+   * remain a no-op, same as today.
+   */
+  getRowLabel?: (row: TData) => string;
   selectedIds: Set<string>;
   onSelectionChange: (ids: Set<string>) => void;
   onRowClick?: (row: TData) => void;
@@ -38,11 +51,26 @@ interface ListViewProps<TData> {
   onCut?: () => void;
   onPaste?: () => void;
   onDelete?: () => void;
+  /**
+   * Enables HTML5 drag-and-drop of rows. `draggedRows` is the full set being
+   * dragged: the current selection if `row` is part of it, otherwise just
+   * `row` alone (dragging a row that isn't selected drags only that row,
+   * matching the right-click-to-select behavior in handleContextMenuOpen).
+   */
+  onRowDragStart?: (row: TData, draggedRows: TData[], e: DragEvent<HTMLDivElement>) => void;
+  /** MIME type set by onRowDragStart, used to ignore drags this list didn't originate (e.g. dragged text). */
+  dragMimeType?: string;
+  /** Whether `row` can accept a drop -- rows for which this returns false fall through to onDropBackground instead. */
+  canDropOnRow?: (row: TData) => boolean;
+  onDropOnRow?: (row: TData, e: DragEvent<HTMLDivElement>) => void;
+  /** Fires for drops that don't land on a valid row target (empty space, a non-drop-target row). */
+  onDropBackground?: (e: DragEvent<HTMLDivElement>) => void;
 }
 
 export function ListView<TData>({
   table,
   getRowId,
+  getRowLabel,
   selectedIds,
   onSelectionChange,
   onRowClick,
@@ -53,7 +81,12 @@ export function ListView<TData>({
   onCopy,
   onCut,
   onPaste,
-  onDelete
+  onDelete,
+  onRowDragStart,
+  dragMimeType,
+  canDropOnRow,
+  onDropOnRow,
+  onDropBackground
 }: ListViewProps<TData>) {
   const rows = table.getRowModel().rows;
   const containerRef = useRef<HTMLDivElement>(null);
@@ -69,6 +102,13 @@ export function ListView<TData>({
   // scrolled. The virtualizer needs its height (as scrollMargin/
   // scrollPaddingStart) to keep rows from landing underneath it.
   const [headerHeight, setHeaderHeight] = useState(0);
+
+  // Ids currently being dragged (set on this row's own dragstart, not a
+  // cross-window drag originating elsewhere) -- used to dim the dragged rows
+  // and to refuse dropping a row onto itself/its own selection.
+  const [draggingIds, setDraggingIds] = useState<Set<string> | null>(null);
+  const [dragOverRowId, setDragOverRowId] = useState<string | null>(null);
+  const [dragOverBackground, setDragOverBackground] = useState(false);
 
   useLayoutEffect(() => {
     const el = headerRef.current;
@@ -87,9 +127,20 @@ export function ListView<TData>({
   const pendingMoveRef = useRef<{ baseIndex: number; delta: number; extend: boolean } | null>(null);
   const rafIdRef = useRef<number | null>(null);
 
+  // Buffers consecutive printable keypresses into a search query for
+  // type-ahead jump-to-item. Repeating the *same* single character (e.g.
+  // mashing "s") doesn't grow the query to "sss" (which would rarely match
+  // anything) -- it instead cycles forward through every row starting with
+  // "s". Typing different characters within TYPEAHEAD_RESET_MS grows a
+  // multi-char prefix (e.g. "d" then "o" -> searches for names starting
+  // with "do").
+  const typeaheadQueryRef = useRef('');
+  const typeaheadTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   useEffect(() => {
     return () => {
       if (rafIdRef.current !== null) cancelAnimationFrame(rafIdRef.current);
+      if (typeaheadTimeoutRef.current !== null) clearTimeout(typeaheadTimeoutRef.current);
     };
   }, []);
 
@@ -155,6 +206,52 @@ export function ListView<TData>({
     }
   };
 
+  // Resolves the type-ahead query for a newly typed character and returns
+  // the row index to jump to, or -1 if nothing matches. Mutates
+  // typeaheadQueryRef/typeaheadTimeoutRef as a side effect (query buffering
+  // + reset timer) -- callers just act on the returned index.
+  const resolveTypeaheadMatch = (key: string, currentIndex: number): number => {
+    if (!getRowLabel) return -1;
+
+    // toLocaleLowerCase (not toLowerCase) so case-folding respects the
+    // user's locale (e.g. Turkish dotted/dotless I). This does not do
+    // accent-folding (e.g. "e" won't match "é") -- unlike the list's sort
+    // order, which uses localeCompare with sensitivity: 'base'. Matching
+    // and sort-ordering are different concerns; Explorer/Finder's own
+    // type-ahead has the same limitation.
+    const typedChar = key.toLocaleLowerCase();
+    const prevQuery = typeaheadQueryRef.current;
+    const isRepeatOfSameKey =
+      prevQuery.length > 0 && prevQuery === typedChar.repeat(prevQuery.length);
+
+    const query = isRepeatOfSameKey ? prevQuery : prevQuery + typedChar;
+    typeaheadQueryRef.current = query;
+
+    if (typeaheadTimeoutRef.current !== null) clearTimeout(typeaheadTimeoutRef.current);
+    typeaheadTimeoutRef.current = setTimeout(() => {
+      typeaheadQueryRef.current = '';
+      typeaheadTimeoutRef.current = null;
+    }, TYPEAHEAD_RESET_MS);
+
+    if (isRepeatOfSameKey) {
+      // Cycle forward from just past the current row, wrapping around, so
+      // repeated presses advance through every match and wrap back to the
+      // first after the last.
+      for (let offset = 1; offset <= rows.length; offset++) {
+        const index = (currentIndex + offset) % rows.length;
+        if (getRowLabel(rows[index].original).toLocaleLowerCase().startsWith(query)) return index;
+      }
+      return -1;
+    }
+
+    // Fresh/growing query: always search from the top, not from the
+    // current position -- the list is already meaningfully sorted
+    // (dirs-first/alphabetical), so "first match from the top" is the
+    // predictable, expected result rather than depending on where focus
+    // currently is.
+    return rows.findIndex((r) => getRowLabel(r.original).toLocaleLowerCase().startsWith(query));
+  };
+
   const cancelPendingMove = () => {
     if (rafIdRef.current !== null) {
       cancelAnimationFrame(rafIdRef.current);
@@ -201,6 +298,67 @@ export function ListView<TData>({
     onRowClick?.(entry);
   };
 
+  const isForeignDrag = (e: DragEvent<HTMLDivElement>) =>
+    dragMimeType !== undefined && !e.dataTransfer.types.includes(dragMimeType);
+
+  const handleRowDragStart = (entry: TData, id: string, e: DragEvent<HTMLDivElement>) => {
+    const draggedIds = selectedIds.has(id) ? selectedIds : new Set([id]);
+    if (!selectedIds.has(id)) {
+      onSelectionChange(draggedIds);
+      anchorIdRef.current = id;
+    }
+    setDraggingIds(draggedIds);
+    const draggedRows = rows
+      .filter((r) => draggedIds.has(getRowId(r.original)))
+      .map((r) => r.original);
+    onRowDragStart?.(entry, draggedRows, e);
+  };
+
+  const handleRowDragEnd = () => {
+    setDraggingIds(null);
+    setDragOverRowId(null);
+    setDragOverBackground(false);
+  };
+
+  const handleRowDragOver = (entry: TData, id: string, e: DragEvent<HTMLDivElement>) => {
+    if (!onDropOnRow || !canDropOnRow?.(entry) || draggingIds?.has(id) || isForeignDrag(e)) return;
+    e.preventDefault();
+    e.stopPropagation();
+    e.dataTransfer.dropEffect = 'copy';
+    setDragOverRowId(id);
+  };
+
+  const handleRowDragLeave = (id: string) => {
+    setDragOverRowId((current) => (current === id ? null : current));
+  };
+
+  const handleRowDrop = (entry: TData, id: string, e: DragEvent<HTMLDivElement>) => {
+    if (!onDropOnRow || !canDropOnRow?.(entry) || draggingIds?.has(id) || isForeignDrag(e)) return;
+    e.preventDefault();
+    e.stopPropagation();
+    setDragOverRowId(null);
+    onDropOnRow(entry, e);
+  };
+
+  const handleBackgroundDragOver = (e: DragEvent<HTMLDivElement>) => {
+    if (!onDropBackground || isForeignDrag(e)) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'copy';
+    setDragOverBackground(true);
+  };
+
+  const handleBackgroundDragLeave = (e: DragEvent<HTMLDivElement>) => {
+    if (e.currentTarget.contains(e.relatedTarget as Node)) return;
+    setDragOverBackground(false);
+  };
+
+  const handleBackgroundDrop = (e: DragEvent<HTMLDivElement>) => {
+    if (!onDropBackground || isForeignDrag(e)) return;
+    e.preventDefault();
+    setDragOverBackground(false);
+    onDropBackground(e);
+  };
+
   // Single handler for the whole list area (see the container's onContextMenu
   // below) rather than one per row -- it looks at the event target to figure
   // out whether a row or the background was right-clicked.
@@ -231,6 +389,23 @@ export function ListView<TData>({
     if (rows.length === 0 || effectiveFocusedId === null) return;
     const currentIndex = rows.findIndex((r) => getRowId(r.original) === effectiveFocusedId);
 
+    // Type-ahead must be checked before the switch: unmodified 'c'/'x'/'a'
+    // already have dedicated case labels below (for their mod+key
+    // shortcuts), so an unmodified press of one of those letters would hit
+    // its case, find `mod` false, and `break` without ever reaching
+    // `default` -- silently swallowing the letter instead of jumping to
+    // it. Checking here intercepts all unmodified single-character keys up
+    // front, while modifier-held presses still fall through to the switch
+    // below for copy/cut/select-all. ' ' is explicitly excluded so it
+    // keeps its existing "toggle selection of focused row" behavior.
+    if (getRowLabel && !mod && !e.altKey && e.key.length === 1 && e.key !== ' ') {
+      e.preventDefault();
+      cancelPendingMove();
+      const matchIndex = resolveTypeaheadMatch(e.key, currentIndex);
+      if (matchIndex >= 0) moveFocus(matchIndex, false);
+      return;
+    }
+
     switch (e.key) {
       case 'c':
       case 'C':
@@ -247,7 +422,6 @@ export function ListView<TData>({
         }
         break;
       case 'Delete':
-      case 'Backspace':
         if (onDelete) {
           e.preventDefault();
           onDelete();
@@ -309,9 +483,13 @@ export function ListView<TData>({
       onBlur={() => setIsFocusWithin(false)}
       onKeyDown={handleKeyDown}
       onContextMenu={handleContextMenuOpen}
+      onDragOver={handleBackgroundDragOver}
+      onDragLeave={handleBackgroundDragLeave}
+      onDrop={handleBackgroundDrop}
       className={cn(
         'flex-1 overflow-auto min-h-0 outline-none',
-        rows.length === 0 && emptyState && 'flex flex-col'
+        rows.length === 0 && emptyState && 'flex flex-col',
+        dragOverBackground && 'bg-accent/5'
       )}
     >
       <div ref={headerRef} role="rowgroup" className="sticky top-0 z-10">
@@ -382,13 +560,27 @@ export function ListView<TData>({
                   height: `${virtualRow.size}px`,
                   transform: `translateY(${virtualRow.start - headerHeight}px)`
                 }}
-                onMouseDown={(e) => e.preventDefault()}
+                // Chromium won't fire dragstart on a draggable element whose
+                // mousedown was preventDefault()'d, so skip it when dragging
+                // is enabled -- text selection is already blocked by the
+                // select-none class below.
+                onMouseDown={(e) => {
+                  if (!onRowDragStart) e.preventDefault();
+                }}
                 onClick={(e) => handleRowClick(entry, id, e)}
                 onDoubleClick={() => onRowDoubleClick?.(entry)}
+                draggable={!!onRowDragStart}
+                onDragStart={(e) => handleRowDragStart(entry, id, e)}
+                onDragEnd={handleRowDragEnd}
+                onDragOver={(e) => handleRowDragOver(entry, id, e)}
+                onDragLeave={() => handleRowDragLeave(id)}
+                onDrop={(e) => handleRowDrop(entry, id, e)}
                 className={cn(
                   'hover:bg-surface-2 cursor-pointer select-none outline-none',
                   isSelected && 'bg-surface-3',
-                  isFocusedRow && isFocusWithin && 'ring-1 ring-inset ring-accent'
+                  isFocusedRow && isFocusWithin && 'ring-1 ring-inset ring-accent',
+                  draggingIds?.has(id) && 'opacity-40',
+                  dragOverRowId === id && 'ring-1 ring-inset ring-accent bg-accent/10'
                 )}
               >
                 {row.getVisibleCells().map((cell) => (

@@ -6,7 +6,8 @@ export function ToolbarRoot({ className, ...props }: ComponentProps<typeof Toolb
   return (
     <ToolbarPrimitive.Root
       className={cn(
-        'flex items-center gap-1 border-b border-border bg-surface px-2 py-1.5',
+        'flex h-9 items-center border-b border-border bg-surface',
+        'divide-x divide-border',
         className
       )}
       {...props}
@@ -16,15 +17,19 @@ export function ToolbarRoot({ className, ...props }: ComponentProps<typeof Toolb
 
 export function ToolbarButton({
   className,
+  shape = 'default',
   ...props
-}: ComponentProps<typeof ToolbarPrimitive.Button>) {
+}: ComponentProps<typeof ToolbarPrimitive.Button> & { shape?: 'square' | 'default' }) {
   return (
     <ToolbarPrimitive.Button
       className={cn(
-        'inline-flex h-7 items-center justify-center gap-1.5 rounded-sm px-2 text-[13px] text-text-dim outline-none select-none',
-        'hover:bg-surface-2 hover:text-text-base',
-        'focus-visible:bg-surface-2 focus-visible:text-text-base',
+        'h-full px-3 gap-1.5 outline-none select-none',
+        'inline-flex items-center justify-center',
+        'cursor-pointer',
+        'text-xs',
+        'hover:bg-surface-3 hover:text-text-base',
         'data-[disabled]:pointer-events-none data-[disabled]:opacity-50',
+        shape === 'square' && 'aspect-square px-0',
         className
       )}
       {...props}

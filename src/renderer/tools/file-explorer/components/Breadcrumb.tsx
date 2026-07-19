@@ -1,4 +1,4 @@
-import { ChevronRight, HardDrive } from 'lucide-react';
+import { ChevronDown, ChevronRight, CloudIcon, HardDrive } from 'lucide-react';
 import { cn } from 'cnfast';
 import { useEffect, useRef, useState } from 'react';
 import { Menu } from '@renderer/components/ui/Menu';
@@ -7,6 +7,7 @@ import { splitPathSegments } from '../lib/paths';
 import { getFavoriteIcon } from '../lib/sidebarIcons';
 import type { SidebarSections } from '../../../../preload/file-explorer/api';
 import type { PanelMode } from '../store/fileExplorer.store';
+import { Toolbar } from '@renderer/components/ui/Toolbar';
 
 interface BreadcrumbModeSwitch {
   value: PanelMode;
@@ -23,9 +24,9 @@ interface BreadcrumbProps {
 
 export function Breadcrumb(props: BreadcrumbProps) {
   return (
-    <div className="flex items-center gap-1 p-1 px-1 bg-surface border-b border-border">
+    <Toolbar.Root>
       <BreadcrumbInner {...props} />
-    </div>
+    </Toolbar.Root>
   );
 }
 
@@ -40,11 +41,11 @@ export function BreadcrumbInner({
 
   return (
     <>
+      {modeSwitch && <BreadcrumbModeSwitch modeSwitch={modeSwitch} />}
       {showPath && (
         <>
-          <div>
-            <BreadcrumbLocationPicker onNavigate={onNavigate} />
-          </div>
+          <BreadcrumbLocationPicker onNavigate={onNavigate} />
+
           {isEditing ? (
             <BreadcrumbPathInput
               currentPath={currentPath}
@@ -58,9 +59,7 @@ export function BreadcrumbInner({
               }}
               className={cn(
                 'flex flex-1 items-center px-1 h-8 text-xs overflow-x-auto shrink-0 select-none gap-2 px-3', // Layout
-                'bg-surface-2', // Background
-                'border border-border rounded', // Border
-                'shadow-[inset_0_1px_2px_rgba(0,0,0,0.12),inset_0_-1px_0_rgba(255,255,255,0.05)]' // 3D inset
+                'hover:bg-surface-2 cursor-pointer'
               )}
             >
               {segments.map((segment, i) => {
@@ -76,7 +75,7 @@ export function BreadcrumbInner({
                           <button
                             onClick={() => !isLast && onNavigate(segment.path)}
                             className={cn(
-                              'px-0 h-6 rounded max-w-48 truncate text-xs border border-surface-2 cursor-pointer', // Layout
+                              'px-0 h-6 rounded max-w-48 truncate text-xs cursor-pointer', // Layout
                               'text-text-dim hover:bg-surface hover:border-border hover:px-1.5 hover:-mx-1.5', // Color + hover
                               'data-[popup-open]:bg-surface data-[popup-open]:border-border data-[popup-open]:px-1.5 data-[popup-open]:-mx-1.5' // Keep hover style while menu is open
                             )}
@@ -106,7 +105,6 @@ export function BreadcrumbInner({
         </>
       )}
       {!showPath && <div className="flex-1" />}
-      {modeSwitch && <BreadcrumbModeSwitch modeSwitch={modeSwitch} />}
     </>
   );
 }
@@ -115,30 +113,20 @@ function BreadcrumbModeSwitch({ modeSwitch }: { modeSwitch: BreadcrumbModeSwitch
   const { value, onChange } = modeSwitch;
 
   return (
-    <div className="flex items-center gap-0.5 shrink-0 p-0.5 rounded border border-border bg-surface-2">
-      <button
-        onClick={() => onChange('explorer')}
-        className={cn(
-          'px-2 h-6 rounded text-xs cursor-pointer transition-colors', // Layout
-          value === 'explorer'
-            ? 'bg-surface-4 text-text-base'
-            : 'text-text-dim hover:bg-surface-3 hover:text-text-base'
-        )}
-      >
-        Explorer
-      </button>
-      <button
-        onClick={() => onChange('preview')}
-        className={cn(
-          'px-2 h-6 rounded text-xs cursor-pointer transition-colors', // Layout
-          value === 'preview'
-            ? 'bg-surface-4 text-text-base'
-            : 'text-text-dim hover:bg-surface-3 hover:text-text-base'
-        )}
-      >
-        Preview
-      </button>
-    </div>
+    <Menu.Root>
+      <Menu.Trigger
+        render={
+          <Toolbar.Button>
+            <span>{value === 'explorer' ? 'Explorer' : 'Preview'}</span>
+            <ChevronDown className="size-3.5 text-gray-500" />
+          </Toolbar.Button>
+        }
+      />
+      <Menu.Content>
+        <Menu.Item onClick={() => onChange('explorer')}>Explorer</Menu.Item>
+        <Menu.Item onClick={() => onChange('preview')}>Preview</Menu.Item>
+      </Menu.Content>
+    </Menu.Root>
   );
 }
 
@@ -196,9 +184,8 @@ function BreadcrumbPathInput({
       className={cn(
         'flex-1 h-8 px-3 text-xs', // Layout
         'bg-surface-2', // Background
-        'border border-border rounded', // Border
-        'text-text-base outline-none', // Text
-        'shadow-[inset_0_1px_2px_rgba(0,0,0,0.12),inset_0_-1px_0_rgba(255,255,255,0.05)]' // 3D inset
+        'border-l border-border', // Border
+        'text-text-base outline-none' // Text
       )}
     />
   );
@@ -216,9 +203,9 @@ function BreadcrumbLocationPicker({ onNavigate }: { onNavigate: (path: string) =
       <Menu.Trigger
         title="Locations"
         render={
-          <button className="h-8 w-8 flex items-center justify-center hover:bg-surface-2 rounded border border-transparent hover:border-border cursor-pointer">
+          <Toolbar.Button shape="square">
             <HardDrive size={14} />
-          </button>
+          </Toolbar.Button>
         }
       />
 
@@ -243,6 +230,17 @@ function BreadcrumbLocationPicker({ onNavigate }: { onNavigate: (path: string) =
             {sections.locations.map((item) => (
               <Menu.Item key={item.path} onClick={() => onNavigate(item.path)}>
                 <HardDrive size={14} className="shrink-0 text-zinc-500" />
+                <span className="truncate">{item.label}</span>
+              </Menu.Item>
+            ))}
+          </Menu.Group>
+        )}
+        {sections && sections.r2Buckets.length > 0 && (
+          <Menu.Group>
+            <Menu.GroupLabel>R2</Menu.GroupLabel>
+            {sections.r2Buckets.map((item) => (
+              <Menu.Item key={item.path} onClick={() => onNavigate(item.path)}>
+                <CloudIcon size={14} className="shrink-0 text-zinc-500" />
                 <span className="truncate">{item.label}</span>
               </Menu.Item>
             ))}

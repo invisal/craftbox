@@ -10,6 +10,7 @@ interface KubeTableRowProps<T> {
   selectedRowKey?: string | number;
   colWidths: Record<string, number>;
   resizable?: boolean;
+  isExpanded?: boolean;
 }
 
 export function KubeTableRow<T>({
@@ -19,7 +20,8 @@ export function KubeTableRow<T>({
   onRowClick,
   selectedRowKey,
   colWidths,
-  resizable
+  resizable,
+  isExpanded
 }: KubeTableRowProps<T>) {
   const key = getRowKey(row);
   const isSelected = selectedRowKey !== undefined && selectedRowKey === key;
@@ -28,9 +30,9 @@ export function KubeTableRow<T>({
     <tr
       onClick={() => onRowClick?.(row)}
       className={cn(
-        'transition-colors duration-100 border-b border-border-dark/30 hover:bg-surface-2/45',
+        'transition-colors duration-100 border-b border-border hover:bg-surface-2',
         onRowClick && 'cursor-pointer',
-        isSelected && 'bg-surface-3/80 text-white font-medium'
+        isSelected && 'bg-surface-3 text-white font-semibold'
       )}
     >
       {columns.map((col) => (
@@ -40,6 +42,7 @@ export function KubeTableRow<T>({
           col={col}
           colWidth={colWidths[col.key]}
           resizable={resizable}
+          isExpanded={isExpanded}
         />
       ))}
     </tr>

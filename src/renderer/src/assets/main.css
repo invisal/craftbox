@@ -7,7 +7,7 @@
   --color-bottom-bg: #181825; /* Catppuccin Mocha Mantle */
   --color-status-bg: #11111b; /* Catppuccin Mocha Crust */
   --color-border-dark: #313244; /* Catppuccin Mocha Surface 0 */
-  --color-text-dim: #a6adc8; /* Catppuccin Mocha Subtext 0 */
+  --color-muted-foreground: #a6adc8; /* Catppuccin Mocha Subtext 0 */
   --color-accent: #89b4fa; /* Catppuccin Mocha Blue */
   --color-danger: #f38ba8; /* Catppuccin Mocha Red */
   --color-surface: #1e1e1e; /* base background, VS Code editor tone */
@@ -22,7 +22,13 @@
   --color-surface-sunken: var(--color-activity-bg); /* screen-recorder: recessed side panel */
   --color-line: var(--color-border-dark); /* screen-recorder: hairline border */
   --color-emphasis-text: #11111b; /* Catppuccin Mocha Crust — text on accent/danger fills */
-  --color-text-base: #c0c5d8; /* softened from Catppuccin Mocha Text — less near-white contrast */
+  --color-foreground: #c0c5d8; /* softened from Catppuccin Mocha Text — less near-white contrast */
+  --color-text-base: var(
+    --color-foreground
+  ); /* alias so old `text-text-base` utility keeps working */
+  --color-text-dim: var(
+    --color-muted-foreground
+  ); /* alias so old `text-text-dim` utility keeps working */
   --color-scrollbar-track: #181825;
   --color-scrollbar-thumb: #313244;
   --color-scrollbar-thumb-hover: #45475a;
@@ -34,7 +40,7 @@
      would break the `:root.light` override below. Plain custom properties
      don't have that problem, so `@utility shadow-panel-elevate` (below)
      reads this one directly. */
-  --panel-elevate-shadow: inset -1px 0 4px -3px rgba(255, 255, 255, 0.5);
+  --panel-elevate-shadow: inset -1px 0 6px -3px rgba(255, 255, 255, 0.15);
 
   /* screen-recorder: annotation entrance animations, see
      features/annotations/presets/text-animation-presets.ts */
@@ -80,11 +86,11 @@
   --color-bottom-bg: #e6e9ef; /* Catppuccin Latte Mantle */
   --color-status-bg: #dce0e8; /* Catppuccin Latte Crust */
   --color-border-dark: #ccd0da; /* Catppuccin Latte Surface 0 */
-  --color-text-dim: #6c6f85; /* Catppuccin Latte Subtext 0 */
+  --color-muted-foreground: #6c6f85; /* Catppuccin Latte Subtext 0 */
   --color-accent: #1e66f5; /* Catppuccin Latte Blue */
   --color-danger: #d20f39; /* Catppuccin Latte Red */
   --color-surface: #ffffff; /* base background, pure white */
-  --color-surface-2: #f1f2f6; /* elevation 1 — hover on surface */
+  --color-surface-2: #fafbfc; /* elevation 1 — hover on surface */
   --color-surface-3: #e1e4eb; /* elevation 2 — hover on surface-2, selected on surface */
   --color-surface-4: #ccd0dd; /* elevation 3 — selected on surface-2 */
   --color-surface-5: #b8bed0; /* elevation 4 — selected on surface-3 */
@@ -95,7 +101,7 @@
   --color-surface-sunken: var(--color-activity-bg); /* screen-recorder: recessed side panel */
   --color-line: var(--color-border-dark); /* screen-recorder: hairline border */
   --color-emphasis-text: #ffffff; /* Latte's accent/danger are saturated — need light text */
-  --color-text-base: #5c5f7a; /* softened from Catppuccin Latte Text — less near-black contrast */
+  --color-foreground: #5c5f7a; /* softened from Catppuccin Latte Text — less near-black contrast */
   --color-scrollbar-track: #e6e9ef;
   --color-scrollbar-thumb: #ccd0da;
   --color-scrollbar-thumb-hover: #bcc0cc;
@@ -165,7 +171,7 @@ body,
   margin: 0;
   padding: 0;
   background-color: var(--color-editor-bg);
-  color: var(--color-text-base);
+  color: var(--color-foreground);
   font-family:
     'Inter',
     -apple-system,
@@ -190,8 +196,14 @@ body {
   background-size: 16px 16px;
 }
 
-@utility shadow-panel-elevate {
-  box-shadow: var(--panel-elevate-shadow);
+@utility bg-diagonal-stripes {
+  background-image: repeating-linear-gradient(
+    -45deg,
+    var(--color-border) 0,
+    var(--color-border) 1.5px,
+    transparent 1.5px,
+    transparent 6px
+  );
 }
 
 /* Titlebar dragging configurations */
@@ -219,5 +231,23 @@ body {
   background: var(--color-scrollbar-thumb);
 }
 .kuberneter-sidebar:hover .kuberneter-sidebar-scroll::-webkit-scrollbar-thumb:hover {
+  background: var(--color-scrollbar-thumb-hover);
+}
+
+/* Tab bar scrollbar: only visible on hover */
+.tab-bar-container::-webkit-scrollbar {
+  height: 3px;
+}
+.tab-bar-container::-webkit-scrollbar-track {
+  background: transparent;
+}
+.tab-bar-container::-webkit-scrollbar-thumb {
+  background: transparent;
+  border-radius: 1.5px;
+}
+.tab-bar-container:hover::-webkit-scrollbar-thumb {
+  background: var(--color-scrollbar-thumb);
+}
+.tab-bar-container:hover::-webkit-scrollbar-thumb:hover {
   background: var(--color-scrollbar-thumb-hover);
 }

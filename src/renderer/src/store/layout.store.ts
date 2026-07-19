@@ -9,6 +9,7 @@ export interface Tab {
   instanceId: string;
   /** Tool-specific tab seed data (e.g. PostmanTabSeed). Each tool narrows/casts this at its own read site. */
   meta?: unknown;
+  isPreview?: boolean;
 }
 
 export interface ActivityInstance {
@@ -37,6 +38,10 @@ interface LayoutState {
   closeTab: (id: string) => void;
   setActiveTabId: (id: string | null) => void;
   renameTab: (id: string, title: string) => void;
+  pinTab: (id: string) => void;
+  closeOthers: (id: string) => void;
+  closeToRight: (id: string) => void;
+  closeAll: (instanceId: string) => void;
 
   // Instance Lifecycle Actions
   addActivityInstance: (
@@ -66,7 +71,31 @@ export const useLayoutStore = create<LayoutState>()(
       openTab: (tab) =>
         set((state) => {
           const tabExists = state.openTabs.some((t) => t.id === tab.id);
-          const newTabs = tabExists ? state.openTabs : [...state.openTabs, tab];
+
+          if (tabExists) {
+            return {
+              activeTabId: tab.id
+            };
+          }
+
+          // Check if there is an unsticky/preview tab in the same instance
+          const previewTab = state.openTabs.find(
+            (t) => t.instanceId === tab.instanceId && t.isPreview
+          );
+
+          const isNewTabPreview = tab.isPreview === true;
+          let newTabs: Tab[];
+
+          if (previewTab) {
+            // Overwrite the existing preview tab with the new tab
+            const newTab = { ...tab, isPreview: isNewTabPreview };
+            newTabs = state.openTabs.map((t) => (t.id === previewTab.id ? newTab : t));
+          } else {
+            // Add as a new tab
+            const newTab = { ...tab, isPreview: isNewTabPreview };
+            newTabs = [...state.openTabs, newTab];
+          }
+
           return {
             openTabs: newTabs,
             activeTabId: tab.id
@@ -102,6 +131,66 @@ export const useLayoutStore = create<LayoutState>()(
           openTabs: state.openTabs.map((t) => (t.id === id ? { ...t, title } : t))
         })),
 
+      pinTab: (id) =>
+        set((state) => ({
+          openTabs: state.openTabs.map((t) => (t.id === id ? { ...t, isPreview: false } : t))
+        })),
+
+      closeOthers: (id) =>
+        set((state) => {
+          const targetTab = state.openTabs.find((t) => t.id === id);
+          if (!targetTab) return {};
+
+          const newTabs = state.openTabs.filter(
+            (t) => t.instanceId !== targetTab.instanceId || t.id === id
+          );
+
+          return {
+            openTabs: newTabs,
+            activeTabId: id
+          };
+        }),
+
+      closeToRight: (id) =>
+        set((state) => {
+          const targetTab = state.openTabs.find((t) => t.id === id);
+          if (!targetTab) return {};
+
+          const instanceTabs = state.openTabs.filter((t) => t.instanceId === targetTab.instanceId);
+          const targetIndex = instanceTabs.findIndex((t) => t.id === id);
+          if (targetIndex === -1) return {};
+
+          const tabIdsToClose = new Set(instanceTabs.slice(targetIndex + 1).map((t) => t.id));
+
+          const newTabs = state.openTabs.filter((t) => !tabIdsToClose.has(t.id));
+
+          let nextActiveId = state.activeTabId;
+          if (nextActiveId && tabIdsToClose.has(nextActiveId)) {
+            nextActiveId = id;
+          }
+
+          return {
+            openTabs: newTabs,
+            activeTabId: nextActiveId
+          };
+        }),
+
+      closeAll: (instanceId) =>
+        set((state) => {
+          const newTabs = state.openTabs.filter((t) => t.instanceId !== instanceId);
+
+          let nextActiveId = state.activeTabId;
+          const activeTab = state.openTabs.find((t) => t.id === state.activeTabId);
+          if (activeTab && activeTab.instanceId === instanceId) {
+            nextActiveId = null;
+          }
+
+          return {
+            openTabs: newTabs,
+            activeTabId: nextActiveId
+          };
+        }),
+
       addActivityInstance: (type, customId, context) =>
         set((state) => {
           const instanceId = customId || `${type}-${Date.now()}`;
@@ -119,26 +208,36 @@ export const useLayoutStore = create<LayoutState>()(
           };
 
           // Create a default tab for the newly spawned instance
+          let defaultTab: Tab | null = null;
           let defaultTabId = '';
-          let defaultTabTitle = '';
           if (type === 'kuberneter') {
-            defaultTabId = `kuberneter-home-${instanceId}`;
-            defaultTabTitle = 'Home';
+            if (context?.cluster) {
+              defaultTabId = `kuberneter-k8s-overview-${instanceId}`;
+              defaultTab = {
+                id: defaultTabId,
+                title: 'Cluster Overview',
+                type: 'kuberneter',
+                instanceId,
+                meta: { resource: 'overview' }
+              };
+            }
           } else if (type === 'postman') {
             defaultTabId = `postman-req-${instanceId}`;
-            defaultTabTitle = 'New API Request';
+            defaultTab = {
+              id: defaultTabId,
+              title: 'New API Request',
+              type,
+              instanceId
+            };
           } else if (type === 'screenrecorder') {
             defaultTabId = `screenrecorder-session-${instanceId}`;
-            defaultTabTitle = 'Screen Recording';
+            defaultTab = {
+              id: defaultTabId,
+              title: 'Screen Recording',
+              type,
+              instanceId
+            };
           }
-
-          const defaultTab: Tab = {
-            id: defaultTabId,
-            title: defaultTabTitle,
-            type,
-            instanceId,
-            ...(type === 'kuberneter' ? { meta: { resource: 'home' } } : {})
-          };
 
           // IMPORTANT: If this is a kuberneter instance, we initialize its private store
           if (type === 'kuberneter') {
@@ -149,8 +248,8 @@ export const useLayoutStore = create<LayoutState>()(
             activeInstances: [...state.activeInstances, newInstance],
             activeInstanceId: instanceId,
             activeActivity: type,
-            openTabs: [...state.openTabs, defaultTab],
-            activeTabId: defaultTabId
+            openTabs: defaultTab ? [...state.openTabs, defaultTab] : state.openTabs,
+            activeTabId: defaultTab ? defaultTabId : null
           };
         }),
 

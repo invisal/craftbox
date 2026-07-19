@@ -16,6 +16,9 @@ import { registerWorkspaceHandlers } from './http-client/ipc/workspaces';
 import { registerIpcHandlers as registerScreenRecorderHandlers } from './screen-recorder/ipc/register-handlers';
 import { applyContentSecurityPolicy } from './screen-recorder/security/content-security-policy';
 import { registerTrayHandlers, destroyTray } from './screen-recorder/windows/tray';
+import { destroyRecorderToolbar } from './screen-recorder/windows/recorder-toolbar-window';
+import { destroySourcePickerOverlay } from './screen-recorder/windows/source-picker-overlay-window';
+import { registerDisplayMediaHandler } from './screen-recorder/security/display-media-handler';
 import { registerKuberneterHandlers } from './kuberneter';
 import { registerFileExplorerHandlers } from './file-explorer';
 import { registerNotificationHandlers } from './notification-handlers';
@@ -87,6 +90,8 @@ app.whenReady().then(() => {
   // (Vite HMR needs 'unsafe-eval' + a websocket connect-src) and production,
   // and needs media-src blob: for ScreenRecorder's recording preview.
   applyContentSecurityPolicy();
+  // Screen Recorder: macOS 15+ ScreenCaptureKit system picker. No-op elsewhere.
+  registerDisplayMediaHandler();
 
   // Default open or close DevTools by F12 in development
   // and ignore CommandOrControl + R in production.
@@ -225,6 +230,8 @@ app.on('window-all-closed', () => {
 
 app.on('before-quit', () => {
   destroyTray();
+  destroyRecorderToolbar();
+  destroySourcePickerOverlay();
 });
 
 // In this file you can include the rest of your app's specific main process
