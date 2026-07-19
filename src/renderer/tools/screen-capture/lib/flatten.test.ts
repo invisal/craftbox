@@ -1,0 +1,42 @@
+import { describe, expect, it } from 'vitest';
+import { arrowHeadLength, arrowHeadPoints, labelTextColor, normalizeRect } from './flatten';
+import { nextLabelValue } from '../store/editor.store';
+import type { CaptureAnnotation } from '../types/editor';
+
+describe('normalizeRect', () => {
+  it('round-trips a forward drag unchanged', () => {
+    expect(normalizeRect(10, 20, 110, 220)).toEqual({ x: 10, y: 20, width: 100, height: 200 });
+  });
+
+  it('normalizes a backwards (up-left) drag to a positive-size rect', () => {
+    expect(normalizeRect(110, 220, 10, 20)).toEqual({ x: 10, y: 20, width: 100, height: 200 });
+  });
+});
+
+describe('arrowHeadPoints', () => {
+  it('places both wings behind the tip of a horizontal arrow, mirrored about the shaft', () => {
+    const head = arrowHeadPoints(0, 0, 100, 0, arrowHeadLength(4));
+    expect(head.hx1).toBeLessThan(100);
+    expect(head.hx2).toBeLessThan(100);
+    expect(head.hy1).toBeCloseTo(-head.hy2);
+    // Wing tips are exactly headLength away from the arrow tip.
+    expect(Math.hypot(head.hx1 - 100, head.hy1)).toBeCloseTo(16);
+    expect(Math.hypot(head.hx2 - 100, head.hy2)).toBeCloseTo(16);
+  });
+});
+
+describe('label helpers', () => {
+  it('auto-increments past the highest existing label value', () => {
+    const annotations: CaptureAnnotation[] = [
+      { id: 'a', kind: 'label', x: 0, y: 0, value: 3, radius: 14, color: '#ef4444' },
+      { id: 'b', kind: 'rect', x: 0, y: 0, width: 10, height: 10, color: '#fff', strokeWidth: 2 }
+    ];
+    expect(nextLabelValue(annotations)).toBe(4);
+    expect(nextLabelValue([])).toBe(1);
+  });
+
+  it('uses dark digits only on a white badge', () => {
+    expect(labelTextColor('#ffffff')).toBe('#111111');
+    expect(labelTextColor('#ef4444')).toBe('#ffffff');
+  });
+});

@@ -1,5 +1,5 @@
 import type { JSX } from 'react';
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Tabs } from '@base-ui/react/tabs';
 import { Camera, CircleCheck, ClipboardCopy, Download, Scan } from 'lucide-react';
 import { cn } from 'cnfast';
@@ -8,6 +8,10 @@ import { Button } from '@renderer/components/ui/Button';
 import type { CaptureSource } from '@screen-recorder/types/recording';
 import { ScreenRecordingPermissionBanner } from '@screen-recorder/features/recording/components/ScreenRecordingPermissionBanner';
 import { SourcePickerPanels } from './components/SourcePicker';
+import { CaptureEditor } from './components/CaptureEditor';
+import { EditorToolbar } from './components/EditorToolbar';
+import { useCaptureEditorStore } from './store/editor.store';
+import { flattenImage } from './lib/flatten';
 import { useCaptureSources, type SourceTab } from './lib/use-capture-sources';
 import {
   blobToDataUrl,
@@ -83,6 +87,43 @@ export function ScreenCaptureMain({}: ToolComponentProps<Props>): JSX.Element {
     { enabled: !usesOsPicker }
   );
 
+  // Keeps the clipboard in sync with the editor: every annotation or
+  // corner-radius change re-flattens and copies, debounced so a drag doesn't
+  // re-encode a full-resolution PNG on every pointermove frame.
+  useEffect(() => {
+    if (phase !== 'result' || !previewBlob) return;
+
+    let timer: number | undefined;
+    // Guards against an older, slower flatten finishing after a newer one
+    // and overwriting the clipboard with stale content.
+    let generation = 0;
+
+    const unsubscribe = useCaptureEditorStore.subscribe((state, previous) => {
+      if (
+        state.annotations === previous.annotations &&
+        state.cornerRadius === previous.cornerRadius
+      ) {
+        return;
+      }
+      window.clearTimeout(timer);
+      timer = window.setTimeout(() => {
+        generation += 1;
+        const current = generation;
+        const { annotations, cornerRadius } = useCaptureEditorStore.getState();
+        void flattenImage(previewBlob, annotations, cornerRadius)
+          .then((blob) => (current === generation ? copyAfterCapture(blob) : true))
+          .then((copied) => {
+            if (!copied) console.error('Could not copy edited screenshot to clipboard.');
+          });
+      }, 600);
+    });
+
+    return () => {
+      unsubscribe();
+      window.clearTimeout(timer);
+    };
+  }, [phase, previewBlob]);
+
   const handleTabChange = (value: string): void => {
     const tab = value as SourceTab;
     setActiveTab(tab);
@@ -102,6 +143,7 @@ export function ScreenCaptureMain({}: ToolComponentProps<Props>): JSX.Element {
       return;
     }
     const dataUrl = await blobToDataUrl(blob);
+    useCaptureEditorStore.getState().reset();
     setPreviewBlob(blob);
     setPreviewDataUrl(dataUrl);
     setPhase('result');
@@ -156,15 +198,24 @@ export function ScreenCaptureMain({}: ToolComponentProps<Props>): JSX.Element {
   };
 
   const handleCaptureAgain = (): void => {
+    useCaptureEditorStore.getState().reset();
     setPhase('idle');
     setPreviewDataUrl(null);
     setPreviewBlob(null);
     setConfirmed(null);
   };
 
+  /** Copy/Save export what's on the editor stage, not the raw capture. */
+  const editedBlob = async (): Promise<Blob | null> => {
+    if (!previewBlob) return null;
+    const { annotations, cornerRadius } = useCaptureEditorStore.getState();
+    return flattenImage(previewBlob, annotations, cornerRadius);
+  };
+
   const handleCopy = async (): Promise<void> => {
-    if (!previewBlob) return;
-    if (await copyToClipboard(previewBlob)) {
+    const blob = await editedBlob();
+    if (!blob) return;
+    if (await copyToClipboard(blob)) {
       flashConfirm('copy');
     } else {
       console.error('Could not copy screenshot to clipboard.');
@@ -172,10 +223,12 @@ export function ScreenCaptureMain({}: ToolComponentProps<Props>): JSX.Element {
   };
 
   const handleSave = async (): Promise<void> => {
-    if (!previewBlob || !window.screenRecorder) return;
+    if (!window.screenRecorder) return;
 
     try {
-      const arrayBuffer = await previewBlob.arrayBuffer();
+      const blob = await editedBlob();
+      if (!blob) return;
+      const arrayBuffer = await blob.arrayBuffer();
       const filePath = await window.screenRecorder.screenshot.save(
         arrayBuffer,
         screenshotFileName()
@@ -232,7 +285,9 @@ export function ScreenCaptureMain({}: ToolComponentProps<Props>): JSX.Element {
           ) : (
             <div>
               <h1 className="text-base font-medium">Preview</h1>
-              <p className="mt-0.5 text-xs text-text-dim">Save your screenshot or capture again.</p>
+              <p className="mt-0.5 text-xs text-text-dim">
+                Annotate your screenshot, then copy or save it — or capture again.
+              </p>
             </div>
           )}
         </header>
@@ -276,12 +331,9 @@ export function ScreenCaptureMain({}: ToolComponentProps<Props>): JSX.Element {
           )}
 
           {phase === 'result' && previewDataUrl && (
-            <div className="flex min-h-0 flex-1 items-center justify-center overflow-hidden">
-              <img
-                src={previewDataUrl}
-                alt="Captured screenshot"
-                className="max-h-full max-w-full object-contain"
-              />
+            <div className="flex min-h-0 flex-1 gap-3">
+              <EditorToolbar />
+              <CaptureEditor dataUrl={previewDataUrl} />
             </div>
           )}
         </div>
