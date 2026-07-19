@@ -16,7 +16,18 @@ import { PriorityClassDetail } from './PriorityClassDetail';
 import { RuntimeClassDetail } from './RuntimeClassDetail';
 import { LeaseDetail } from './LeaseDetail';
 import { ServiceDetail } from './ServiceDetail';
+import { PersistentVolumeClaimDetail } from './PersistentVolumeClaimDetail';
+import { PersistentVolumeDetail } from './PersistentVolumeDetail';
+import { StorageClassDetail } from './StorageClassDetail';
+import { NamespaceDetail } from './NamespaceDetail';
+import { EventDetail } from './EventDetail';
 import { MutatingWebhookDetail } from './MutatingWebhookDetail';
+import { type PersistentVolumeClaimData } from '../../../types/PersistentVolumeClaimData';
+import { type PersistentVolumeData } from '../../../types/PersistentVolumeData';
+import { type StorageClassData } from '../../../types/StorageClassData';
+import { type NamespaceData } from '../../../types/NamespaceData';
+import { type EventData } from '../../../types/EventData';
+
 import { ValidatingWebhookDetail } from './ValidatingWebhookDetail';
 import { EndpointSliceDetail } from './EndpointSliceDetail';
 import { EndpointDetail } from './EndpointDetail';
@@ -102,6 +113,18 @@ export const DetailContent: React.FC<DetailContentProps> = ({
       return <LeaseDetail payload={payload as LeaseData} isTab={isTab} />;
     case 'service':
       return <ServiceDetail payload={payload as ServiceData} isTab={isTab} />;
+    case 'persistentvolumeclaim':
+      return (
+        <PersistentVolumeClaimDetail payload={payload as PersistentVolumeClaimData} isTab={isTab} />
+      );
+    case 'persistentvolume':
+      return <PersistentVolumeDetail payload={payload as PersistentVolumeData} isTab={isTab} />;
+    case 'storageclass':
+      return <StorageClassDetail payload={payload as StorageClassData} isTab={isTab} />;
+    case 'namespace':
+      return <NamespaceDetail payload={payload as NamespaceData} isTab={isTab} />;
+    case 'event':
+      return <EventDetail payload={payload as EventData} isTab={isTab} />;
     case 'endpointslice':
       return <EndpointSliceDetail payload={payload as EndpointSliceData} isTab={isTab} />;
     case 'endpoints':
