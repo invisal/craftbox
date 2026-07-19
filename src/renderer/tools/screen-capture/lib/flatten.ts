@@ -221,8 +221,6 @@ function composeBackground(
   const ctx = frame.getContext('2d');
   if (!ctx) return content;
 
-  fillWallpaper(ctx, frame.width, frame.height, background.wallpaper);
-
   const inner = backgroundInnerRect(
     frame.width,
     frame.height,
@@ -231,6 +229,15 @@ function composeBackground(
     background.marginPct
   );
   const radius = cornerRadius * (inner.width / content.width);
+  // The frame's own rounding (independent of the image's) — the clip stays
+  // active for everything drawn below, leaving transparent PNG corners.
+  if (background.cornerRadius > 0) {
+    ctx.beginPath();
+    ctx.roundRect(0, 0, frame.width, frame.height, background.cornerRadius);
+    ctx.clip();
+  }
+
+  fillWallpaper(ctx, frame.width, frame.height, background.wallpaper);
 
   // Soft drop shadow so the capture doesn't look pasted on. Opaque black
   // fill under the image, like the recorder's drawContentShadow.

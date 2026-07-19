@@ -43,7 +43,8 @@ export const DEFAULT_BACKGROUND: BackgroundConfig = {
   wallpaper: WALLPAPER_PRESETS[0].id,
   width: BACKGROUND_SIZE_PRESETS[0].width,
   height: BACKGROUND_SIZE_PRESETS[0].height,
-  marginPct: 5
+  marginPct: 5,
+  cornerRadius: 0
 };
 
 interface EditorState {

@@ -873,7 +873,9 @@ export function CaptureEditor({ dataUrl }: CaptureEditorProps): JSX.Element {
           style={{
             width: framed.frame.width * frameFit,
             height: framed.frame.height * frameFit,
-            background: cssGradient(findWallpaperPreset(framed.frame.wallpaper))
+            background: cssGradient(findWallpaperPreset(framed.frame.wallpaper)),
+            // Frame radius is in frame px; frameFit converts to display px.
+            borderRadius: framed.frame.cornerRadius * frameFit
           }}
         >
           <div

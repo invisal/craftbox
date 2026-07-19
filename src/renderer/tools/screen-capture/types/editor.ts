@@ -10,6 +10,8 @@ export interface BackgroundConfig {
   height: number;
   /** Margin around the capture as % of the shorter frame side. */
   marginPct: number;
+  /** Rounded-rect clip on the frame itself, in frame px (transparent PNG corners). 0 = square. */
+  cornerRadius: number;
 }
 
 interface AnnotationBase {

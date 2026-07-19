@@ -87,6 +87,8 @@ function RailTooltip({
 
 const MAX_BACKGROUND_MARGIN_PCT = 25;
 const MAX_FRAME_PX = 8192;
+/** Max frame corner radius in frame px. */
+const MAX_BACKGROUND_RADIUS_PX = 128;
 
 function clampFramePx(px: number): number {
   return Math.min(Math.max(1, Math.round(px)), MAX_FRAME_PX);
@@ -238,6 +240,40 @@ function BackgroundControls(): JSX.Element {
               className="w-14 shrink-0"
             />
             <span className="shrink-0 text-xs text-text-dim">%</span>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <span className="w-10 shrink-0 text-xs text-text-dim">Radius</span>
+            <input
+              type="range"
+              aria-label="Background corner radius"
+              min={0}
+              max={MAX_BACKGROUND_RADIUS_PX}
+              step={1}
+              value={background.cornerRadius}
+              onChange={(e) =>
+                setBackground({ ...background, cornerRadius: Number(e.target.value) })
+              }
+              className="h-1 w-full cursor-pointer accent-(--color-accent)"
+            />
+            <Input
+              type="number"
+              size="sm"
+              aria-label="Background corner radius in pixels"
+              min={0}
+              max={MAX_BACKGROUND_RADIUS_PX}
+              value={background.cornerRadius}
+              onChange={(e) => {
+                const px = Number(e.target.value);
+                if (Number.isNaN(px)) return;
+                setBackground({
+                  ...background,
+                  cornerRadius: Math.min(Math.max(0, Math.round(px)), MAX_BACKGROUND_RADIUS_PX)
+                });
+              }}
+              className="w-14 shrink-0"
+            />
+            <span className="shrink-0 text-xs text-text-dim">px</span>
           </div>
         </>
       )}
