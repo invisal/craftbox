@@ -30,6 +30,7 @@ import { usePersistentVolumeClaims } from './usePersistentVolumeClaims';
 import { usePersistentVolumes } from './usePersistentVolumes';
 import { useStorageClasses } from './useStorageClasses';
 import { useNamespaces } from './useNamespaces';
+import { useEvents } from './useEvents';
 
 export function useWorkspaceResources(resource: string) {
   const activeInstanceId = useLayoutStore((s) => s.activeInstanceId);
@@ -70,6 +71,7 @@ export function useWorkspaceResources(resource: string) {
   const pvs = usePersistentVolumes(resource === 'pvs');
   const storageclasses = useStorageClasses(resource === 'storageclasses');
   const namespaces = useNamespaces(resource === 'namespaces');
+  const events = useEvents(resource === 'events');
 
   let activeQuery: { data: unknown[]; isLoading: boolean; errorMsg: string | null } | null = null;
   if (resource === 'pods') activeQuery = pods;
@@ -102,6 +104,7 @@ export function useWorkspaceResources(resource: string) {
   else if (resource === 'pvs') activeQuery = pvs;
   else if (resource === 'storageclasses') activeQuery = storageclasses;
   else if (resource === 'namespaces') activeQuery = namespaces;
+  else if (resource === 'events') activeQuery = events;
 
   return {
     kuberneterSelectedCluster,
@@ -136,6 +139,7 @@ export function useWorkspaceResources(resource: string) {
     pvsData: pvs.data,
     storageClassesData: storageclasses.data,
     namespacesData: namespaces.data,
+    eventsData: events.data,
     isLoading: activeQuery ? activeQuery.isLoading : false,
     errorMsg: activeQuery ? activeQuery.errorMsg : null
   };

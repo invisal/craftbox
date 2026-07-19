@@ -14,6 +14,7 @@ import { PersistentVolumeClaims } from './pvcs/PersistentVolumeClaims';
 import { PersistentVolumes } from './pvs/PersistentVolumes';
 import { StorageClasses } from './storageclasses/StorageClasses';
 import { Namespaces } from './namespaces/Namespaces';
+import { Events } from './events/Events';
 import { ConfigMaps } from './configmaps/ConfigMaps';
 import { Secrets } from './secrets/Secrets';
 import { ResourceQuotas } from './resourcequotas/ResourceQuotas';
@@ -80,6 +81,7 @@ export const KuberneterWorkspace: React.FC<KuberneterWorkspaceProps> = ({ resour
     pvsData,
     storageClassesData,
     namespacesData,
+    eventsData,
     isLoading,
     errorMsg
   } = useWorkspaceResources(resource);
@@ -201,6 +203,8 @@ export const KuberneterWorkspace: React.FC<KuberneterWorkspaceProps> = ({ resour
           )}
 
           {resource === 'namespaces' && <Namespaces namespacesData={namespacesData} />}
+
+          {resource === 'events' && <Events eventsData={eventsData} />}
 
           {resource === 'endpointslices' && (
             <EndpointSlices
