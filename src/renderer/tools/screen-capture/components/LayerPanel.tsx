@@ -2,6 +2,7 @@ import type { JSX } from 'react';
 import { useRef, useState } from 'react';
 import {
   ChevronDown,
+  Circle,
   Droplets,
   Eye,
   EyeOff,
@@ -26,6 +27,7 @@ const KIND_ICONS = {
   text: Type,
   label: Tag,
   rect: Square,
+  circle: Circle,
   arrow: MoveUpRight,
   blur: Droplets
 } as const;
@@ -39,6 +41,8 @@ function layerLabel(annotation: CaptureAnnotation): string {
       return `Label ${annotation.value}`;
     case 'rect':
       return 'Rectangle';
+    case 'circle':
+      return 'Circle';
     case 'arrow':
       return 'Arrow';
     case 'blur':
@@ -114,7 +118,9 @@ function LayerProperties({ annotation }: { annotation: CaptureAnnotation }): JSX
         </div>
       )}
 
-      {(annotation.kind === 'rect' || annotation.kind === 'arrow') && (
+      {(annotation.kind === 'rect' ||
+        annotation.kind === 'circle' ||
+        annotation.kind === 'arrow') && (
         <div className="flex items-center gap-1">
           {STROKE_TIERS.map(({ label, value }) => (
             <button

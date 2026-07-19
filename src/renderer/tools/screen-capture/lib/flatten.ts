@@ -2,6 +2,7 @@ import type {
   ArrowAnnotation,
   BlurAnnotation,
   CaptureAnnotation,
+  CircleAnnotation,
   LabelAnnotation,
   RectAnnotation,
   TextAnnotation
@@ -149,6 +150,22 @@ function drawRect(ctx: CanvasRenderingContext2D, rect: RectAnnotation): void {
   ctx.strokeRect(rect.x, rect.y, rect.width, rect.height);
 }
 
+function drawCircle(ctx: CanvasRenderingContext2D, circle: CircleAnnotation): void {
+  ctx.strokeStyle = circle.color;
+  ctx.lineWidth = circle.strokeWidth;
+  ctx.beginPath();
+  ctx.ellipse(
+    circle.x + circle.width / 2,
+    circle.y + circle.height / 2,
+    circle.width / 2,
+    circle.height / 2,
+    0,
+    0,
+    Math.PI * 2
+  );
+  ctx.stroke();
+}
+
 function drawArrow(ctx: CanvasRenderingContext2D, arrow: ArrowAnnotation): void {
   const { x1, y1, x2, y2 } = arrow;
   const { hx1, hy1, hx2, hy2 } = arrowHeadPoints(
@@ -240,6 +257,7 @@ export async function flattenImage(
     ctx.save();
     if (a.kind === 'blur') drawBlur(ctx, canvas, a);
     else if (a.kind === 'rect') drawRect(ctx, a);
+    else if (a.kind === 'circle') drawCircle(ctx, a);
     else if (a.kind === 'arrow') drawArrow(ctx, a);
     else if (a.kind === 'label') drawLabel(ctx, a);
     else if (a.kind === 'text') drawText(ctx, a);

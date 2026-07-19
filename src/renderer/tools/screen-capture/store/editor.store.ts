@@ -174,7 +174,11 @@ export const useCaptureEditorStore = create<EditorState>((set, get) => ({
   setStrokeTier: (strokeTier, id) =>
     set((state) => {
       const target = state.annotations.find((a) => a.id === (id ?? state.selectedId));
-      if (!target || (target.kind !== 'rect' && target.kind !== 'arrow')) return { strokeTier };
+      if (
+        !target ||
+        (target.kind !== 'rect' && target.kind !== 'circle' && target.kind !== 'arrow')
+      )
+        return { strokeTier };
       return {
         strokeTier,
         ...pushPast(state),

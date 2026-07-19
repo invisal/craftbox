@@ -1,4 +1,5 @@
-export type EditorTool = 'select' | 'text' | 'label' | 'rect' | 'arrow' | 'blur' | 'crop';
+export type EditorTool =
+  'select' | 'text' | 'label' | 'rect' | 'circle' | 'arrow' | 'blur' | 'crop';
 
 interface AnnotationBase {
   id: string;
@@ -39,6 +40,17 @@ export interface RectAnnotation extends AnnotationBase {
   strokeWidth: number;
 }
 
+/** Ellipse inscribed in its (x, y, width, height) bounding box. */
+export interface CircleAnnotation extends AnnotationBase {
+  kind: 'circle';
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  color: string;
+  strokeWidth: number;
+}
+
 export interface ArrowAnnotation extends AnnotationBase {
   kind: 'arrow';
   x1: number;
@@ -60,4 +72,9 @@ export interface BlurAnnotation extends AnnotationBase {
 }
 
 export type CaptureAnnotation =
-  TextAnnotation | LabelAnnotation | RectAnnotation | ArrowAnnotation | BlurAnnotation;
+  | TextAnnotation
+  | LabelAnnotation
+  | RectAnnotation
+  | CircleAnnotation
+  | ArrowAnnotation
+  | BlurAnnotation;

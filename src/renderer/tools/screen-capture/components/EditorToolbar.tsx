@@ -1,5 +1,6 @@
 import type { JSX } from 'react';
 import {
+  Circle,
   Crop,
   Droplets,
   MousePointer2,
@@ -23,6 +24,7 @@ const TOOLS: { id: EditorTool; label: string; icon: typeof MousePointer2 }[] = [
   { id: 'text', label: 'Text', icon: Type },
   { id: 'label', label: 'Numbered label', icon: Tag },
   { id: 'rect', label: 'Rectangle', icon: Square },
+  { id: 'circle', label: 'Circle', icon: Circle },
   { id: 'arrow', label: 'Arrow', icon: MoveUpRight },
   { id: 'blur', label: 'Blur', icon: Droplets },
   { id: 'crop', label: 'Crop', icon: Crop }

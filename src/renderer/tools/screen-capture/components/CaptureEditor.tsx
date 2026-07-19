@@ -16,6 +16,7 @@ import {
 import type {
   BlurAnnotation,
   CaptureAnnotation,
+  CircleAnnotation,
   RectAnnotation,
   TextAnnotation
 } from '../types/editor';
@@ -38,7 +39,7 @@ const CORNER_CLASSES: Record<Corner, string> = {
 const MIN_DRAG_PX = 4;
 
 interface Draft {
-  kind: 'rect' | 'blur' | 'arrow';
+  kind: 'rect' | 'circle' | 'blur' | 'arrow';
   startX: number;
   startY: number;
   endX: number;
@@ -263,7 +264,10 @@ export function CaptureEditor({ dataUrl }: CaptureEditorProps): JSX.Element {
     };
   }
 
-  function cornerDragMove(annotation: RectAnnotation | BlurAnnotation, corner: Corner): DragMove {
+  function cornerDragMove(
+    annotation: RectAnnotation | CircleAnnotation | BlurAnnotation,
+    corner: Corner
+  ): DragMove {
     const start = {
       x: annotation.x,
       y: annotation.y,
@@ -446,10 +450,10 @@ export function CaptureEditor({ dataUrl }: CaptureEditorProps): JSX.Element {
       return;
     }
     const rect = normalizeRect(d.startX, d.startY, d.endX, d.endY);
-    if (d.kind === 'rect') {
+    if (d.kind === 'rect' || d.kind === 'circle') {
       s.addAnnotation({
         id: crypto.randomUUID(),
-        kind: 'rect',
+        kind: d.kind,
         ...rect,
         color: s.color,
         strokeWidth: s.strokeTier * unit
@@ -469,7 +473,7 @@ export function CaptureEditor({ dataUrl }: CaptureEditorProps): JSX.Element {
   function renderAnnotation(annotation: CaptureAnnotation): JSX.Element {
     const isSelected = selectedId === annotation.id;
 
-    if (annotation.kind === 'blur' || annotation.kind === 'rect') {
+    if (annotation.kind === 'blur' || annotation.kind === 'rect' || annotation.kind === 'circle') {
       return (
         <div
           key={annotation.id}
@@ -494,7 +498,8 @@ export function CaptureEditor({ dataUrl }: CaptureEditorProps): JSX.Element {
                   WebkitBackdropFilter: `blur(${annotation.blurRadius * scale}px)`
                 }
               : {
-                  border: `${Math.max(1, annotation.strokeWidth * scale)}px solid ${annotation.color}`
+                  border: `${Math.max(1, annotation.strokeWidth * scale)}px solid ${annotation.color}`,
+                  ...(annotation.kind === 'circle' ? { borderRadius: '50%' } : {})
                 })
           }}
         >
@@ -683,9 +688,10 @@ export function CaptureEditor({ dataUrl }: CaptureEditorProps): JSX.Element {
           width: rect.width * scale,
           height: rect.height * scale,
           border:
-            d.kind === 'rect'
+            d.kind === 'rect' || d.kind === 'circle'
               ? `${Math.max(1, store.getState().strokeTier * unit * scale)}px solid ${store.getState().color}`
-              : '1px dashed var(--color-accent)'
+              : '1px dashed var(--color-accent)',
+          borderRadius: d.kind === 'circle' ? '50%' : undefined
         }}
       />
     );
