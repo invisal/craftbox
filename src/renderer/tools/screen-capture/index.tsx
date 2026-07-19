@@ -328,24 +328,13 @@ export function ScreenCaptureMain({}: ToolComponentProps<Props>): JSX.Element {
       {phase !== 'capturing' && (
         <header className="shrink-0 border-b border-border-dark px-6 py-4">
           {phase === 'idle' ? (
-            usesOsPicker ? (
-              <div>
-                <h1 className="text-base font-medium">Screen Capture</h1>
-                <p className="mt-0.5 text-xs text-text-dim">
-                  Capture a full screen or window, or drag a region. You can also paste (Ctrl+V) or
-                  open an image to edit it.
-                </p>
-              </div>
-            ) : (
-              <Tabs.List className="flex items-center gap-1">
-                <Tabs.Tab value="screen" className={headerTabClass(activeTab === 'screen')}>
-                  Entire Screen{screens.length > 0 ? ` (${screens.length})` : ''}
-                </Tabs.Tab>
-                <Tabs.Tab value="window" className={headerTabClass(activeTab === 'window')}>
-                  Window{windows.length > 0 ? ` (${windows.length})` : ''}
-                </Tabs.Tab>
-              </Tabs.List>
-            )
+            <div>
+              <h1 className="text-base font-medium">Screen Capture</h1>
+              <p className="mt-0.5 text-xs text-text-dim">
+                Capture a full screen or window, or drag a region. You can also paste (Ctrl+V) or
+                open an image to edit it.
+              </p>
+            </div>
           ) : (
             <div>
               <h1 className="text-base font-medium">Preview</h1>
@@ -370,7 +359,15 @@ export function ScreenCaptureMain({}: ToolComponentProps<Props>): JSX.Element {
           <ScreenRecordingPermissionBanner />
 
           {phase === 'idle' && !usesOsPicker && (
-            <div className="w-full min-w-0">
+            <div className="flex w-full min-w-0 flex-col gap-3">
+              <Tabs.List className="flex items-center gap-1">
+                <Tabs.Tab value="screen" className={headerTabClass(activeTab === 'screen')}>
+                  Entire Screen{screens.length > 0 ? ` (${screens.length})` : ''}
+                </Tabs.Tab>
+                <Tabs.Tab value="window" className={headerTabClass(activeTab === 'window')}>
+                  Window{windows.length > 0 ? ` (${windows.length})` : ''}
+                </Tabs.Tab>
+              </Tabs.List>
               {loading ? (
                 <p className="text-sm text-text-dim">Loading sources…</p>
               ) : (
