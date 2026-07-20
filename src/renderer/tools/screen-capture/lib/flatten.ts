@@ -168,6 +168,41 @@ export function backgroundInnerRect(
 }
 
 /**
+ * Default top-left for a new chip/text label in source-image coordinates.
+ * Without a background: inset from the image corner. With one: inset from
+ * the frame's top-left margin so the pill sits on the wallpaper — same
+ * frame-space padding the export uses via {@link backgroundInnerRect}.
+ */
+export function defaultChipPosition(
+  imageWidth: number,
+  imageHeight: number,
+  unit: number,
+  crop: Rect | null,
+  background: BackgroundConfig | null
+): { x: number; y: number } {
+  const pad = 16 * unit;
+  if (!background) return { x: pad, y: pad };
+
+  const viewWidth = crop?.width ?? imageWidth;
+  const viewHeight = crop?.height ?? imageHeight;
+  const inner = backgroundInnerRect(
+    background.width,
+    background.height,
+    viewWidth,
+    viewHeight,
+    background.marginPct
+  );
+  const k = inner.width / viewWidth;
+  const padFrame = pad * k;
+  const cropX = crop?.x ?? 0;
+  const cropY = crop?.y ?? 0;
+  return {
+    x: cropX + (padFrame - inner.x) / k,
+    y: cropY + (padFrame - inner.y) / k
+  };
+}
+
+/**
  * Fills the canvas with a wallpaper preset's linear gradient, converting the
  * CSS angle convention (0deg = to top, clockwise) that cssGradient() uses for
  * the live preview — mirrors main/screen-recorder/export/frame-compositor.ts.
@@ -264,6 +299,28 @@ function composeBackground(
 
   drawAnnotations(ctx, frame, annotations, inner.width / content.width, inner.x, inner.y);
   return frame;
+}
+
+/** Watermark shown in the frame's bottom-right when enabled. Shared with the live preview. */
+export const BACKGROUND_WATERMARK = 'benpocket/screen-capture';
+
+function drawWatermark(
+  ctx: CanvasRenderingContext2D,
+  frameWidth: number,
+  frameHeight: number
+): void {
+  const fontSize = Math.max(12, Math.round(frameWidth * 0.012));
+  const pad = Math.max(8, Math.round(frameWidth * 0.012));
+  ctx.save();
+  ctx.font = `500 ${fontSize}px sans-serif`;
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.55)';
+  ctx.textAlign = 'right';
+  ctx.textBaseline = 'bottom';
+  ctx.shadowColor = 'rgba(0, 0, 0, 0.35)';
+  ctx.shadowBlur = 2;
+  ctx.shadowOffsetY = 1;
+  ctx.fillText(BACKGROUND_WATERMARK, frameWidth - pad, frameHeight - pad);
+  ctx.restore();
 }
 
 // The editor previews regions with CSS `backdrop-filter: blur()` and this
@@ -434,20 +491,22 @@ function drawAnnotations(
 }
 
 /**
- * Bakes the crop, annotations, the corner-radius clip, and the optional
- * background frame into a new PNG blob. Without a background the output is
- * the source image's native (cropped) resolution; with one it is the frame's
- * width x height. Returns the original blob untouched when there is nothing
- * to bake.
+ * Bakes the crop, annotations, the corner-radius clip, the optional
+ * background frame, and an optional watermark into a new PNG blob. Without a
+ * background the output is the source image's native (cropped) resolution;
+ * with one it is the frame's width x height. Returns the original blob
+ * untouched when there is nothing to bake.
  */
 export async function flattenImage(
   blob: Blob,
   annotations: CaptureAnnotation[],
   cornerRadius: number,
   crop: Rect | null = null,
-  background: BackgroundConfig | null = null
+  background: BackgroundConfig | null = null,
+  watermark = false
 ): Promise<Blob> {
-  if (annotations.length === 0 && cornerRadius <= 0 && !crop && !background) return blob;
+  if (annotations.length === 0 && cornerRadius <= 0 && !crop && !background && !watermark)
+    return blob;
 
   const bitmap = await createImageBitmap(blob);
   const ox = crop ? Math.round(crop.x) : 0;
@@ -484,6 +543,10 @@ export async function flattenImage(
   if (!background) drawAnnotations(ctx, canvas, visible, 1, 0, 0);
 
   const output = background ? composeBackground(canvas, visible, cornerRadius, background) : canvas;
+  if (watermark) {
+    const outCtx = output.getContext('2d');
+    if (outCtx) drawWatermark(outCtx, output.width, output.height);
+  }
   return new Promise((resolve, reject) => {
     output.toBlob(
       (result) => (result ? resolve(result) : reject(new Error('Could not encode PNG.'))),

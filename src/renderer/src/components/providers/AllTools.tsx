@@ -7,6 +7,20 @@ const homeTool = registerTool({
   label: ''
 });
 
+const fileExplorerTool = registerTool({
+  name: 'file-explorer' as const,
+  loadComponent: () => import('./../../../tools/file-explorer'),
+  generateName: () => 'File Explorer',
+  label: ''
+});
+
+const kuberneterTool = registerTool({
+  name: 'kuberneter' as const,
+  loadComponent: () => import('./../../../tools/kuberneter'),
+  generateName: () => `Kuberneter`,
+  label: ''
+});
+
 const httpClientTool = registerTool({
   name: 'http-client',
   loadComponent: () => import('./../../../tools/http-client'),
@@ -28,20 +42,6 @@ const screenCaptureTool = registerTool({
   label: ''
 });
 
-const kuberneterTool = registerTool({
-  name: 'kuberneter' as const,
-  loadComponent: () => import('./../../../tools/kuberneter'),
-  generateName: () => `Kuberneter`,
-  label: ''
-});
-
-const fileExplorerTool = registerTool({
-  name: 'file-explorer' as const,
-  loadComponent: () => import('./../../../tools/file-explorer'),
-  generateName: () => 'File Explorer',
-  label: ''
-});
-
 const storybookTool = registerTool({
   name: 'storybook' as const,
   loadComponent: () => import('./../../../tools/storybook'),
@@ -49,13 +49,12 @@ const storybookTool = registerTool({
   label: ''
 });
 
-// Mini component gallery/storybook, dev-only: never registered in production builds.
 export const allTools = [
   homeTool,
+  fileExplorerTool,
+  kuberneterTool,
   httpClientTool,
   screenRecordTool,
   screenCaptureTool,
-  kuberneterTool,
-  fileExplorerTool,
   ...(import.meta.env.DEV ? [storybookTool] : [])
 ];

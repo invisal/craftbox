@@ -1,10 +1,19 @@
 import type { JSX } from 'react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Tabs } from '@base-ui/react/tabs';
-import { Camera, CircleCheck, ClipboardCopy, Download, ImageUp, Scan } from 'lucide-react';
+import {
+  Camera,
+  ChevronDown,
+  CircleCheck,
+  ClipboardCopy,
+  Download,
+  ImageUp,
+  Scan
+} from 'lucide-react';
 import { cn } from 'cnfast';
 import { type ToolComponentProps } from '@renderer/components/providers/createTabProvider';
 import { Button } from '@renderer/components/ui/Button';
+import { Menu } from '@renderer/components/ui/Menu';
 import type { CaptureSource } from '@screen-recorder/types/recording';
 import { ScreenRecordingPermissionBanner } from '@screen-recorder/features/recording/components/ScreenRecordingPermissionBanner';
 import { SourcePickerPanels } from './components/SourcePicker';
@@ -16,10 +25,13 @@ import { flattenImage } from './lib/flatten';
 import { useCaptureSources, type SourceTab } from './lib/use-capture-sources';
 import {
   blobToDataUrl,
+  CAPTURE_EXPORT_FORMATS,
   captureFromSource,
+  encodeCaptureBlob,
   selectAndCaptureRegion,
   screenshotFileName,
   toPngBlob,
+  type CaptureExportFormat,
   type RegionCaptureStep
 } from './lib/capture-frame';
 
@@ -144,7 +156,8 @@ export function ScreenCaptureMain({}: ToolComponentProps<Props>): JSX.Element {
         state.annotations === previous.annotations &&
         state.cornerRadius === previous.cornerRadius &&
         state.crop === previous.crop &&
-        state.background === previous.background
+        state.background === previous.background &&
+        state.watermark === previous.watermark
       ) {
         return;
       }
@@ -152,8 +165,9 @@ export function ScreenCaptureMain({}: ToolComponentProps<Props>): JSX.Element {
       timer = window.setTimeout(() => {
         generation += 1;
         const current = generation;
-        const { annotations, cornerRadius, crop, background } = useCaptureEditorStore.getState();
-        void flattenImage(previewBlob, annotations, cornerRadius, crop, background)
+        const { annotations, cornerRadius, crop, background, watermark } =
+          useCaptureEditorStore.getState();
+        void flattenImage(previewBlob, annotations, cornerRadius, crop, background, watermark)
           .then((blob) => (current === generation ? copyAfterCapture(blob) : true))
           .then((copied) => {
             if (!copied) console.error('Could not copy edited screenshot to clipboard.');
@@ -258,8 +272,9 @@ export function ScreenCaptureMain({}: ToolComponentProps<Props>): JSX.Element {
   /** Copy/Save export what's on the editor stage, not the raw capture. */
   const editedBlob = async (): Promise<Blob | null> => {
     if (!previewBlob) return null;
-    const { annotations, cornerRadius, crop, background } = useCaptureEditorStore.getState();
-    return flattenImage(previewBlob, annotations, cornerRadius, crop, background);
+    const { annotations, cornerRadius, crop, background, watermark } =
+      useCaptureEditorStore.getState();
+    return flattenImage(previewBlob, annotations, cornerRadius, crop, background, watermark);
   };
 
   const handleCopy = async (): Promise<void> => {
@@ -272,16 +287,18 @@ export function ScreenCaptureMain({}: ToolComponentProps<Props>): JSX.Element {
     }
   };
 
-  const handleSave = async (): Promise<void> => {
+  const handleSave = async (format: CaptureExportFormat): Promise<void> => {
     if (!window.screenRecorder) return;
 
     try {
-      const blob = await editedBlob();
-      if (!blob) return;
+      const edited = await editedBlob();
+      if (!edited) return;
+      const preset = CAPTURE_EXPORT_FORMATS.find((f) => f.id === format)!;
+      const blob = await encodeCaptureBlob(edited, format);
       const arrayBuffer = await blob.arrayBuffer();
       const filePath = await window.screenRecorder.screenshot.save(
         arrayBuffer,
-        screenshotFileName()
+        screenshotFileName(preset.ext)
       );
       if (filePath) flashConfirm('save');
     } catch (err) {
@@ -311,24 +328,13 @@ export function ScreenCaptureMain({}: ToolComponentProps<Props>): JSX.Element {
       {phase !== 'capturing' && (
         <header className="shrink-0 border-b border-border-dark px-6 py-4">
           {phase === 'idle' ? (
-            usesOsPicker ? (
-              <div>
-                <h1 className="text-base font-medium">Screen Capture</h1>
-                <p className="mt-0.5 text-xs text-text-dim">
-                  Capture a full screen or window, or drag a region. You can also paste (Ctrl+V) or
-                  open an image to edit it.
-                </p>
-              </div>
-            ) : (
-              <Tabs.List className="flex items-center gap-1">
-                <Tabs.Tab value="screen" className={headerTabClass(activeTab === 'screen')}>
-                  Entire Screen{screens.length > 0 ? ` (${screens.length})` : ''}
-                </Tabs.Tab>
-                <Tabs.Tab value="window" className={headerTabClass(activeTab === 'window')}>
-                  Window{windows.length > 0 ? ` (${windows.length})` : ''}
-                </Tabs.Tab>
-              </Tabs.List>
-            )
+            <div>
+              <h1 className="text-base font-medium">Screen Capture</h1>
+              <p className="mt-0.5 text-xs text-text-dim">
+                Capture a full screen or window, or drag a region. You can also paste (Ctrl+V) or
+                open an image to edit it.
+              </p>
+            </div>
           ) : (
             <div>
               <h1 className="text-base font-medium">Preview</h1>
@@ -353,7 +359,15 @@ export function ScreenCaptureMain({}: ToolComponentProps<Props>): JSX.Element {
           <ScreenRecordingPermissionBanner />
 
           {phase === 'idle' && !usesOsPicker && (
-            <div className="w-full min-w-0">
+            <div className="flex w-full min-w-0 flex-col gap-3">
+              <Tabs.List className="flex items-center gap-1">
+                <Tabs.Tab value="screen" className={headerTabClass(activeTab === 'screen')}>
+                  Entire Screen{screens.length > 0 ? ` (${screens.length})` : ''}
+                </Tabs.Tab>
+                <Tabs.Tab value="window" className={headerTabClass(activeTab === 'window')}>
+                  Window{windows.length > 0 ? ` (${windows.length})` : ''}
+                </Tabs.Tab>
+              </Tabs.List>
               {loading ? (
                 <p className="text-sm text-text-dim">Loading sources…</p>
               ) : (
@@ -391,10 +405,20 @@ export function ScreenCaptureMain({}: ToolComponentProps<Props>): JSX.Element {
             {confirmed === 'copy' ? <CircleCheck size={14} /> : <ClipboardCopy size={14} />}
             Copy to clipboard
           </Button>
-          <Button variant="secondary" size="sm" onClick={() => void handleSave()}>
-            {confirmed === 'save' ? <CircleCheck size={14} /> : <Download size={14} />}
-            Save to file
-          </Button>
+          <Menu.Root>
+            <Menu.Trigger render={<Button variant="secondary" size="sm" />}>
+              {confirmed === 'save' ? <CircleCheck size={14} /> : <Download size={14} />}
+              Save to file
+              <ChevronDown size={14} />
+            </Menu.Trigger>
+            <Menu.Content side="top" align="end">
+              {CAPTURE_EXPORT_FORMATS.map((format) => (
+                <Menu.Item key={format.id} onClick={() => void handleSave(format.id)}>
+                  {format.label}
+                </Menu.Item>
+              ))}
+            </Menu.Content>
+          </Menu.Root>
           <Button variant="primary" size="sm" onClick={handleCaptureAgain}>
             <Camera size={14} />
             Capture again

@@ -13,7 +13,8 @@ import {
   Tag,
   Type,
   Undo2,
-  Wallpaper
+  Wallpaper,
+  Copyright
 } from 'lucide-react';
 import { cn } from 'cnfast';
 import { WALLPAPER_PRESETS, cssGradient } from '@shared/wallpaper-presets';
@@ -21,6 +22,7 @@ import { Input } from '@renderer/components/ui/Input';
 import { Popover } from '@renderer/components/ui/Popover';
 import { Select } from '@renderer/components/ui/Select';
 import { Tooltip } from '@renderer/components/ui/Tooltip';
+import { defaultChipPosition } from '../lib/flatten';
 import {
   BACKGROUND_SIZE_PRESETS,
   DEFAULT_BACKGROUND,
@@ -31,18 +33,20 @@ import {
 import type { EditorTool } from '../types/editor';
 
 /**
- * Unlike stage tools, a chip has a fixed default spot (image top-left), so
- * the rail button places it immediately — no placement click. Defaults:
- * white text, biggest font tier; edit via the layer's properties dropdown.
+ * Unlike stage tools, a chip has a fixed default spot (image top-left, or the
+ * background margin when a frame is enabled), so the rail button places it
+ * immediately — no placement click. Defaults: white text, biggest font tier;
+ * edit via the layer's properties dropdown.
  */
 function addChip(): void {
   const s = useCaptureEditorStore.getState();
+  const { x, y } = defaultChipPosition(s.imageWidth, s.imageHeight, s.unit, s.crop, s.background);
   s.setTool('select');
   s.addAnnotation({
     id: crypto.randomUUID(),
     kind: 'chip',
-    x: 16 * s.unit,
-    y: 16 * s.unit,
+    x,
+    y,
     text: 'Before',
     color: '#ffffff',
     fontSize: FONT_TIERS.at(-1)!.value * s.unit
@@ -288,6 +292,8 @@ export function EditorToolbar(): JSX.Element {
   const cornerRadius = useCaptureEditorStore((s) => s.cornerRadius);
   const setCornerRadius = useCaptureEditorStore((s) => s.setCornerRadius);
   const hasBackground = useCaptureEditorStore((s) => s.background !== null);
+  const watermark = useCaptureEditorStore((s) => s.watermark);
+  const setWatermark = useCaptureEditorStore((s) => s.setWatermark);
   const unit = useCaptureEditorStore((s) => s.unit);
   const canUndo = useCaptureEditorStore((s) => s.past.length > 0);
   const canRedo = useCaptureEditorStore((s) => s.future.length > 0);
@@ -360,10 +366,26 @@ export function EditorToolbar(): JSX.Element {
               <Wallpaper size={16} strokeWidth={1.75} />
             </Popover.Trigger>
           </RailTooltip>
-          <Popover.Content side="right" align="start" className="w-72">
+          <Popover.Content
+            side="right"
+            align="start"
+            className="max-h-[min(32rem,var(--available-height))] w-72 overflow-y-auto"
+          >
             <BackgroundControls />
           </Popover.Content>
         </Popover.Root>
+
+        <RailTooltip label={watermark ? 'Watermark on' : 'Watermark off'}>
+          <button
+            type="button"
+            aria-label="Watermark"
+            aria-pressed={watermark}
+            onClick={() => setWatermark(!watermark)}
+            className={railButtonClass(watermark)}
+          >
+            <Copyright size={16} strokeWidth={1.75} />
+          </button>
+        </RailTooltip>
 
         <div className="my-1.5 h-px w-6 bg-border-dark" />
 
