@@ -11,7 +11,7 @@ interface EditorToolRailProps {
 export function EditorToolRail({ active, onSelect }: EditorToolRailProps): JSX.Element {
   return (
     <Tooltip.Provider delay={200} closeDelay={0}>
-      <nav className="flex w-14 shrink-0 flex-col items-center gap-0.5 border-r border-line bg-surface py-3">
+      <nav className="flex w-14 shrink-0 flex-col items-center gap-0.5 border-r border-line border-l bg-surface py-3">
         {EDITOR_TOOLS.map((tool) => {
           const Icon = tool.icon;
           const isActive = active === tool.id;
