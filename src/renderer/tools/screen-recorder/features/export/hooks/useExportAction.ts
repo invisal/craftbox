@@ -4,6 +4,7 @@ import { useTimelineStore, PRIMARY_VIDEO_TRACK_ID } from '../../timeline/store/t
 import { getSegmentOutputDurationMs } from '../../timeline/lib/segment-duration';
 import { useExportStore } from '../store/export-store';
 import { buildExportProject } from '../lib/build-export-project';
+import { runExport } from '../../../export-engine/export-coordinator';
 
 export type ExportStatus = 'idle' | 'exporting' | 'error';
 
@@ -58,32 +59,31 @@ export function useExportAction(): UseExportActionResult {
     setError(null);
     setProgress({ percent: 0, stage: 'rendering' });
 
-    const unsubscribe = window.screenRecorder.export.onProgress((p) => {
-      setProgress({ percent: p.percent, stage: p.stage });
-      if (p.stage === 'error' && p.error) setError(p.error);
-    });
-
     try {
       const durationMs = segments.reduce((sum, s) => sum + getSegmentOutputDurationMs(s), 0);
-      await window.screenRecorder.export.start({
-        format: store.format,
-        codec: store.codec,
-        aspectRatio: store.aspectRatio,
-        resolution: store.resolution,
-        frameRate: store.frameRate,
-        quality: store.quality,
-        outputPath,
-        sourceVideoPath,
-        segments: segments.map((s) => ({ range: s.range, crop: s.crop, speed: s.speed })),
-        project: buildExportProject(sourceVideoPath, durationMs)
-      });
+      await runExport(
+        {
+          format: store.format,
+          codec: store.codec,
+          aspectRatio: store.aspectRatio,
+          resolution: store.resolution,
+          frameRate: store.frameRate,
+          quality: store.quality,
+          outputPath,
+          sourceVideoPath,
+          segments: segments.map((s) => ({ range: s.range, crop: s.crop, speed: s.speed })),
+          project: buildExportProject(sourceVideoPath, durationMs)
+        },
+        (p) => {
+          setProgress({ percent: p.percent, stage: p.stage });
+          if (p.stage === 'error' && p.error) setError(p.error);
+        }
+      );
       setStatus('idle');
       setProgress(null);
     } catch (err) {
       setStatus('error');
       setError(err instanceof Error ? err.message : String(err));
-    } finally {
-      unsubscribe();
     }
   }
 

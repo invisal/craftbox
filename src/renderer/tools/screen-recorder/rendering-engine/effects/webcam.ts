@@ -1,5 +1,4 @@
-import { Container, Graphics, Sprite } from 'pixi.js';
-import { RawFrameTexture } from '../raw-frame-texture';
+import { Container, Graphics, Sprite, type Texture } from 'pixi.js';
 import type { WebcamSceneData } from '../types';
 
 function traceShape(
@@ -24,22 +23,17 @@ export class WebcamEffect {
   private readonly maskGraphics = new Graphics();
   private readonly sprite = new Sprite();
   private readonly placeholder = new Graphics();
-  private readonly rawTexture = new RawFrameTexture();
 
   constructor(parent: Container) {
     // See shadow-corner.ts's constructor comment: `includeInBuild = false`,
     // not `renderable = false` -- the latter also breaks the mask itself.
     this.maskGraphics.includeInBuild = false;
-    this.sprite.texture = this.rawTexture.texture;
     this.container.addChild(this.maskGraphics, this.placeholder, this.sprite);
     this.container.mask = this.maskGraphics;
     parent.addChild(this.container);
   }
 
-  update(
-    webcam: WebcamSceneData | null,
-    frame: { buffer: Uint8Array; size: number } | undefined
-  ): void {
+  update(webcam: WebcamSceneData | null, texture: Texture | undefined): void {
     this.maskGraphics.clear();
     this.placeholder.clear();
     if (!webcam) {
@@ -51,11 +45,10 @@ export class WebcamEffect {
       0xffffff
     );
 
-    if (frame) {
+    if (texture) {
       this.placeholder.visible = false;
       this.sprite.visible = true;
-      this.rawTexture.update(frame.buffer, frame.size, frame.size);
-      this.sprite.texture = this.rawTexture.texture;
+      this.sprite.texture = texture;
       this.sprite.height = webcam.sizePx;
       this.sprite.y = webcam.yPx;
       if (webcam.mirrored) {

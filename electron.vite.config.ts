@@ -31,53 +31,29 @@ export default defineConfig({
     },
     build: {
       rollupOptions: {
-        // Only ever imported by export-worker.ts's import graph (a hidden,
-        // nodeIntegration:true window -- see export-worker-window.ts) --
-        // left external so they resolve via that window's real Node
-        // `require`/native ESM-require at runtime instead of being bundled
-        // for a browser environment, the same way the main-process build
-        // already externalizes execa. Harmless for every other renderer
-        // entry below, none of which import these.
-        external: [
-          'electron',
-          'fs',
-          'path',
-          'stream',
-          'node:fs',
-          'node:path',
-          'node:stream',
-          'execa',
-          'ffmpeg-static',
-          'ffprobe-static'
-        ],
         input: {
           index: resolve('src/renderer/index.html'),
           regionSelect: resolve('src/renderer/region-select.html'),
           recorderToolbar: resolve('src/renderer/recorder-toolbar.html'),
-          sourcePickerOverlay: resolve('src/renderer/source-picker-overlay.html'),
-          exportWorker: resolve('src/renderer/export-worker.html')
+          sourcePickerOverlay: resolve('src/renderer/source-picker-overlay.html')
         }
       }
     },
-    // Vite's dev-server dependency pre-bundler (esbuild) is separate from
-    // the Rollup `build.rollupOptions.external` above -- it doesn't consult
-    // that list, and by default tries to pre-bundle every bare import it
-    // finds for the browser, including execa's ESM-only transitive deps
-    // (unicorn-magic etc.), which esbuild can't resolve any better here than
-    // tsx could earlier. Excluding them stops the optimizer from touching
-    // them at all, matching how they're handled in the production build.
-    optimizeDeps: {
-      exclude: ['electron', 'execa', 'ffmpeg-static', 'ffprobe-static']
-    },
-    // The nested PixiJS render Worker (rendering-engine/render-worker.ts,
-    // imported via a `?worker` suffix from render-worker-client.ts) pulls in
-    // pixi.js, which internally code-splits (autoDetectRenderer dynamically
-    // imports the WebGL/WebGPU backend) -- Vite's default worker format
-    // ('iife') can't support that, so this worker output needs ES modules,
-    // matching the `{ type: 'module' }` the Worker is already constructed
-    // with.
+    // The export Worker (src/renderer/export-worker.ts, imported via a
+    // `?worker` suffix from the export coordinator) pulls in pixi.js, which
+    // internally code-splits (autoDetectRenderer dynamically imports the
+    // WebGL/WebGPU backend) -- Vite's default worker format ('iife') can't
+    // support that, so this worker output needs ES modules, matching the
+    // `{ type: 'module' }` the Worker is already constructed with.
     worker: {
       format: 'es'
+    },
+    // In `electron-vite dev`, this Worker's dev-mode module wrapper runs
+    // with an opaque ("null") origin, so any `fetch()` it makes -- e.g.
+    // `web-demuxer` loading its WASM file -- is treated as cross-origin even
+    // against this same dev server, and gets blocked by CORS without this.
+    server: {
+      cors: true
     },
     define: {
       __APP_VERSION__: JSON.stringify(version)

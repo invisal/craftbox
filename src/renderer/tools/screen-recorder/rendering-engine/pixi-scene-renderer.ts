@@ -1,4 +1,4 @@
-import { autoDetectRenderer, Container, Rectangle, Sprite, type Renderer } from 'pixi.js';
+import { autoDetectRenderer, Container, Rectangle, Sprite, Texture, type Renderer } from 'pixi.js';
 import { AnnotationsEffect } from './effects/annotations';
 import { BackgroundEffect } from './effects/background';
 import { BlurMasksEffect } from './effects/blur-masks';
@@ -7,29 +7,45 @@ import { CursorEffect } from './effects/cursor';
 import { ShadowCornerEffect } from './effects/shadow-corner';
 import { applyZoom } from './effects/zoom';
 import { WebcamEffect } from './effects/webcam';
-import { RawFrameTexture } from './raw-frame-texture';
+import type { PixelCropRect } from './crop';
 import type { SceneDescription } from './types';
+
+/** Wraps a `VideoFrame` as a PixiJS `Texture`, optionally cropped to a sub-rect (source pixel coordinates) via the texture's `frame`. Caller owns the `VideoFrame`'s lifetime -- must not `close()` it until after the render that uses this texture has happened. */
+function textureFromVideoFrame(frame: VideoFrame, cropRect?: PixelCropRect): Texture {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Pixi's public TextureSourceLike union doesn't list VideoFrame, but ImageSource's runtime source-detection explicitly accepts it (`globalThis.VideoFrame && resource instanceof VideoFrame`).
+  const base = Texture.from(frame as any);
+  if (!cropRect) return base;
+  return new Texture({
+    source: base.source,
+    frame: new Rectangle(cropRect.x, cropRect.y, cropRect.width, cropRect.height)
+  });
+}
 
 /**
  * Owns a persistent PixiJS scene graph (built once, mutated per frame -- not
- * rebuilt from scratch every frame) that mirrors frame-compositor.ts's
- * layer/draw order:
+ * rebuilt from scratch every frame) that mirrors the layer/draw order:
  *
  *   background -> [zoom-transformed: shadow, [clipped: video, blur-masks,
  *   cursor]] -> webcam PiP -> annotations -> caption
  *
- * Consumes a `SceneDescription` (from `timeline-evaluator.ts`) plus the raw
- * decoded video/webcam RGBA buffers for one frame, and returns the
- * composited RGBA pixels for that frame. No PixiJS type appears in
- * `types.ts`/`timeline-evaluator.ts` -- this is the only module that knows
- * about PixiJS at all.
+ * Consumes a `SceneDescription` (from `timeline-evaluator.ts`) plus the
+ * decoded video/webcam `VideoFrame`s for one frame, and renders them onto its
+ * `OffscreenCanvas`. No PixiJS type appears in `types.ts`/
+ * `timeline-evaluator.ts` -- this is the only module that knows about PixiJS
+ * at all.
+ *
+ * Unlike the earlier ffmpeg-subprocess-pipe version of this class, there is
+ * no `extract.pixels()` call here: the caller wraps `getCanvas()` directly as
+ * a `VideoFrame` for the WebCodecs `VideoEncoder` (`new VideoFrame(canvas,
+ * {timestamp, duration})`), which is both simpler and avoids an extra full-
+ * frame pixel readback+copy every frame.
  */
 export class PixiSceneRenderer {
   private readonly stage = new Container();
   private readonly contentLayer = new Container();
   private readonly clippedContent = new Container();
   private readonly videoSprite = new Sprite();
-  private readonly videoTexture = new RawFrameTexture();
+  private videoTexture: Texture | null = null;
 
   private readonly background: BackgroundEffect;
   private readonly shadowCorner: ShadowCornerEffect;
@@ -44,7 +60,6 @@ export class PixiSceneRenderer {
     this.stage.addChild(this.contentLayer);
     this.shadowCorner = new ShadowCornerEffect(this.contentLayer, this.clippedContent);
 
-    this.videoSprite.texture = this.videoTexture.texture;
     this.clippedContent.addChild(this.videoSprite);
     this.contentLayer.addChild(this.clippedContent);
     this.clippedContent.mask = this.shadowCorner.maskGraphics;
@@ -67,10 +82,9 @@ export class PixiSceneRenderer {
       width,
       height,
       // Pinned explicitly so the exported frame's pixel dimensions always
-      // exactly match `width x height` (what the ffmpeg encoder is told to
-      // expect) regardless of whatever this Worker's `devicePixelRatio`
-      // happens to be -- HiDPI scaling here would silently double the
-      // renderer's backing pixel size.
+      // exactly match `width x height` regardless of whatever this Worker's
+      // `devicePixelRatio` happens to be -- HiDPI scaling here would
+      // silently double the renderer's backing pixel size.
       resolution: 1,
       preference: ['webgl', 'webgpu'],
       antialias: false,
@@ -83,48 +97,55 @@ export class PixiSceneRenderer {
 
   async renderFrame(
     scene: SceneDescription,
-    videoFrame: Uint8Array,
-    videoFrameWidth: number,
-    videoFrameHeight: number,
-    webcamFrame?: { buffer: Uint8Array; size: number }
-  ): Promise<Uint8Array> {
+    videoFrame: VideoFrame,
+    videoCropRect: PixelCropRect | undefined,
+    webcamFrame?: VideoFrame,
+    webcamCropRect?: PixelCropRect
+  ): Promise<void> {
     await this.background.update(scene.background);
     applyZoom(this.contentLayer, scene.innerRect, scene.zoom);
     this.shadowCorner.update(scene.innerRect, scene.cornerRadiusPx, scene.shadow);
 
-    this.videoTexture.update(videoFrame, videoFrameWidth, videoFrameHeight);
-    this.videoSprite.texture = this.videoTexture.texture;
+    // A fresh Texture is created per frame (VideoFrames aren't mutable/
+    // reusable like the old raw-buffer approach) -- the previous one is
+    // destroyed *after* the new one is assigned, matching the reference
+    // implementation's leak-avoidance pattern.
+    const oldVideoTexture = this.videoTexture;
+    this.videoTexture = textureFromVideoFrame(videoFrame, videoCropRect);
+    this.videoSprite.texture = this.videoTexture;
+    oldVideoTexture?.destroy(true);
+
     this.videoSprite.x = scene.innerRect.x;
     this.videoSprite.y = scene.innerRect.y;
     this.videoSprite.width = scene.innerRect.width;
     this.videoSprite.height = scene.innerRect.height;
 
-    this.blurMasks.update(scene.blurMasks, this.videoTexture.texture, scene.innerRect);
+    this.blurMasks.update(scene.blurMasks, this.videoTexture, scene.innerRect);
     this.cursor.update(scene.cursor, scene.innerRect);
-    this.webcam.update(scene.webcam, webcamFrame);
+
+    let webcamTexture: Texture | undefined;
+    if (webcamFrame) {
+      webcamTexture = textureFromVideoFrame(webcamFrame, webcamCropRect);
+    }
+    this.webcam.update(scene.webcam, webcamTexture);
+
     await this.annotations.update(scene.annotations);
     this.caption.update(scene.caption, scene.outputWidth, scene.outputHeight, scene.referenceScale);
 
     this.renderer.render(this.stage);
-    // `frame` must be explicit: without it, `extract.pixels(container)`
-    // measures the container's *dynamic content bounds* (which grow/shrink
-    // frame to frame -- zoom scaling, BlurFilter's inherent edge padding,
-    // etc.) instead of the fixed canvas size, so the returned buffer's byte
-    // length silently varies per frame. The ffmpeg encoder is told a fixed
-    // `width x height` raw-frame size (see video-encoder.ts's `-s`
-    // argument); feeding it variably-sized buffers desyncs its byte-stream
-    // framing, corrupting every frame after the first mismatch. Confirmed
-    // by dumping an actual composited buffer -- it was ~2.9MB against an
-    // expected 960x540x4 = ~2.07MB.
-    const { pixels } = this.renderer.extract.pixels({
-      target: this.stage,
-      frame: new Rectangle(0, 0, scene.outputWidth, scene.outputHeight)
-    });
-    return new Uint8Array(pixels.buffer, pixels.byteOffset, pixels.byteLength);
+    // Destroying the webcam texture only after render() has actually
+    // uploaded/read it -- it's not retained across frames like the video
+    // texture (webcam.ts always gets a fresh one when present, or none).
+    webcamTexture?.destroy(true);
+  }
+
+  /** The canvas this renderer draws to -- wrap directly as `new VideoFrame(canvas, {timestamp, duration})` for encoding, no pixel extraction needed. */
+  getCanvas(): OffscreenCanvas {
+    return this.renderer.canvas as unknown as OffscreenCanvas;
   }
 
   destroy(): void {
-    this.videoTexture.destroy();
+    this.videoTexture?.destroy(true);
     this.renderer.destroy();
   }
 }
