@@ -37,6 +37,12 @@ import { AlertCircle, Loader2 } from 'lucide-react';
 import { useLayoutStore } from '../../../../src/store/layout.store';
 import { DetailContent } from './details/DetailContent';
 import { HelmCharts } from './helm-charts/HelmCharts';
+import { HelmReleases } from './helm-releases/HelmReleases';
+import { ServiceAccounts } from './serviceaccounts/ServiceAccounts';
+import { ClusterRoles } from './clusterroles/ClusterRoles';
+import { Roles } from './roles/Roles';
+import { ClusterRoleBindings } from './clusterrolebindings/ClusterRoleBindings';
+import { RoleBindings } from './rolebindings/RoleBindings';
 
 export type { ApplicationData } from '../../types/ApplicationData';
 
@@ -82,6 +88,11 @@ export const KuberneterWorkspace: React.FC<KuberneterWorkspaceProps> = ({ resour
     storageClassesData,
     namespacesData,
     eventsData,
+    serviceAccountsData,
+    clusterRolesData,
+    rolesData,
+    clusterRoleBindingsData,
+    roleBindingsData,
     isLoading,
     errorMsg
   } = useWorkspaceResources(resource);
@@ -300,7 +311,7 @@ export const KuberneterWorkspace: React.FC<KuberneterWorkspaceProps> = ({ resour
             <ValidatingWebhooks validatingWebhooksData={validatingWebhooksData} />
           )}
 
-          {(resource === 'apps' || resource === 'helm-releases') && (
+          {resource === 'apps' && (
             <Application
               applicationsData={applicationsData}
               kuberneterSelectedNamespace={kuberneterSelectedNamespace}
@@ -308,6 +319,25 @@ export const KuberneterWorkspace: React.FC<KuberneterWorkspaceProps> = ({ resour
           )}
 
           {resource === 'helm-charts' && <HelmCharts />}
+
+          {resource === 'helm-releases' && <HelmReleases />}
+
+          {resource === 'serviceaccounts' && (
+            <ServiceAccounts
+              serviceAccountsData={serviceAccountsData}
+              kuberneterSelectedNamespace={kuberneterSelectedNamespace}
+            />
+          )}
+
+          {resource === 'clusterroles' && <ClusterRoles clusterRolesData={clusterRolesData} />}
+
+          {resource === 'roles' && <Roles rolesData={rolesData} />}
+
+          {resource === 'clusterrolebindings' && (
+            <ClusterRoleBindings clusterRoleBindingsData={clusterRoleBindingsData} />
+          )}
+
+          {resource === 'bindings' && <RoleBindings roleBindingsData={roleBindingsData} />}
 
           {resource === 'nodes' && <Nodes nodesData={nodesData} />}
         </>

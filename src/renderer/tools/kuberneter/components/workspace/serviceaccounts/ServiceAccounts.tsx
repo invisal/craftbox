@@ -1,19 +1,19 @@
 import type React from 'react';
 import { useState, useMemo, useCallback } from 'react';
-import { type ApplicationData } from '../../../types/ApplicationData';
-import { ApplicationsToolbar } from './ApplicationsToolbar';
-import { ApplicationsTable } from './ApplicationsTable';
-import { KubeWorkspaceLayout } from '../KubeWorkspaceLayout';
+import { type ServiceAccountData } from '../../../types/ServiceAccountData';
+import { ServiceAccountsToolbar } from './ServiceAccountsToolbar';
+import { ServiceAccountsTable } from './ServiceAccountsTable';
 import { useLayoutStore } from '../../../../../src/store/layout.store';
 import { useKuberneterStore } from '../../../store/kuberneter.store';
+import { KubeWorkspaceLayout } from '../KubeWorkspaceLayout';
 
-interface ApplicationProps {
-  applicationsData: ApplicationData[];
+interface ServiceAccountsProps {
+  serviceAccountsData: ServiceAccountData[];
   kuberneterSelectedNamespace: string;
 }
 
-export const Application: React.FC<ApplicationProps> = ({
-  applicationsData,
+export const ServiceAccounts: React.FC<ServiceAccountsProps> = ({
+  serviceAccountsData,
   kuberneterSelectedNamespace
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
@@ -27,18 +27,18 @@ export const Application: React.FC<ApplicationProps> = ({
     activeTabId ? s.kuberneterTabDrawers[activeTabId] : null
   );
 
-  const selectedApplicationId =
-    drawerState?.isOpen && drawerState?.contentType === 'application'
-      ? (drawerState?.payload as ApplicationData)?.id
+  const selectedSaId =
+    drawerState?.isOpen && drawerState?.contentType === 'serviceaccount'
+      ? (drawerState?.payload as ServiceAccountData)?.id
       : undefined;
 
-  const handleSelectApplication = useCallback(
-    (app: ApplicationData) => {
+  const handleSelectSa = useCallback(
+    (sa: ServiceAccountData) => {
       if (activeTabId) {
         setDrawerState(activeTabId, {
           isOpen: true,
-          contentType: 'application',
-          payload: app
+          contentType: 'serviceaccount',
+          payload: sa
         });
       }
     },
@@ -47,24 +47,19 @@ export const Application: React.FC<ApplicationProps> = ({
 
   // Filter rows by namespace + search query
   const filteredData = useMemo(() => {
-    return applicationsData.filter((app) => {
+    return serviceAccountsData.filter((sa) => {
       if (
         kuberneterSelectedNamespace !== 'All Namespaces' &&
-        app.namespace !== kuberneterSelectedNamespace
+        sa.ns !== kuberneterSelectedNamespace
       ) {
         return false;
       }
 
       if (!searchQuery) return true;
 
-      const fields = [
-        app.instance,
-        app.application,
-        app.namespace,
-        app.managedBy,
-        app.version,
-        app.status
-      ];
+      const labelsArr = sa.labels ? Object.entries(sa.labels) : [];
+      const labelsStr = labelsArr.map(([k, v]) => `${k}=${v}`).join(', ');
+      const fields = [sa.name, sa.ns, labelsStr, sa.age];
 
       if (useRegex) {
         try {
@@ -82,7 +77,7 @@ export const Application: React.FC<ApplicationProps> = ({
         });
       }
     });
-  }, [applicationsData, kuberneterSelectedNamespace, searchQuery, caseSensitive, useRegex]);
+  }, [serviceAccountsData, kuberneterSelectedNamespace, searchQuery, caseSensitive, useRegex]);
 
   const handleSelectAll = useCallback(
     (checked: boolean) => {
@@ -100,27 +95,52 @@ export const Application: React.FC<ApplicationProps> = ({
     });
   }, []);
 
+  const handleDownloadCsv = () => {
+    const dataToExport =
+      selectedIds.size > 0 ? filteredData.filter((d) => selectedIds.has(d.id)) : filteredData;
+
+    if (dataToExport.length === 0) return;
+
+    const headers = ['Name', 'Namespace', 'Secrets', 'Age'];
+    const csvRows = [headers.join(',')];
+
+    dataToExport.forEach((sa) => {
+      const row = [`"${sa.name}"`, `"${sa.ns}"`, `"${sa.secrets.join(';')}"`, `"${sa.age}"`];
+      csvRows.push(row.join(','));
+    });
+
+    const blob = new Blob([csvRows.join('\n')], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `serviceaccounts-export-${Date.now()}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <KubeWorkspaceLayout
       header={
-        <ApplicationsToolbar
+        <ServiceAccountsToolbar
           searchQuery={searchQuery}
           caseSensitive={caseSensitive}
           useRegex={useRegex}
+          totalCount={filteredData.length}
           selectedCount={selectedIds.size}
           onSearchChange={setSearchQuery}
           onCaseSensitiveToggle={() => setCaseSensitive((v) => !v)}
           onRegexToggle={() => setUseRegex((v) => !v)}
+          onDownload={handleDownloadCsv}
         />
       }
     >
-      <ApplicationsTable
+      <ServiceAccountsTable
         filteredData={filteredData}
         selectedIds={selectedIds}
         onSelectAll={handleSelectAll}
         onSelectRow={handleSelectRow}
-        onSelectApplication={handleSelectApplication}
-        selectedApplicationId={selectedApplicationId}
+        onSelectServiceAccount={handleSelectSa}
+        selectedServiceAccountId={selectedSaId}
       />
     </KubeWorkspaceLayout>
   );

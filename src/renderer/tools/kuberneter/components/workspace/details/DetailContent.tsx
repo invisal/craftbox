@@ -20,12 +20,24 @@ import { PersistentVolumeClaimDetail } from './PersistentVolumeClaimDetail';
 import { PersistentVolumeDetail } from './PersistentVolumeDetail';
 import { StorageClassDetail } from './StorageClassDetail';
 import { NamespaceDetail } from './NamespaceDetail';
+import { ClusterRoleDetail } from './ClusterRoleDetail';
+import { RoleDetail } from './RoleDetail';
+import { ClusterRoleBindingDetail } from './ClusterRoleBindingDetail';
+import { RoleBindingDetail } from './RoleBindingDetail';
+import { ApplicationDetail } from './ApplicationDetail';
+import { NodeDetail } from './NodeDetail';
 import { EventDetail } from './EventDetail';
 import { MutatingWebhookDetail } from './MutatingWebhookDetail';
 import { type PersistentVolumeClaimData } from '../../../types/PersistentVolumeClaimData';
 import { type PersistentVolumeData } from '../../../types/PersistentVolumeData';
 import { type StorageClassData } from '../../../types/StorageClassData';
 import { type NamespaceData } from '../../../types/NamespaceData';
+import { type ClusterRoleData } from '../../../types/ClusterRoleData';
+import { type RoleData } from '../../../types/RoleData';
+import { type ClusterRoleBindingData } from '../../../types/ClusterRoleBindingData';
+import { type RoleBindingData } from '../../../types/RoleBindingData';
+import { type ApplicationData } from '../../../types/ApplicationData';
+import { type NodeData } from '../../../types/NodeData';
 import { type EventData } from '../../../types/EventData';
 
 import { ValidatingWebhookDetail } from './ValidatingWebhookDetail';
@@ -35,7 +47,9 @@ import { IngressDetail } from './IngressDetail';
 import { IngressClassDetail } from './IngressClassDetail';
 import { NetworkPolicyDetail } from './NetworkPolicyDetail';
 import { HelmChartDetail } from './HelmChartDetail';
-import { type HelmChartItem } from '../../../../../../preload/kuberneter/api';
+import { HelmReleaseDetail } from './HelmReleaseDetail';
+import { ServiceAccountDetail } from './ServiceAccountDetail';
+import { type HelmChartItem, type HelmReleaseItem } from '../../../../../../preload/kuberneter/api';
 
 import { type PodData } from '../../../types/PodData';
 import { type DeployData } from '../../../types/DeployData';
@@ -61,6 +75,7 @@ import { type EndpointData } from '../../../types/EndpointData';
 import { type IngressData } from '../../../types/IngressData';
 import { type IngressClassData } from '../../../types/IngressClassData';
 import { type NetworkPolicyData } from '../../../types/NetworkPolicyData';
+import { type ServiceAccountData } from '../../../types/ServiceAccountData';
 
 interface DetailContentProps {
   contentType: string;
@@ -125,6 +140,18 @@ export const DetailContent: React.FC<DetailContentProps> = ({
       return <StorageClassDetail payload={payload as StorageClassData} isTab={isTab} />;
     case 'namespace':
       return <NamespaceDetail payload={payload as NamespaceData} isTab={isTab} />;
+    case 'clusterrole':
+      return <ClusterRoleDetail payload={payload as ClusterRoleData} isTab={isTab} />;
+    case 'role':
+      return <RoleDetail payload={payload as RoleData} isTab={isTab} />;
+    case 'clusterrolebinding':
+      return <ClusterRoleBindingDetail payload={payload as ClusterRoleBindingData} isTab={isTab} />;
+    case 'rolebinding':
+      return <RoleBindingDetail payload={payload as RoleBindingData} isTab={isTab} />;
+    case 'application':
+      return <ApplicationDetail payload={payload as ApplicationData} isTab={isTab} />;
+    case 'nodes':
+      return <NodeDetail payload={payload as NodeData} isTab={isTab} />;
     case 'event':
       return <EventDetail payload={payload as EventData} isTab={isTab} />;
     case 'endpointslice':
@@ -151,8 +178,12 @@ export const DetailContent: React.FC<DetailContentProps> = ({
           isTab={isTab}
         />
       );
+    case 'serviceaccount':
+      return <ServiceAccountDetail payload={payload as ServiceAccountData} isTab={isTab} />;
     case 'helm-chart':
       return <HelmChartDetail payload={payload as HelmChartItem} isTab={isTab} />;
+    case 'helm-release':
+      return <HelmReleaseDetail payload={payload as HelmReleaseItem} isTab={isTab} />;
     default:
       return (
         <div className="p-4 text-xs text-zinc-500">

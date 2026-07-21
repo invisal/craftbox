@@ -3,27 +3,26 @@ import type React from 'react';
 import { useMemo } from 'react';
 import { KubeTable, type Column } from '../../kubeTable';
 import { MoreVertical } from 'lucide-react';
-import { cn } from 'cnfast';
-import { type ApplicationData } from '../../../types/ApplicationData';
+import { type ServiceAccountData } from '../../../types/ServiceAccountData';
 
-interface ApplicationsTableProps {
-  filteredData: ApplicationData[];
+interface ServiceAccountsTableProps {
+  filteredData: ServiceAccountData[];
   selectedIds: Set<string>;
   onSelectAll: (checked: boolean) => void;
   onSelectRow: (id: string, checked: boolean) => void;
-  onSelectApplication?: (app: ApplicationData) => void;
-  selectedApplicationId?: string;
+  onSelectServiceAccount: (sa: ServiceAccountData) => void;
+  selectedServiceAccountId?: string;
 }
 
-export const ApplicationsTable: React.FC<ApplicationsTableProps> = ({
+export const ServiceAccountsTable: React.FC<ServiceAccountsTableProps> = ({
   filteredData,
   selectedIds,
   onSelectAll,
   onSelectRow,
-  onSelectApplication,
-  selectedApplicationId
+  onSelectServiceAccount,
+  selectedServiceAccountId
 }) => {
-  const columns = useMemo<Column<ApplicationData>[]>(
+  const columns = useMemo<Column<ServiceAccountData>[]>(
     () => [
       {
         key: 'select',
@@ -51,52 +50,37 @@ export const ApplicationsTable: React.FC<ApplicationsTableProps> = ({
         sortable: false
       },
       {
-        key: 'instance',
-        header: 'Instance',
+        key: 'name',
+        header: 'Name',
         render: (row) => (
-          <span className="font-mono text-zinc-300 font-semibold">{row.instance}</span>
+          <span
+            className="font-mono text-zinc-300 font-semibold truncate hover:underline cursor-pointer"
+            title={row.name}
+          >
+            {row.name}
+          </span>
         ),
-        className: 'font-mono text-zinc-300',
-        initialWidth: 180
-      },
-      {
-        key: 'application',
-        header: 'Application',
-        render: (row) => <span className="font-sans text-zinc-200">{row.application}</span>,
-        className: 'text-zinc-200',
-        initialWidth: 160
+        className: 'font-mono text-zinc-300 max-w-[250px] truncate',
+        initialWidth: 250
       },
       {
         key: 'namespace',
         header: 'Namespace',
         render: (row) => (
-          <span className="font-mono text-[10px] text-zinc-550">{row.namespace}</span>
+          <span className="font-mono text-accent hover:underline cursor-pointer">{row.ns}</span>
         ),
-        className: 'font-mono text-zinc-550',
-        initialWidth: 160
+        sortValue: (row) => row.ns,
+        className: 'font-mono text-accent',
+        initialWidth: 150
       },
       {
-        key: 'managedBy',
-        header: 'Managed By',
-        render: (row) =>
-          row.managedBy ? (
-            <span className="text-zinc-400 text-[11px]">{row.managedBy}</span>
-          ) : (
-            <span className="text-zinc-600">—</span>
-          ),
-        className: 'text-xs',
-        initialWidth: 100
-      },
-      {
-        key: 'version',
-        header: 'Version',
+        key: 'secrets',
+        header: 'Secrets',
         render: (row) => (
-          <span className="font-mono text-zinc-400">
-            {row.version || <span className="text-zinc-600">—</span>}
-          </span>
+          <span className="text-zinc-300 font-mono text-[11px]">{row.secretsCount}</span>
         ),
-        className: 'font-mono text-zinc-400',
-        initialWidth: 80
+        sortValue: (row) => row.secretsCount,
+        initialWidth: 100
       },
       {
         key: 'age',
@@ -109,32 +93,13 @@ export const ApplicationsTable: React.FC<ApplicationsTableProps> = ({
           </span>
         ),
         className: 'text-zinc-500',
-        initialWidth: 70
-      },
-      {
-        key: 'status',
-        header: 'Status',
-        render: (row) => {
-          const isRunning = row.status === 'Running';
-          return (
-            <span
-              className={cn(
-                'text-[11px] font-medium select-none',
-                isRunning ? 'text-emerald-400' : 'text-amber-400'
-              )}
-            >
-              {row.status}
-            </span>
-          );
-        },
-        className: 'text-xs',
-        initialWidth: 80
+        initialWidth: 120
       },
       {
         key: 'actions',
         header: (
           <div className="flex justify-center select-none">
-            <MoreVertical className="size-3.5 text-zinc-550" />
+            <MoreVertical className="size-3.5 text-zinc-555" />
           </div>
         ),
         render: () => (
@@ -150,7 +115,8 @@ export const ApplicationsTable: React.FC<ApplicationsTableProps> = ({
         headerClassName: 'w-10 text-center',
         className: 'w-10 text-center',
         initialWidth: 40,
-        resizable: false
+        resizable: false,
+        sortable: false
       }
     ],
     [filteredData, selectedIds, onSelectAll, onSelectRow]
@@ -162,9 +128,9 @@ export const ApplicationsTable: React.FC<ApplicationsTableProps> = ({
       data={filteredData}
       getRowKey={(row) => row.id}
       className="flex-1"
-      onRowClick={onSelectApplication}
-      selectedRowKey={selectedApplicationId}
-      emptyMessage="No applications match the search filters."
+      onRowClick={(row) => onSelectServiceAccount(row)}
+      selectedRowKey={selectedServiceAccountId}
+      emptyMessage="No Service Accounts match the search filters."
     />
   );
 };

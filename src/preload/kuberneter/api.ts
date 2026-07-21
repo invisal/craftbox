@@ -41,6 +41,16 @@ export interface KuberneterApi {
     items?: { namespace: string; name: string; cpu: string; memory: string }[];
     error?: string;
   }>;
+  queryPrometheus: (
+    kubeconfigPath: string | undefined,
+    contextName: string | undefined,
+    prometheusNamespace?: string,
+    prometheusService?: string,
+    prometheusPort?: number
+  ) => Promise<{
+    items?: { namespace: string; name: string; cpu: string; memory: string }[];
+    error?: string;
+  }>;
   helmSearchCharts: (kubeconfigPath?: string) => Promise<HelmChartItem[] | { error: string }>;
   helmGetChartVersions: (
     chartName: string,
@@ -64,6 +74,13 @@ export interface KuberneterApi {
     kubeconfigPath?: string,
     contextName?: string
   ) => Promise<HelmReleaseItem[] | { error: string }>;
+  helmGetReleaseValues: (
+    releaseName: string,
+    namespace: string,
+    allValues?: boolean,
+    kubeconfigPath?: string,
+    contextName?: string
+  ) => Promise<{ values: string } | { error: string }>;
 }
 
 export interface HelmChartItem {
@@ -125,6 +142,21 @@ export const kuberneterApi: KuberneterApi = {
     ipcRenderer.invoke('kuberneter:get-top-nodes', kubeconfigPath, contextName),
   getTopPods: (kubeconfigPath, contextName, namespace) =>
     ipcRenderer.invoke('kuberneter:get-top-pods', kubeconfigPath, contextName, namespace),
+  queryPrometheus: (
+    kubeconfigPath,
+    contextName,
+    prometheusNamespace,
+    prometheusService,
+    prometheusPort
+  ) =>
+    ipcRenderer.invoke(
+      'kuberneter:query-prometheus',
+      kubeconfigPath,
+      contextName,
+      prometheusNamespace,
+      prometheusService,
+      prometheusPort
+    ),
   helmSearchCharts: (kubeconfigPath) =>
     ipcRenderer.invoke('kuberneter:helm-search-charts', kubeconfigPath),
   helmGetChartVersions: (chartName, kubeconfigPath) =>
@@ -143,5 +175,14 @@ export const kuberneterApi: KuberneterApi = {
     ),
   helmGetChartIcons: () => ipcRenderer.invoke('kuberneter:helm-get-chart-icons'),
   helmListReleases: (kubeconfigPath, contextName) =>
-    ipcRenderer.invoke('kuberneter:helm-list-releases', kubeconfigPath, contextName)
+    ipcRenderer.invoke('kuberneter:helm-list-releases', kubeconfigPath, contextName),
+  helmGetReleaseValues: (releaseName, namespace, allValues, kubeconfigPath, contextName) =>
+    ipcRenderer.invoke(
+      'kuberneter:helm-get-release-values',
+      releaseName,
+      namespace,
+      allValues,
+      kubeconfigPath,
+      contextName
+    )
 };

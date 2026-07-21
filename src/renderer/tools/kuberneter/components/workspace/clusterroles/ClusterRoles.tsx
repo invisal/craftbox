@@ -1,17 +1,17 @@
 import type React from 'react';
 import { useState, useMemo, useCallback } from 'react';
-import { type NodeData } from '../../../types/NodeData';
-import { NodesToolbar } from './NodesToolbar';
-import { NodesTable } from './NodesTable';
-import { KubeWorkspaceLayout } from '../KubeWorkspaceLayout';
+import { type ClusterRoleData } from '../../../types/ClusterRoleData';
+import { ClusterRolesToolbar } from './ClusterRolesToolbar';
+import { ClusterRolesTable } from './ClusterRolesTable';
 import { useLayoutStore } from '../../../../../src/store/layout.store';
 import { useKuberneterStore } from '../../../store/kuberneter.store';
+import { KubeWorkspaceLayout } from '../KubeWorkspaceLayout';
 
-interface NodesProps {
-  nodesData: NodeData[];
+interface ClusterRolesProps {
+  clusterRolesData: ClusterRoleData[];
 }
 
-export const Nodes: React.FC<NodesProps> = ({ nodesData }) => {
+export const ClusterRoles: React.FC<ClusterRolesProps> = ({ clusterRolesData }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [caseSensitive, setCaseSensitive] = useState(false);
   const [useRegex, setUseRegex] = useState(false);
@@ -23,18 +23,18 @@ export const Nodes: React.FC<NodesProps> = ({ nodesData }) => {
     activeTabId ? s.kuberneterTabDrawers[activeTabId] : null
   );
 
-  const selectedNodeId =
-    drawerState?.isOpen && drawerState?.contentType === 'nodes'
-      ? (drawerState?.payload as NodeData)?.id
+  const selectedRoleId =
+    drawerState?.isOpen && drawerState?.contentType === 'clusterrole'
+      ? (drawerState?.payload as ClusterRoleData)?.id
       : undefined;
 
-  const handleSelectNode = useCallback(
-    (node: NodeData) => {
+  const handleSelectRole = useCallback(
+    (role: ClusterRoleData) => {
       if (activeTabId) {
         setDrawerState(activeTabId, {
           isOpen: true,
-          contentType: 'nodes',
-          payload: node
+          contentType: 'clusterrole',
+          payload: role
         });
       }
     },
@@ -43,29 +43,45 @@ export const Nodes: React.FC<NodesProps> = ({ nodesData }) => {
 
   // Filter rows by search query
   const filteredData = useMemo(() => {
-    return nodesData.filter((node) => {
+    return clusterRolesData.filter((role) => {
       if (!searchQuery) return true;
 
-      const fields = [node.name, node.roles, node.version, node.conditions];
+      const labelsStr = role.labels
+        ? Object.entries(role.labels)
+            .map(([k, v]) => `${k}=${v}`)
+            .join(' ')
+        : '';
+
+      const rulesStr = role.rules
+        ? role.rules
+            .map((r) => {
+              const resources = r.resources?.join(',') || '';
+              const verbs = r.verbs?.join(',') || '';
+              const groups = r.apiGroups?.join(',') || '';
+              return `${resources} ${verbs} ${groups}`;
+            })
+            .join(' ')
+        : '';
+
+      const fields = [role.name, role.age, labelsStr, rulesStr];
 
       if (useRegex) {
         try {
           const flags = caseSensitive ? '' : 'i';
           const regex = new RegExp(searchQuery, flags);
-          return fields.some((f) => f && regex.test(f));
+          return fields.some((f) => regex.test(f));
         } catch {
           return false;
         }
       } else {
         const query = caseSensitive ? searchQuery : searchQuery.toLowerCase();
         return fields.some((f) => {
-          if (!f) return false;
           const val = caseSensitive ? f : f.toLowerCase();
           return val.includes(query);
         });
       }
     });
-  }, [nodesData, searchQuery, caseSensitive, useRegex]);
+  }, [clusterRolesData, searchQuery, caseSensitive, useRegex]);
 
   const handleSelectAll = useCallback(
     (checked: boolean) => {
@@ -83,67 +99,57 @@ export const Nodes: React.FC<NodesProps> = ({ nodesData }) => {
     });
   }, []);
 
-  const handleExportCSV = useCallback(() => {
-    const headers = [
-      'name',
-      'cpu',
-      'memory',
-      'disk',
-      'taints',
-      'roles',
-      'version',
-      'age',
-      'conditions'
-    ];
-    const rows = filteredData.map((node) => {
-      // Escape conditions string if we use commas, or just use tabs
-      return [
-        node.name,
-        node.rawCpu,
-        node.rawMemory,
-        node.rawDisk,
-        node.taints,
-        node.roles,
-        node.version,
-        node.rawAge,
-        node.rawConditions
-      ].join('\t');
+  const handleDownloadCsv = () => {
+    const dataToExport =
+      selectedIds.size > 0 ? filteredData.filter((d) => selectedIds.has(d.id)) : filteredData;
+
+    if (dataToExport.length === 0) return;
+
+    const headers = ['Name', 'Labels', 'Age'];
+    const csvRows = [headers.join(',')];
+
+    dataToExport.forEach((role) => {
+      const labelsStr = role.labels
+        ? Object.entries(role.labels)
+            .map(([k, v]) => `${k}=${v}`)
+            .join(';')
+        : '';
+      const row = [`"${role.name}"`, `"${labelsStr}"`, `"${role.age}"`];
+      csvRows.push(row.join(','));
     });
 
-    // Using TSV format but naming .csv is common for Excel compatibility with tabs, or we can just use tabs.
-    const csvContent = [headers.join('\t'), ...rows].join('\n');
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const blob = new Blob([csvRows.join('\n')], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
-    link.setAttribute('href', url);
-    link.setAttribute('download', 'nodes.csv');
-    document.body.appendChild(link);
+    link.href = url;
+    link.download = `clusterrole-export-${Date.now()}.csv`;
     link.click();
-    document.body.removeChild(link);
-  }, [filteredData]);
+    URL.revokeObjectURL(url);
+  };
 
   return (
     <KubeWorkspaceLayout
       header={
-        <NodesToolbar
+        <ClusterRolesToolbar
           searchQuery={searchQuery}
           caseSensitive={caseSensitive}
           useRegex={useRegex}
           totalCount={filteredData.length}
+          selectedCount={selectedIds.size}
           onSearchChange={setSearchQuery}
           onCaseSensitiveToggle={() => setCaseSensitive((v) => !v)}
           onRegexToggle={() => setUseRegex((v) => !v)}
-          onDownload={handleExportCSV}
+          onDownload={handleDownloadCsv}
         />
       }
     >
-      <NodesTable
+      <ClusterRolesTable
         filteredData={filteredData}
         selectedIds={selectedIds}
         onSelectAll={handleSelectAll}
         onSelectRow={handleSelectRow}
-        onSelectNode={handleSelectNode}
-        selectedNodeId={selectedNodeId}
+        onSelectRole={handleSelectRole}
+        selectedRoleId={selectedRoleId}
       />
     </KubeWorkspaceLayout>
   );

@@ -2,28 +2,27 @@ import { Age } from '../../Age';
 import type React from 'react';
 import { useMemo } from 'react';
 import { KubeTable, type Column } from '../../kubeTable';
-import { MoreVertical } from 'lucide-react';
-import { cn } from 'cnfast';
-import { type ApplicationData } from '../../../types/ApplicationData';
+import { MoreVertical, AlertTriangle } from 'lucide-react';
+import { type ClusterRoleBindingData } from '../../../types/ClusterRoleBindingData';
 
-interface ApplicationsTableProps {
-  filteredData: ApplicationData[];
+interface ClusterRoleBindingsTableProps {
+  filteredData: ClusterRoleBindingData[];
   selectedIds: Set<string>;
   onSelectAll: (checked: boolean) => void;
   onSelectRow: (id: string, checked: boolean) => void;
-  onSelectApplication?: (app: ApplicationData) => void;
-  selectedApplicationId?: string;
+  onSelectBinding: (binding: ClusterRoleBindingData) => void;
+  selectedBindingId?: string;
 }
 
-export const ApplicationsTable: React.FC<ApplicationsTableProps> = ({
+export const ClusterRoleBindingsTable: React.FC<ClusterRoleBindingsTableProps> = ({
   filteredData,
   selectedIds,
   onSelectAll,
   onSelectRow,
-  onSelectApplication,
-  selectedApplicationId
+  onSelectBinding,
+  selectedBindingId
 }) => {
-  const columns = useMemo<Column<ApplicationData>[]>(
+  const columns = useMemo<Column<ClusterRoleBindingData>[]>(
     () => [
       {
         key: 'select',
@@ -51,52 +50,59 @@ export const ApplicationsTable: React.FC<ApplicationsTableProps> = ({
         sortable: false
       },
       {
-        key: 'instance',
-        header: 'Instance',
+        key: 'name',
+        header: 'Name',
         render: (row) => (
-          <span className="font-mono text-zinc-300 font-semibold">{row.instance}</span>
-        ),
-        className: 'font-mono text-zinc-300',
-        initialWidth: 180
-      },
-      {
-        key: 'application',
-        header: 'Application',
-        render: (row) => <span className="font-sans text-zinc-200">{row.application}</span>,
-        className: 'text-zinc-200',
-        initialWidth: 160
-      },
-      {
-        key: 'namespace',
-        header: 'Namespace',
-        render: (row) => (
-          <span className="font-mono text-[10px] text-zinc-550">{row.namespace}</span>
-        ),
-        className: 'font-mono text-zinc-550',
-        initialWidth: 160
-      },
-      {
-        key: 'managedBy',
-        header: 'Managed By',
-        render: (row) =>
-          row.managedBy ? (
-            <span className="text-zinc-400 text-[11px]">{row.managedBy}</span>
-          ) : (
-            <span className="text-zinc-600">—</span>
-          ),
-        className: 'text-xs',
-        initialWidth: 100
-      },
-      {
-        key: 'version',
-        header: 'Version',
-        render: (row) => (
-          <span className="font-mono text-zinc-400">
-            {row.version || <span className="text-zinc-600">—</span>}
+          <span
+            className="font-mono text-zinc-300 font-semibold truncate hover:underline cursor-pointer"
+            title={row.name}
+          >
+            {row.name}
           </span>
         ),
-        className: 'font-mono text-zinc-400',
-        initialWidth: 80
+        className: 'font-mono text-zinc-300 max-w-[320px] truncate',
+        initialWidth: 320
+      },
+      {
+        key: 'warning',
+        header: (
+          <div className="flex justify-center">
+            <AlertTriangle className="size-3.5 text-zinc-500" />
+          </div>
+        ),
+        render: () => {
+          return (
+            <div className="flex justify-center">
+              {/* No warnings for clusterrolebindings in mockup */}
+            </div>
+          );
+        },
+        headerClassName: 'w-10 text-center',
+        className: 'w-10 text-center',
+        initialWidth: 40,
+        resizable: false
+      },
+      {
+        key: 'bindings',
+        header: 'Bindings',
+        render: (row) => {
+          const subjectsList = row.subjects || [];
+          if (subjectsList.length === 0) {
+            return <span className="text-zinc-650 font-mono text-[11px]">—</span>;
+          }
+          const tooltip = subjectsList.map((s) => `${s.kind}: ${s.name}`).join('\n');
+          const subjectsStr = subjectsList.map((s) => s.name).join(', ');
+          return (
+            <span
+              className="text-zinc-300 font-mono text-[11px] truncate block max-w-100"
+              title={tooltip}
+            >
+              {subjectsStr}
+            </span>
+          );
+        },
+        className: 'font-mono text-zinc-300 max-w-[400px] truncate',
+        initialWidth: 400
       },
       {
         key: 'age',
@@ -109,32 +115,13 @@ export const ApplicationsTable: React.FC<ApplicationsTableProps> = ({
           </span>
         ),
         className: 'text-zinc-500',
-        initialWidth: 70
-      },
-      {
-        key: 'status',
-        header: 'Status',
-        render: (row) => {
-          const isRunning = row.status === 'Running';
-          return (
-            <span
-              className={cn(
-                'text-[11px] font-medium select-none',
-                isRunning ? 'text-emerald-400' : 'text-amber-400'
-              )}
-            >
-              {row.status}
-            </span>
-          );
-        },
-        className: 'text-xs',
-        initialWidth: 80
+        initialWidth: 100
       },
       {
         key: 'actions',
         header: (
           <div className="flex justify-center select-none">
-            <MoreVertical className="size-3.5 text-zinc-550" />
+            <MoreVertical className="size-3.5 text-zinc-555" />
           </div>
         ),
         render: () => (
@@ -162,9 +149,9 @@ export const ApplicationsTable: React.FC<ApplicationsTableProps> = ({
       data={filteredData}
       getRowKey={(row) => row.id}
       className="flex-1"
-      onRowClick={onSelectApplication}
-      selectedRowKey={selectedApplicationId}
-      emptyMessage="No applications match the search filters."
+      onRowClick={(row) => onSelectBinding(row)}
+      selectedRowKey={selectedBindingId}
+      emptyMessage="No Cluster Role Bindings match the search filters."
     />
   );
 };

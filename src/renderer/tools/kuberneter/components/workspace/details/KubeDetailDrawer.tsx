@@ -1,6 +1,6 @@
 import type React from 'react';
 import { useRef, useEffect } from 'react';
-import { Maximize2, Pencil, Star, Trash2, X } from 'lucide-react';
+import { Maximize2, Pencil, Star, Trash2, X, Terminal, Pause, RefreshCw } from 'lucide-react';
 import { useLayoutStore } from '../../../../../src/store/layout.store';
 import { useKuberneterStore } from '../../../store/kuberneter.store';
 import { DetailContent } from './DetailContent';
@@ -32,6 +32,77 @@ export const KubeDetailDrawer: React.FC<KubeDetailDrawerProps> = ({ tabId }) => 
 
   const { contentType, payload } = drawerState;
 
+  const prefixMap: Record<string, string> = {
+    pod: 'Pod',
+    deployment: 'Deployment',
+    daemonset: 'Daemon Set',
+    statefulset: 'Stateful Set',
+    replicaset: 'Replica Set',
+    job: 'Job',
+    cronjob: 'Cron Job',
+    configmap: 'Config Map',
+    secret: 'Secret',
+    resourcequota: 'Resource Quota',
+    limitrange: 'Limit Range',
+    horizontalpodautoscaler: 'Horizontal Pod Autoscaler',
+    hpa: 'Horizontal Pod Autoscaler',
+    poddisruptionbudget: 'Pod Disruption Budget',
+    pdb: 'Pod Disruption Budget',
+    priorityclass: 'Priority Class',
+    runtimeclass: 'Runtime Class',
+    lease: 'Lease',
+    service: 'Service',
+    persistentvolumeclaim: 'Persistent Volume Claim',
+    pvc: 'Persistent Volume Claim',
+    persistentvolume: 'Persistent Volume',
+    pv: 'Persistent Volume',
+    storageclass: 'Storage Class',
+    namespace: 'Namespace',
+    clusterrole: 'Cluster Role',
+    role: 'Role',
+    clusterrolebinding: 'Cluster Role Binding',
+    rolebinding: 'Role Binding',
+    application: 'Application',
+    app: 'Application',
+    nodes: 'Node',
+    node: 'Node',
+    event: 'Event',
+    endpointslice: 'Endpoint Slice',
+    endpoints: 'Endpoints',
+    endpoint: 'Endpoints',
+    ingresses: 'Ingress',
+    ingress: 'Ingress',
+    ingressclasses: 'Ingress Class',
+    ingressclass: 'Ingress Class',
+    networkpolicies: 'Network Policy',
+    networkpolicy: 'Network Policy',
+    mutatingwebhook: 'Mutating Webhook',
+    validatingwebhook: 'Validating Webhook',
+    serviceaccount: 'Service Account',
+    'helm-chart': 'Helm Chart',
+    'helm-release': 'Helm Release'
+  };
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const getResourceName = (data: any): string => {
+    if (!data) return '';
+    return (
+      data.name ||
+      data.metadata?.name ||
+      data.instance ||
+      data.releaseName ||
+      data.chartName ||
+      data.involvedObject ||
+      data.reason ||
+      data.id ||
+      ''
+    );
+  };
+
+  const resourceName = getResourceName(payload);
+  const prefix = prefixMap[contentType] || contentType;
+  const headerTitle = resourceName ? `${prefix}: ${resourceName}` : `${prefix}: Details`;
+
   const handleClose = () => {
     setDrawerState(tabId, { isOpen: false });
   };
@@ -39,16 +110,13 @@ export const KubeDetailDrawer: React.FC<KubeDetailDrawerProps> = ({ tabId }) => 
   const handleMaximize = () => {
     if (!payload || !contentType) return;
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const resourceName = (payload as any).name || '';
-
     // Close drawer first
     setDrawerState(tabId, { isOpen: false });
 
     // Open new tab
     openTab({
-      id: `kuberneter-${contentType}-detail-${resourceName}-${activeInstanceId}`,
-      title: `${contentType}: ${resourceName}`,
+      id: `kuberneter-${contentType}-detail-${resourceName || 'item'}-${activeInstanceId}`,
+      title: headerTitle,
       type: 'kuberneter',
       instanceId: activeInstanceId,
       meta: {
@@ -89,55 +157,6 @@ export const KubeDetailDrawer: React.FC<KubeDetailDrawerProps> = ({ tabId }) => 
     document.addEventListener('pointerup', handlePointerUp);
   };
 
-  const titleNames: Record<string, string> = {
-    pod: 'Pod Details',
-    deployment: 'Deployment Details',
-    daemonset: 'Daemon Set Details',
-    statefulset: 'Stateful Set Details',
-    replicaset: 'Replica Set Details',
-    service: 'Service Details',
-    persistentvolumeclaim: 'Persistent Volume Claim Details',
-    persistentvolume: 'Persistent Volume Details',
-    storageclass: 'Storage Class Details',
-    namespace: 'Namespace Details',
-    event: 'Event Details',
-    endpointslice: 'Endpoint Slice Details',
-    job: 'Job Details',
-    cronjob: 'Cron Job Details',
-    configmap: 'Config Map Details',
-    secret: 'Secret Details',
-    resourcequota: 'Resource Quota Details',
-    limitrange: 'Limit Range Details',
-    horizontalpodautoscaler: 'Horizontal Pod Autoscaler Details',
-    poddisruptionbudget: 'Pod Disruption Budget Details',
-    priorityclass: 'Priority Class Details',
-    runtimeclass: 'Runtime Class Details',
-    lease: 'Lease Details',
-    mutatingwebhook: 'Mutating Webhook Configuration Details',
-    validatingwebhook: 'Validating Webhook Configuration Details',
-    endpoints: 'Endpoints Details',
-    ingresses: 'Ingress Details',
-    ingressclasses: 'Ingress Class Details',
-    networkpolicies: 'Network Policy Details',
-    'helm-chart': 'Helm Chart Details'
-  };
-
-  const prefixMap: Record<string, string> = {
-    endpoints: 'Endpoints',
-    ingresses: 'Ingress',
-    ingressclasses: 'Ingress Class',
-    networkpolicies: 'Network Policy',
-    persistentvolumeclaim: 'PersistentVolumeClaim',
-    persistentvolume: 'PersistentVolume',
-    storageclass: 'StorageClass',
-    namespace: 'Namespace',
-    event: 'Event',
-    'helm-chart': 'Chart'
-  };
-
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const resourceName = (payload as any)?.name || '';
-
   return (
     <div
       ref={drawerRef}
@@ -147,28 +166,69 @@ export const KubeDetailDrawer: React.FC<KubeDetailDrawerProps> = ({ tabId }) => 
       {/* Resize Handle on the left side of the drawer */}
       <div
         onPointerDown={handlePointerDown}
-        className="absolute top-0 left-0 w-[4px] h-full cursor-col-resize hover:bg-accent/40 active:bg-accent transition-colors z-40"
+        className="absolute top-0 left-0 w-1 h-full cursor-col-resize hover:bg-accent/40 active:bg-accent transition-colors z-40"
       />
 
-      <div className="h-11 shrink-0 flex items-center justify-between px-4 border-b border-border-dark">
-        <span className="text-xs font-bold text-white uppercase tracking-wider">
-          {prefixMap[contentType]
-            ? `${prefixMap[contentType]}: ${resourceName}`
-            : titleNames[contentType] || 'Details'}
+      <div className="h-11 shrink-0 flex items-center gap-2 px-4 border-b border-border-dark min-w-0">
+        <span
+          className="text-xs font-bold text-white uppercase tracking-wider truncate min-w-0 flex-1"
+          title={headerTitle}
+        >
+          {headerTitle}
         </span>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 shrink-0">
           {contentType === 'ingressclasses' && (
+            <button
+              title={`${(payload as IngressClassData).isDefault ? 'Remove default' : 'Set as default'}`}
+              className="text-zinc-400 hover:text-yellow-400 cursor-pointer hover:bg-border-dark/40 p-1 rounded transition-colors border-none bg-transparent flex items-center justify-center"
+            >
+              {(payload as IngressClassData).isDefault ? (
+                <Star className="size-3.5 fill-yellow-400 text-yellow-400" />
+              ) : (
+                <Star className="size-3.5" />
+              )}
+            </button>
+          )}
+          {contentType === 'nodes' && (
             <>
               <button
-                title={`${(payload as IngressClassData).isDefault ? 'Remove default' : 'Set as default'}`}
-                className="text-zinc-400 hover:text-yellow-400 cursor-pointer hover:bg-border-dark/40 p-1 rounded transition-colors border-none bg-transparent flex items-center justify-center"
+                title="Node Shell"
+                className="text-zinc-400 hover:text-white cursor-pointer hover:bg-border-dark/40 p-1 rounded transition-colors border-none bg-transparent flex items-center justify-center"
               >
-                {(payload as IngressClassData).isDefault ? (
-                  <Star className="size-3.5 fill-yellow-400 text-yellow-400" />
-                ) : (
-                  <Star className="size-3.5" />
-                )}
+                <Terminal className="size-3.5" />
               </button>
+              <button
+                title="Cordon Node"
+                className="text-zinc-400 hover:text-white cursor-pointer hover:bg-border-dark/40 p-1 rounded transition-colors border-none bg-transparent flex items-center justify-center"
+              >
+                <Pause className="size-3.5" />
+              </button>
+              <button
+                title="Refresh"
+                className="text-zinc-400 hover:text-white cursor-pointer hover:bg-border-dark/40 p-1 rounded transition-colors border-none bg-transparent flex items-center justify-center"
+              >
+                <RefreshCw className="size-3.5" />
+              </button>
+              <button
+                title="Edit"
+                className="text-zinc-400 hover:text-white cursor-pointer hover:bg-border-dark/40 p-1 rounded transition-colors border-none bg-transparent flex items-center justify-center"
+              >
+                <Pencil className="size-3.5" />
+              </button>
+              <button
+                title="Delete"
+                className="text-zinc-400 hover:text-red-400 cursor-pointer hover:bg-border-dark/40 p-1 rounded transition-colors border-none bg-transparent flex items-center justify-center"
+              >
+                <Trash2 className="size-3.5" />
+              </button>
+            </>
+          )}
+          {(contentType === 'ingressclasses' ||
+            contentType === 'clusterrole' ||
+            contentType === 'role' ||
+            contentType === 'clusterrolebinding' ||
+            contentType === 'rolebinding') && (
+            <>
               <button
                 title="Edit"
                 className="text-zinc-400 hover:text-white cursor-pointer hover:bg-border-dark/40 p-1 rounded transition-colors border-none bg-transparent flex items-center justify-center"
