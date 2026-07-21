@@ -61,7 +61,7 @@ function closestQualityChoice(quality: number): (typeof QUALITY_CHOICES)[number]
   );
 }
 
-export function ExportPopoverButton(): JSX.Element {
+export function ExportPopoverButton({ disabled }: { disabled?: boolean }): JSX.Element {
   const [open, setOpen] = useState(false);
   const store = useExportStore();
   const { status, error, progress, canExport, handleExport, handleCancel } = useExportAction();
@@ -71,8 +71,8 @@ export function ExportPopoverButton(): JSX.Element {
   return (
     <Popover.Root open={open} onOpenChange={(next) => !isExporting && setOpen(next)}>
       <Popover.Trigger
-        disabled={!canExport}
-        title={canExport ? undefined : 'Record something first'}
+        disabled={disabled || !canExport}
+        title={disabled || !canExport ? 'Record something first' : undefined}
         className={cn(
           'flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors disabled:pointer-events-none disabled:opacity-30',
           open
@@ -173,7 +173,7 @@ export function ExportPopoverButton(): JSX.Element {
 }
 
 function Section({ title, children }: { title: string; children: ReactNode }): JSX.Element {
-  const [open, setOpen] = useState(true);
+  const [open, setOpen] = useState(false);
   return (
     <div className="border-b border-line px-3 py-2.5">
       <button

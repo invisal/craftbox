@@ -61,6 +61,7 @@ export function useExportAction(): UseExportActionResult {
     setStatus('exporting');
     setError(null);
     setProgress({ percent: 0, stage: 'rendering' });
+    store.setIsExporting(true);
 
     const controller = new AbortController();
     abortControllerRef.current = controller;
@@ -99,6 +100,7 @@ export function useExportAction(): UseExportActionResult {
       }
     } finally {
       abortControllerRef.current = null;
+      store.setIsExporting(false);
     }
   }
 

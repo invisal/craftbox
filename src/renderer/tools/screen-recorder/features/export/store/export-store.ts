@@ -42,6 +42,12 @@ interface ExportStoreState {
   frameRate: number;
   quality: number;
   includeAudio: boolean;
+  /**
+   * Mirrors `useExportAction`'s local export status, but lives here so
+   * components outside the export popover (e.g. the top-nav route buttons,
+   * to block navigating away mid-export) can read it without prop-drilling.
+   */
+  isExporting: boolean;
   setPreset: (presetId: string) => void;
   setFormat: (format: ExportFormat) => void;
   setCodec: (codec: ExportCodec) => void;
@@ -50,6 +56,7 @@ interface ExportStoreState {
   setFrameRate: (frameRate: number) => void;
   setQuality: (quality: number) => void;
   setIncludeAudio: (includeAudio: boolean) => void;
+  setIsExporting: (isExporting: boolean) => void;
 }
 
 export const useExportStore = create<ExportStoreState>((set) => ({
@@ -61,6 +68,7 @@ export const useExportStore = create<ExportStoreState>((set) => ({
   frameRate: defaultPreset.frameRate,
   quality: defaultPreset.quality,
   includeAudio: true,
+  isExporting: false,
   setPreset: (presetId) => {
     const preset = EXPORT_PRESETS.find((p) => p.id === presetId);
     if (!preset) return;
@@ -96,5 +104,6 @@ export const useExportStore = create<ExportStoreState>((set) => ({
     })),
   setFrameRate: (frameRate) => set({ frameRate, presetId: 'custom' }),
   setQuality: (quality) => set({ quality, presetId: 'custom' }),
-  setIncludeAudio: (includeAudio) => set({ includeAudio })
+  setIncludeAudio: (includeAudio) => set({ includeAudio }),
+  setIsExporting: (isExporting) => set({ isExporting })
 }));

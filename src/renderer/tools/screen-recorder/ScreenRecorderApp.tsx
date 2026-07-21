@@ -11,6 +11,7 @@ import { CutTimeline } from './features/timeline/components/CutTimeline';
 import { RecordingControllerProvider } from './features/recording/context/RecordingControllerContext';
 import { RecorderToolbarBridge } from './features/recording/components/RecorderToolbarBridge';
 import { ExportPopoverButton } from './features/export/components/ExportPopoverButton';
+import { useExportStore } from './features/export/store/export-store';
 
 const NAV_ITEMS: {
   route: ScreenRecorderRoute;
@@ -26,8 +27,10 @@ export function ScreenRecorderApp(): JSX.Element {
   const route = useAppStore((state) => state.route);
   const setRoute = useAppStore((state) => state.setRoute);
   const lastRecording = useAppStore((state) => state.lastRecording);
+  const isExporting = useExportStore((state) => state.isExporting);
 
   function handleNavClick(itemRoute: ScreenRecorderRoute): void {
+    if (isExporting) return;
     setRoute(itemRoute);
   }
 
@@ -40,8 +43,10 @@ export function ScreenRecorderApp(): JSX.Element {
             <button
               key={itemRoute}
               onClick={() => handleNavClick(itemRoute)}
+              disabled={isExporting}
+              title={isExporting ? 'Export in progress' : undefined}
               className={cn(
-                'flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors',
+                'flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors disabled:pointer-events-none disabled:opacity-30',
                 route === itemRoute
                   ? 'bg-accent/10 text-accent'
                   : 'text-muted-foreground hover:bg-surface-2 hover:text-foreground'
@@ -52,9 +57,15 @@ export function ScreenRecorderApp(): JSX.Element {
             </button>
           ))}
           <button
-            onClick={() => lastRecording && setRoute('editor')}
-            disabled={!lastRecording}
-            title={lastRecording ? undefined : 'Record something first'}
+            onClick={() => lastRecording && handleNavClick('editor')}
+            disabled={!lastRecording || isExporting}
+            title={
+              isExporting
+                ? 'Export in progress'
+                : lastRecording
+                  ? undefined
+                  : 'Record something first'
+            }
             className={cn(
               'ml-auto flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors disabled:pointer-events-none disabled:opacity-30',
               route === 'editor'
@@ -64,7 +75,7 @@ export function ScreenRecorderApp(): JSX.Element {
           >
             Editor
           </button>
-          {route === 'editor' && <ExportPopoverButton />}
+          <ExportPopoverButton disabled={route !== 'editor'} />
         </nav>
 
         <div className="flex min-h-0 flex-1 flex-col">
