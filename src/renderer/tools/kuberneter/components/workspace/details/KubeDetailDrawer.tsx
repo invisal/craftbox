@@ -113,6 +113,7 @@ export const KubeDetailDrawer: React.FC<KubeDetailDrawerProps> = ({ tabId }) => 
     priorityclass: 'Priority Class Details',
     runtimeclass: 'Runtime Class Details',
     lease: 'Lease Details',
+    serviceaccount: 'Service Account Details',
     mutatingwebhook: 'Mutating Webhook Configuration Details',
     validatingwebhook: 'Validating Webhook Configuration Details',
     endpoints: 'Endpoints Details',
@@ -133,6 +134,7 @@ export const KubeDetailDrawer: React.FC<KubeDetailDrawerProps> = ({ tabId }) => 
     storageclass: 'StorageClass',
     namespace: 'Namespace',
     event: 'Event',
+    serviceaccount: 'ServiceAccount',
     'helm-chart': 'Chart',
     'helm-release': 'Release'
   };

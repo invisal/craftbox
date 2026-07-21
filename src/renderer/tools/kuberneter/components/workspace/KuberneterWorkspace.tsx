@@ -38,6 +38,7 @@ import { useLayoutStore } from '../../../../src/store/layout.store';
 import { DetailContent } from './details/DetailContent';
 import { HelmCharts } from './helm-charts/HelmCharts';
 import { HelmReleases } from './helm-releases/HelmReleases';
+import { ServiceAccounts } from './serviceaccounts/ServiceAccounts';
 
 export type { ApplicationData } from '../../types/ApplicationData';
 
@@ -83,6 +84,7 @@ export const KuberneterWorkspace: React.FC<KuberneterWorkspaceProps> = ({ resour
     storageClassesData,
     namespacesData,
     eventsData,
+    serviceAccountsData,
     isLoading,
     errorMsg
   } = useWorkspaceResources(resource);
@@ -311,6 +313,13 @@ export const KuberneterWorkspace: React.FC<KuberneterWorkspaceProps> = ({ resour
           {resource === 'helm-charts' && <HelmCharts />}
 
           {resource === 'helm-releases' && <HelmReleases />}
+
+          {resource === 'serviceaccounts' && (
+            <ServiceAccounts
+              serviceAccountsData={serviceAccountsData}
+              kuberneterSelectedNamespace={kuberneterSelectedNamespace}
+            />
+          )}
 
           {resource === 'nodes' && <Nodes nodesData={nodesData} />}
         </>
