@@ -103,13 +103,28 @@ export function usePods(enabled: boolean) {
 
   const fetchExtraData = useMemo(
     () => async (configPath: string | undefined, cluster: string, ns: string) => {
+      // 1. Try Prometheus (matches Lens — real working-set memory, CPU rate)
+      try {
+        const promRes = await window.kuberneter.queryPrometheus(configPath, cluster);
+        if (promRes?.items && promRes.items.length > 0) {
+          return promRes.items;
+        }
+      } catch (e) {
+        console.warn('Prometheus query failed, falling back to kubectl top', e);
+      }
+
+      // 2. Fall back to kubectl top (requires metrics-server)
       try {
         const topPodsRes = await window.kuberneter.getTopPods(configPath, cluster, ns);
-        return topPodsRes?.items || [];
+        if (topPodsRes?.items && topPodsRes.items.length > 0) {
+          return topPodsRes.items;
+        }
       } catch (e) {
         console.warn('Failed to fetch top pods', e);
-        return [];
       }
+
+      // 3. No metrics available — UI will show N/A
+      return [];
     },
     []
   );
