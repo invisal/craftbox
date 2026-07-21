@@ -1,21 +1,17 @@
 import type React from 'react';
 import { useState, useMemo, useCallback } from 'react';
-import { type ServiceAccountData } from '../../../types/ServiceAccountData';
-import { ServiceAccountsToolbar } from './ServiceAccountsToolbar';
-import { ServiceAccountsTable } from './ServiceAccountsTable';
+import { type ClusterRoleData } from '../../../types/ClusterRoleData';
+import { ClusterRolesToolbar } from './ClusterRolesToolbar';
+import { ClusterRolesTable } from './ClusterRolesTable';
 import { useLayoutStore } from '../../../../../src/store/layout.store';
 import { useKuberneterStore } from '../../../store/kuberneter.store';
 import { KubeWorkspaceLayout } from '../KubeWorkspaceLayout';
 
-interface ServiceAccountsProps {
-  serviceAccountsData: ServiceAccountData[];
-  kuberneterSelectedNamespace: string;
+interface ClusterRolesProps {
+  clusterRolesData: ClusterRoleData[];
 }
 
-export const ServiceAccounts: React.FC<ServiceAccountsProps> = ({
-  serviceAccountsData,
-  kuberneterSelectedNamespace
-}) => {
+export const ClusterRoles: React.FC<ClusterRolesProps> = ({ clusterRolesData }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [caseSensitive, setCaseSensitive] = useState(false);
   const [useRegex, setUseRegex] = useState(false);
@@ -27,39 +23,47 @@ export const ServiceAccounts: React.FC<ServiceAccountsProps> = ({
     activeTabId ? s.kuberneterTabDrawers[activeTabId] : null
   );
 
-  const selectedSaId =
-    drawerState?.isOpen && drawerState?.contentType === 'serviceaccount'
-      ? (drawerState?.payload as ServiceAccountData)?.id
+  const selectedRoleId =
+    drawerState?.isOpen && drawerState?.contentType === 'clusterrole'
+      ? (drawerState?.payload as ClusterRoleData)?.id
       : undefined;
 
-  const handleSelectSa = useCallback(
-    (sa: ServiceAccountData) => {
+  const handleSelectRole = useCallback(
+    (role: ClusterRoleData) => {
       if (activeTabId) {
         setDrawerState(activeTabId, {
           isOpen: true,
-          contentType: 'serviceaccount',
-          payload: sa
+          contentType: 'clusterrole',
+          payload: role
         });
       }
     },
     [activeTabId, setDrawerState]
   );
 
-  // Filter rows by namespace + search query
+  // Filter rows by search query
   const filteredData = useMemo(() => {
-    return serviceAccountsData.filter((sa) => {
-      if (
-        kuberneterSelectedNamespace !== 'All Namespaces' &&
-        sa.ns !== kuberneterSelectedNamespace
-      ) {
-        return false;
-      }
-
+    return clusterRolesData.filter((role) => {
       if (!searchQuery) return true;
 
-      const labelsArr = sa.labels ? Object.entries(sa.labels) : [];
-      const labelsStr = labelsArr.map(([k, v]) => `${k}=${v}`).join(', ');
-      const fields = [sa.name, sa.ns, labelsStr, sa.age];
+      const labelsStr = role.labels
+        ? Object.entries(role.labels)
+            .map(([k, v]) => `${k}=${v}`)
+            .join(' ')
+        : '';
+
+      const rulesStr = role.rules
+        ? role.rules
+            .map((r) => {
+              const resources = r.resources?.join(',') || '';
+              const verbs = r.verbs?.join(',') || '';
+              const groups = r.apiGroups?.join(',') || '';
+              return `${resources} ${verbs} ${groups}`;
+            })
+            .join(' ')
+        : '';
+
+      const fields = [role.name, role.age, labelsStr, rulesStr];
 
       if (useRegex) {
         try {
@@ -77,7 +81,7 @@ export const ServiceAccounts: React.FC<ServiceAccountsProps> = ({
         });
       }
     });
-  }, [serviceAccountsData, kuberneterSelectedNamespace, searchQuery, caseSensitive, useRegex]);
+  }, [clusterRolesData, searchQuery, caseSensitive, useRegex]);
 
   const handleSelectAll = useCallback(
     (checked: boolean) => {
@@ -101,11 +105,16 @@ export const ServiceAccounts: React.FC<ServiceAccountsProps> = ({
 
     if (dataToExport.length === 0) return;
 
-    const headers = ['Name', 'Namespace', 'Secrets', 'Age'];
+    const headers = ['Name', 'Labels', 'Age'];
     const csvRows = [headers.join(',')];
 
-    dataToExport.forEach((sa) => {
-      const row = [`"${sa.name}"`, `"${sa.ns}"`, `"${sa.secrets.join(';')}"`, `"${sa.age}"`];
+    dataToExport.forEach((role) => {
+      const labelsStr = role.labels
+        ? Object.entries(role.labels)
+            .map(([k, v]) => `${k}=${v}`)
+            .join(';')
+        : '';
+      const row = [`"${role.name}"`, `"${labelsStr}"`, `"${role.age}"`];
       csvRows.push(row.join(','));
     });
 
@@ -113,7 +122,7 @@ export const ServiceAccounts: React.FC<ServiceAccountsProps> = ({
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `serviceaccounts-export-${Date.now()}.csv`;
+    link.download = `clusterrole-export-${Date.now()}.csv`;
     link.click();
     URL.revokeObjectURL(url);
   };
@@ -121,7 +130,7 @@ export const ServiceAccounts: React.FC<ServiceAccountsProps> = ({
   return (
     <KubeWorkspaceLayout
       header={
-        <ServiceAccountsToolbar
+        <ClusterRolesToolbar
           searchQuery={searchQuery}
           caseSensitive={caseSensitive}
           useRegex={useRegex}
@@ -134,13 +143,13 @@ export const ServiceAccounts: React.FC<ServiceAccountsProps> = ({
         />
       }
     >
-      <ServiceAccountsTable
+      <ClusterRolesTable
         filteredData={filteredData}
         selectedIds={selectedIds}
         onSelectAll={handleSelectAll}
         onSelectRow={handleSelectRow}
-        onSelectServiceAccount={handleSelectSa}
-        selectedServiceAccountId={selectedSaId}
+        onSelectRole={handleSelectRole}
+        selectedRoleId={selectedRoleId}
       />
     </KubeWorkspaceLayout>
   );

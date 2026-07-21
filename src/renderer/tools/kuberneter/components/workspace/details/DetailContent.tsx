@@ -20,12 +20,14 @@ import { PersistentVolumeClaimDetail } from './PersistentVolumeClaimDetail';
 import { PersistentVolumeDetail } from './PersistentVolumeDetail';
 import { StorageClassDetail } from './StorageClassDetail';
 import { NamespaceDetail } from './NamespaceDetail';
+import { ClusterRoleDetail } from './ClusterRoleDetail';
 import { EventDetail } from './EventDetail';
 import { MutatingWebhookDetail } from './MutatingWebhookDetail';
 import { type PersistentVolumeClaimData } from '../../../types/PersistentVolumeClaimData';
 import { type PersistentVolumeData } from '../../../types/PersistentVolumeData';
 import { type StorageClassData } from '../../../types/StorageClassData';
 import { type NamespaceData } from '../../../types/NamespaceData';
+import { type ClusterRoleData } from '../../../types/ClusterRoleData';
 import { type EventData } from '../../../types/EventData';
 
 import { ValidatingWebhookDetail } from './ValidatingWebhookDetail';
@@ -128,6 +130,8 @@ export const DetailContent: React.FC<DetailContentProps> = ({
       return <StorageClassDetail payload={payload as StorageClassData} isTab={isTab} />;
     case 'namespace':
       return <NamespaceDetail payload={payload as NamespaceData} isTab={isTab} />;
+    case 'clusterrole':
+      return <ClusterRoleDetail payload={payload as ClusterRoleData} isTab={isTab} />;
     case 'event':
       return <EventDetail payload={payload as EventData} isTab={isTab} />;
     case 'endpointslice':

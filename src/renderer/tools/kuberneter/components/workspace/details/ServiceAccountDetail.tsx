@@ -18,9 +18,7 @@ export const ServiceAccountDetail: React.FC<ServiceAccountDetailProps> = ({
   const setNamespace = useKuberneterStore((s) => s.setKuberneterInstanceNamespace);
 
   if (!payload) {
-    return (
-      <div className="p-4 text-xs text-zinc-500">No Service Account details available.</div>
-    );
+    return <div className="p-4 text-xs text-zinc-500">No Service Account details available.</div>;
   }
 
   const handleNamespaceClick = () => {

@@ -39,6 +39,7 @@ import { DetailContent } from './details/DetailContent';
 import { HelmCharts } from './helm-charts/HelmCharts';
 import { HelmReleases } from './helm-releases/HelmReleases';
 import { ServiceAccounts } from './serviceaccounts/ServiceAccounts';
+import { ClusterRoles } from './clusterroles/ClusterRoles';
 
 export type { ApplicationData } from '../../types/ApplicationData';
 
@@ -85,6 +86,7 @@ export const KuberneterWorkspace: React.FC<KuberneterWorkspaceProps> = ({ resour
     namespacesData,
     eventsData,
     serviceAccountsData,
+    clusterRolesData,
     isLoading,
     errorMsg
   } = useWorkspaceResources(resource);
@@ -320,6 +322,8 @@ export const KuberneterWorkspace: React.FC<KuberneterWorkspaceProps> = ({ resour
               kuberneterSelectedNamespace={kuberneterSelectedNamespace}
             />
           )}
+
+          {resource === 'clusterroles' && <ClusterRoles clusterRolesData={clusterRolesData} />}
 
           {resource === 'nodes' && <Nodes nodesData={nodesData} />}
         </>

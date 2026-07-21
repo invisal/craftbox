@@ -100,6 +100,7 @@ export const KubeDetailDrawer: React.FC<KubeDetailDrawerProps> = ({ tabId }) => 
     persistentvolume: 'Persistent Volume Details',
     storageclass: 'Storage Class Details',
     namespace: 'Namespace Details',
+    clusterrole: 'ClusterRole Details',
     event: 'Event Details',
     endpointslice: 'Endpoint Slice Details',
     job: 'Job Details',
@@ -133,6 +134,7 @@ export const KubeDetailDrawer: React.FC<KubeDetailDrawerProps> = ({ tabId }) => 
     persistentvolume: 'PersistentVolume',
     storageclass: 'StorageClass',
     namespace: 'Namespace',
+    clusterrole: 'ClusterRole',
     event: 'Event',
     serviceaccount: 'ServiceAccount',
     'helm-chart': 'Chart',
@@ -162,17 +164,19 @@ export const KubeDetailDrawer: React.FC<KubeDetailDrawerProps> = ({ tabId }) => 
         </span>
         <div className="flex items-center gap-2">
           {contentType === 'ingressclasses' && (
+            <button
+              title={`${(payload as IngressClassData).isDefault ? 'Remove default' : 'Set as default'}`}
+              className="text-zinc-400 hover:text-yellow-400 cursor-pointer hover:bg-border-dark/40 p-1 rounded transition-colors border-none bg-transparent flex items-center justify-center"
+            >
+              {(payload as IngressClassData).isDefault ? (
+                <Star className="size-3.5 fill-yellow-400 text-yellow-400" />
+              ) : (
+                <Star className="size-3.5" />
+              )}
+            </button>
+          )}
+          {(contentType === 'ingressclasses' || contentType === 'clusterrole') && (
             <>
-              <button
-                title={`${(payload as IngressClassData).isDefault ? 'Remove default' : 'Set as default'}`}
-                className="text-zinc-400 hover:text-yellow-400 cursor-pointer hover:bg-border-dark/40 p-1 rounded transition-colors border-none bg-transparent flex items-center justify-center"
-              >
-                {(payload as IngressClassData).isDefault ? (
-                  <Star className="size-3.5 fill-yellow-400 text-yellow-400" />
-                ) : (
-                  <Star className="size-3.5" />
-                )}
-              </button>
               <button
                 title="Edit"
                 className="text-zinc-400 hover:text-white cursor-pointer hover:bg-border-dark/40 p-1 rounded transition-colors border-none bg-transparent flex items-center justify-center"
