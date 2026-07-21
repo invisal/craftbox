@@ -1,9 +1,9 @@
 import type { VideoCodec } from 'mediabunny';
 import type { ExportOptions, ExportProgress } from '@screen-recorder/types/export';
 import { smoothCursorPath } from '@shared/cursor-path';
-import { evaluateSceneAtMs } from '../rendering-engine/timeline-evaluator';
-import { PixiSceneRenderer } from '../rendering-engine/pixi-scene-renderer';
-import { resolveCropRect, centerSquareCrop } from '../rendering-engine/crop';
+import { evaluateSceneAtMs } from './rendering/timeline-evaluator';
+import { PixiSceneRenderer } from './rendering/pixi-scene-renderer';
+import { resolveCropRect, centerSquareCrop } from './rendering/crop';
 import { StreamingVideoDecoder } from './streaming-decoder';
 import { createVideoEncoder, getEncoderPreferences } from './video-encoder';
 import { WebcamFrameQueue } from './webcam-frame-queue';
@@ -65,7 +65,7 @@ export function isSourceCopyEligible(
 /**
  * Runs entirely inside the export Worker (see `export-worker.ts`) -- demux
  * (web-demuxer WASM), decode (WebCodecs `VideoDecoder`), composite (PixiJS on
- * an `OffscreenCanvas`, reusing `rendering-engine/*` unchanged), encode
+ * an `OffscreenCanvas`, reusing `rendering/*` unchanged), encode
  * (WebCodecs `VideoEncoder`). No ffmpeg subprocess, no nodeIntegration.
  *
  * Audio deliberately isn't handled here: the pitch-preserving speed-change

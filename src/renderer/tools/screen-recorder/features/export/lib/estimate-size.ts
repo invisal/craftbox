@@ -17,9 +17,9 @@ export interface EstimateSizeResult {
 }
 
 // NOTE: this is a rough, client-side heuristic for the "estimated output"
-// panel -- it is NOT a real encoder pass. Once main/export/export-manager.ts
-// actually pipes frames through ffmpeg, replace this with either a two-pass
-// ffprobe estimate or the real output size after encoding.
+// panel shown before export starts -- it is NOT a real encoder pass (the
+// actual size comes from features/export/engine/export-coordinator.ts's
+// WebCodecs pipeline once export runs).
 const CODEC_EFFICIENCY: Record<ExportCodec, number> = {
   h264: 1,
   h265: 0.65,

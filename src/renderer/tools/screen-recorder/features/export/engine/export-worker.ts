@@ -2,8 +2,8 @@
 import { DOMAdapter, WebWorkerAdapter } from 'pixi.js';
 import type { VideoCodec } from 'mediabunny';
 import type { ExportOptions, ExportProgress } from '@screen-recorder/types/export';
-import { exportVideoOnly } from '@screen-recorder/export-engine/export-orchestrator';
-import { exportGif } from '@screen-recorder/export-engine/gif-exporter';
+import { exportVideoOnly } from './export-orchestrator';
+import { exportGif } from './gif-exporter';
 
 // PixiJS defaults to `BrowserAdapter`, which assumes `document` exists (used
 // e.g. by BlurFilter's shader-precision detection). This module runs inside

@@ -4,7 +4,7 @@ import { useTimelineStore, PRIMARY_VIDEO_TRACK_ID } from '../../timeline/store/t
 import { getSegmentOutputDurationMs } from '../../timeline/lib/segment-duration';
 import { useExportStore } from '../store/export-store';
 import { buildExportProject } from '../lib/build-export-project';
-import { runExport } from '../../../export-engine/export-coordinator';
+import { runExport } from '../engine/export-coordinator';
 
 export type ExportStatus = 'idle' | 'exporting' | 'error';
 

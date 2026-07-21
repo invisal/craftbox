@@ -1,10 +1,10 @@
 import { WebDemuxer } from 'web-demuxer';
-import ExportWorker from '../../../export-worker?worker';
+import ExportWorker from './export-worker?worker';
 import type {
   ExportWorkerInMessage,
   ExportWorkerOutMessage,
   RunExportMessage
-} from '../../../export-worker';
+} from './export-worker';
 import type { ExportOptions, ExportProgress } from '@screen-recorder/types/export';
 import { StreamingVideoDecoder } from './streaming-decoder';
 import { VideoMuxer } from './muxer';

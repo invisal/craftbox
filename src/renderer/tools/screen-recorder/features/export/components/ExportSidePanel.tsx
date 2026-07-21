@@ -5,7 +5,7 @@ import { useTimelineStore, PRIMARY_VIDEO_TRACK_ID } from '../../timeline/store/t
 import { getSegmentOutputDurationMs } from '../../timeline/lib/segment-duration';
 import { useExportStore } from '../store/export-store';
 import { useExportAction } from '../hooks/useExportAction';
-import { estimateExportSize } from '../engine/estimate-size';
+import { estimateExportSize } from '../lib/estimate-size';
 import {
   CODEC_OPTIONS,
   EXPORT_PRESETS,

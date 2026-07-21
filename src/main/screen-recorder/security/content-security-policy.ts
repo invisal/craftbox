@@ -16,8 +16,8 @@ import { app, session } from 'electron';
 // waveform (features/timeline/lib/decode-waveform-peaks.ts) does
 // `fetch(previewUrl)` first, which CSP checks against connect-src instead.
 // worker-src needs 'blob:' and 'data:' because the export pipeline's
-// `web-demuxer` (export-engine/streaming-decoder.ts etc.) spins up its own
-// internal workers two different ways -- its main demux worker via
+// `web-demuxer` (features/export/engine/streaming-decoder.ts etc.) spins up
+// its own internal workers two different ways -- its main demux worker via
 // `new Worker(URL.createObjectURL(...))` (blob:) and at least one other via
 // an inline `data:text/javascript;base64,...` URL -- without an explicit
 // worker-src, Chromium falls back to default-src, which doesn't cover either

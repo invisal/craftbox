@@ -39,8 +39,8 @@ export default defineConfig({
         }
       }
     },
-    // The export Worker (src/renderer/export-worker.ts, imported via a
-    // `?worker` suffix from the export coordinator) pulls in pixi.js, which
+    // The export Worker (features/export/engine/export-worker.ts, imported
+    // via a `?worker` suffix from the export coordinator) pulls in pixi.js, which
     // internally code-splits (autoDetectRenderer dynamically imports the
     // WebGL/WebGPU backend) -- Vite's default worker format ('iife') can't
     // support that, so this worker output needs ES modules, matching the

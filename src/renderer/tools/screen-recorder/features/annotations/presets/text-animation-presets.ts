@@ -9,8 +9,9 @@ export interface TextAnimationPreset {
  * Picker options for `TextAnnotation.animationPreset`. Purely a live-preview
  * affordance (AnnotationOverlay plays the entrance animation for the first
  * `ENTRANCE_WINDOW_MS` of an annotation's active window) -- the export
- * rendering engine (`rendering-engine/effects/annotations.ts`) draws text
- * as a static frame and does not read this field, so the choice here has no
+ * rendering engine
+ * (`features/export/engine/rendering/effects/annotations.ts`) draws text as a
+ * static frame and does not read this field, so the choice here has no
  * effect on exported video yet. Baking real enter/exit animation into the
  * PixiJS-backed export pipeline is a separate, larger piece of work.
  */
