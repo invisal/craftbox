@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import { usePostmanTabsStore } from './store/tabs.store';
 import { useCollectionsStore } from './store/collections.store';
+import { useEnvironmentsStore } from './store/environments.store';
 import { WorkspaceSelector } from './components/WorkspaceSelector';
 import type {
   Collection,
@@ -253,10 +254,17 @@ export const HttpClientSidebar: React.FC = () => {
         result.schemaVersion && result.schemaVersion !== 'unknown'
           ? ` (Postman Collection v${result.schemaVersion})`
           : '';
+      const variablesLabel = result.importedVariableCount
+        ? `, ${result.importedVariableCount} variable${result.importedVariableCount === 1 ? '' : 's'}`
+        : '';
       setStatusMessage({
         type: 'success',
-        text: `Imported "${result.collection.name}" (${countRequestsRecursive(result.collection)} requests)${versionLabel}.`
+        text: `Imported "${result.collection.name}" (${countRequestsRecursive(result.collection)} requests${variablesLabel})${versionLabel}.`
       });
+      if (result.environmentId) {
+        await useEnvironmentsStore.getState().load();
+        useEnvironmentsStore.getState().setActiveEnvironmentId(result.environmentId);
+      }
     }
   };
 
