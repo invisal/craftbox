@@ -13,6 +13,7 @@ interface MetricsSectionProps {
 }
 
 interface MetricDataState {
+  source?: string;
   timeLabels: string[];
   cpu: { usage: number[]; requests: number[]; limits: number[] };
   memory: { usage: number[]; requests: number[]; limits: number[] };
@@ -33,6 +34,7 @@ export const MetricsSection: React.FC<MetricsSectionProps> = ({ podName, podNs }
   const configPath = activeInstanceId ? kuberneterInstanceConfigPath[activeInstanceId] : undefined;
 
   const [metricData, setMetricData] = useState<MetricDataState>({
+    source: undefined,
     timeLabels: [],
     cpu: { usage: [], requests: [], limits: [] },
     memory: { usage: [], requests: [], limits: [] },
@@ -54,6 +56,7 @@ export const MetricsSection: React.FC<MetricsSectionProps> = ({ podName, podNs }
         });
         if (!isCancelled && res) {
           setMetricData({
+            source: res.source,
             timeLabels: res.timeLabels || [],
             cpu: res.cpu || { usage: [], requests: [], limits: [] },
             memory: res.memory || { usage: [], requests: [], limits: [] },
@@ -64,6 +67,7 @@ export const MetricsSection: React.FC<MetricsSectionProps> = ({ podName, podNs }
       } catch {
         if (!isCancelled) {
           setMetricData({
+            source: undefined,
             timeLabels: [],
             cpu: { usage: [], requests: [], limits: [] },
             memory: { usage: [], requests: [], limits: [] },
@@ -166,6 +170,7 @@ export const MetricsSection: React.FC<MetricsSectionProps> = ({ podName, podNs }
                 .then((res) => {
                   if (res && res.timeLabels) {
                     setMetricData({
+                      source: res.source,
                       timeLabels: res.timeLabels || [],
                       cpu: res.cpu || { usage: [], requests: [], limits: [] },
                       memory: res.memory || { usage: [], requests: [], limits: [] },
@@ -185,9 +190,15 @@ export const MetricsSection: React.FC<MetricsSectionProps> = ({ podName, podNs }
         </div>
       </div>
 
+      {/* Discovered Data Source display */}
       <div className="flex items-center gap-1 text-[10px] text-muted-foreground font-mono">
         <BarChart2 className="size-3 text-muted-foreground" />
-        <span>Metrics source: Prometheus API (svc/prometheus-stack-kube-prom-prometheus:9090)</span>
+        <span>
+          Displaying metrics from Prometheus:{' '}
+          <span className="text-accent underline font-medium cursor-pointer">
+            {metricData.source || 'monitoring / prometheus-stack-kube-prom-prometheus:9090'}
+          </span>
+        </span>
       </div>
 
       {/* ECharts Instance */}

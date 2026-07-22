@@ -3,6 +3,15 @@ import * as net from 'net';
 import { spawn } from 'child_process';
 import type { ChildProcess } from 'child_process';
 
+interface DiscoveredPromService {
+  namespace: string;
+  name: string;
+  port: number;
+}
+
+// In-memory cache for discovered Prometheus endpoint per context
+const discoveredPromCache = new Map<string, DiscoveredPromService>();
+
 /** Find a free TCP port on localhost */
 function getFreePort(): Promise<number> {
   return new Promise((resolve, reject) => {
@@ -39,6 +48,94 @@ function waitForPortForward(child: ChildProcess, timeoutMs = 8000): Promise<void
     child.on('exit', (code) => {
       clearTimeout(timer);
       reject(new Error(`port-forward exited early with code ${code}`));
+    });
+  });
+}
+
+/** Lens-style Auto-Discovery for Prometheus service across all cluster namespaces */
+async function discoverPrometheusService(
+  kubeconfigPath?: string,
+  contextName?: string
+): Promise<DiscoveredPromService> {
+  const cacheKey = `${kubeconfigPath || 'default'}:${contextName || 'default'}`;
+  if (discoveredPromCache.has(cacheKey)) {
+    return discoveredPromCache.get(cacheKey)!;
+  }
+
+  const defaults: DiscoveredPromService[] = [
+    { namespace: 'lens-metrics', name: 'prometheus', port: 80 },
+    { namespace: 'monitoring', name: 'prometheus-k8s', port: 9090 },
+    { namespace: 'monitoring', name: 'prometheus-stack-kube-prom-prometheus', port: 9090 },
+    { namespace: 'monitoring', name: 'prometheus-server', port: 80 },
+    { namespace: 'prometheus', name: 'prometheus', port: 9090 },
+    { namespace: 'kube-system', name: 'prometheus', port: 9090 }
+  ];
+
+  return new Promise((resolve) => {
+    const args: string[] = [];
+    if (kubeconfigPath) args.push('--kubeconfig', kubeconfigPath);
+    if (contextName) args.push('--context', contextName);
+    args.push('get', 'svc', '-A', '-o', 'json');
+
+    const proc = spawn('kubectl', args, { shell: true });
+    let stdout = '';
+    proc.stdout?.on('data', (chunk) => {
+      stdout += chunk.toString();
+    });
+
+    proc.on('close', (code) => {
+      if (code === 0 && stdout) {
+        try {
+          const json = JSON.parse(stdout);
+          const items = (json.items || []) as Array<{
+            metadata?: { name?: string; namespace?: string; labels?: Record<string, string> };
+            spec?: { ports?: Array<{ port?: number }> };
+          }>;
+
+          // 1. Check priority matches
+          for (const def of defaults) {
+            const match = items.find(
+              (item) =>
+                item.metadata?.namespace === def.namespace && item.metadata?.name === def.name
+            );
+            if (match) {
+              const targetPort = match.spec?.ports?.[0]?.port || def.port;
+              const result = { namespace: def.namespace, name: def.name, port: targetPort };
+              discoveredPromCache.set(cacheKey, result);
+              return resolve(result);
+            }
+          }
+
+          // 2. Search for any service matching prometheus in name or labels
+          for (const item of items) {
+            const name = item.metadata?.name || '';
+            const ns = item.metadata?.namespace || 'default';
+            const labels = item.metadata?.labels || {};
+            const isProm =
+              name.includes('prometheus') ||
+              labels['app'] === 'prometheus' ||
+              labels['app.kubernetes.io/name'] === 'prometheus' ||
+              labels['app.kubernetes.io/instance']?.includes('prometheus');
+
+            if (isProm) {
+              const targetPort = item.spec?.ports?.[0]?.port || 9090;
+              const result = { namespace: ns, name: name, port: targetPort };
+              discoveredPromCache.set(cacheKey, result);
+              return resolve(result);
+            }
+          }
+        } catch {
+          // Ignore JSON parse error
+        }
+      }
+
+      // Default fallback if scan doesn't find any service
+      const fallback = defaults[2];
+      resolve(fallback);
+    });
+
+    proc.on('error', () => {
+      resolve(defaults[2]);
     });
   });
 }
@@ -104,13 +201,26 @@ export function registerPrometheusHandler(): void {
       _,
       kubeconfigPath: string | undefined,
       contextName: string | undefined,
-      prometheusNamespace = 'monitoring',
-      prometheusService = 'prometheus-stack-kube-prom-prometheus',
-      prometheusPort = 9090
+      prometheusNamespace?: string,
+      prometheusService?: string,
+      prometheusPort?: number
     ) => {
       let portForwardProc: ChildProcess | null = null;
       try {
         const resolvedKubeconfig = kubeconfigPath || undefined;
+
+        // Auto-discover Prometheus service if not explicitly provided
+        let targetNs = prometheusNamespace;
+        let targetSvc = prometheusService;
+        let targetPortNum = prometheusPort;
+
+        if (!targetNs || !targetSvc || !targetPortNum) {
+          const discovered = await discoverPrometheusService(resolvedKubeconfig, contextName);
+          targetNs = targetNs || discovered.namespace;
+          targetSvc = targetSvc || discovered.name;
+          targetPortNum = targetPortNum || discovered.port;
+        }
+
         const localPort = await getFreePort();
 
         const pfArgs: string[] = [];
@@ -118,10 +228,10 @@ export function registerPrometheusHandler(): void {
         if (contextName) pfArgs.push('--context', contextName);
         pfArgs.push(
           'port-forward',
-          `svc/${prometheusService}`,
-          `${localPort}:${prometheusPort}`,
+          `svc/${targetSvc}`,
+          `${localPort}:${targetPortNum}`,
           '-n',
-          prometheusNamespace
+          targetNs
         );
 
         portForwardProc = spawn('kubectl', pfArgs, { shell: true });
@@ -199,23 +309,35 @@ export function registerPrometheusHandler(): void {
         namespace,
         podName,
         timeRange = '1h',
-        prometheusNamespace = 'monitoring',
-        prometheusService = 'prometheus-stack-kube-prom-prometheus',
-        prometheusPort = 9090
+        prometheusNamespace,
+        prometheusService,
+        prometheusPort
       } = params;
 
       let portForwardProc: ChildProcess | null = null;
       try {
+        // Auto-discover Prometheus service if not explicitly provided
+        let targetNs = prometheusNamespace;
+        let targetSvc = prometheusService;
+        let targetPortNum = prometheusPort;
+
+        if (!targetNs || !targetSvc || !targetPortNum) {
+          const discovered = await discoverPrometheusService(kubeconfigPath, contextName);
+          targetNs = targetNs || discovered.namespace;
+          targetSvc = targetSvc || discovered.name;
+          targetPortNum = targetPortNum || discovered.port;
+        }
+
         const localPort = await getFreePort();
         const pfArgs: string[] = [];
         if (kubeconfigPath) pfArgs.push('--kubeconfig', kubeconfigPath);
         if (contextName) pfArgs.push('--context', contextName);
         pfArgs.push(
           'port-forward',
-          `svc/${prometheusService}`,
-          `${localPort}:${prometheusPort}`,
+          `svc/${targetSvc}`,
+          `${localPort}:${targetPortNum}`,
           '-n',
-          prometheusNamespace
+          targetNs
         );
 
         portForwardProc = spawn('kubectl', pfArgs, { shell: true });
@@ -300,6 +422,7 @@ export function registerPrometheusHandler(): void {
         const fsLimit = rawFsLimit.map(([, val]) => (parseFloat(val) || 0) / (1024 * 1024));
 
         return {
+          source: `${targetNs} / ${targetSvc}:${targetPortNum}`,
           timeLabels,
           cpu: { usage: cpuUsage, requests: cpuReq, limits: cpuLim },
           memory: { usage: memUsage, requests: memReq, limits: memLim },

@@ -99,6 +99,7 @@ export interface KuberneterApi {
     podName: string;
     timeRange?: '1h' | '6h' | '24h';
   }) => Promise<{
+    source?: string;
     timeLabels: string[];
     cpu: { usage: number[]; requests: number[]; limits: number[] };
     memory: { usage: number[]; requests: number[]; limits: number[] };
