@@ -10,13 +10,16 @@ function normalize(target: string): string {
   return target.replace(/[\\/]+$/, '').toLowerCase();
 }
 
-export function FileExplorerSidebar() {
+interface FileExplorerSidebarProps {
+  onNavigate: (path: string) => void;
+}
+
+export function FileExplorerSidebar({ onNavigate }: FileExplorerSidebarProps) {
   const [sections, setSections] = useState<SidebarSections | null>(null);
   const [bucketDialogOpen, setBucketDialogOpen] = useState(false);
 
   const activePanel = useFileExplorerStore((s) => s.activePanel);
   const panels = useFileExplorerStore((s) => s.panels);
-  const setPanelPath = useFileExplorerStore((s) => s.setPanelPath);
 
   const refreshSections = () => {
     window.fileExplorer.getSidebarSections().then(setSections);
@@ -30,7 +33,7 @@ export function FileExplorerSidebar() {
 
   const activeIndex = activePanel === 'panel1' ? 0 : 1;
   const activePath = panels[activeIndex].path;
-  const navigateActive = (path: string) => setPanelPath(activeIndex, path);
+  const navigateActive = onNavigate;
 
   return (
     <div className="flex flex-col gap-4 py-2">

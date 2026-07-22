@@ -19,6 +19,10 @@ interface GatewaySettings {
 }
 
 const SETTINGS_FILENAME = 'ai-gateway-settings.json';
+// Kept in sync with `AGENT_MODELS[0].id` in the file explorer's agent feature
+// (renderer-only, so not importable from the main process) -- used when a
+// gateway is connected without picking a model first (e.g. from the Home dialog).
+const DEFAULT_MODEL = '@cf/moonshotai/kimi-k2.6';
 
 function settingsFilePath(): string {
   return path.join(app.getPath('userData'), SETTINGS_FILENAME);
@@ -77,11 +81,16 @@ export function registerAiGatewayCredentialHandlers(): void {
       if (!getR2Credential()) {
         return { error: 'Connect Cloudflare first.' };
       }
-      if (!gatewayId.trim() || !model.trim()) {
-        return { error: 'Gateway ID and Model are both required.' };
+      const trimmedGatewayId = gatewayId.trim();
+      if (!trimmedGatewayId) {
+        return { error: 'Gateway ID is required.' };
       }
 
-      const settings: GatewaySettings = { gatewayId, model };
+      // Blank model keeps whatever was already saved (or falls back to the
+      // default) -- callers that only manage the gateway ID, like the Home
+      // page's Connect Cloudflare dialog, don't need to also pick a model.
+      const resolvedModel = model.trim() || getCachedSettings()?.model || DEFAULT_MODEL;
+      const settings: GatewaySettings = { gatewayId: trimmedGatewayId, model: resolvedModel };
       try {
         fs.mkdirSync(path.dirname(settingsFilePath()), { recursive: true });
         fs.writeFileSync(settingsFilePath(), JSON.stringify(settings), { mode: 0o600 });

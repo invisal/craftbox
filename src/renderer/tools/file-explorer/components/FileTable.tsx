@@ -433,7 +433,8 @@ export function FileTable({ entries, currentPath, onNavigate, onSelectionChange 
                 onClick={() => handleDelete(paths)}
                 shortcut="delete"
               >
-                Delete {selectedRows.length > 1 ? `${selectedRows.length} items` : ''}
+                {capabilities.trash ? 'Move to Bin' : 'Delete'}{' '}
+                {selectedRows.length > 1 ? `${selectedRows.length} items` : ''}
               </ContextMenu.Item>
             </>
           );
@@ -549,7 +550,7 @@ export function FileTable({ entries, currentPath, onNavigate, onSelectionChange 
         onOpenChange={(open) => !open && setPendingDeletePaths(null)}
       >
         <Dialog.Content className="max-w-sm">
-          <Dialog.Title>{capabilities.trash ? 'Delete?' : 'Permanently delete?'}</Dialog.Title>
+          <Dialog.Title>{capabilities.trash ? 'Move to bin?' : 'Permanently delete?'}</Dialog.Title>
           <Dialog.Description>
             {pendingDeletePaths && pendingDeletePaths.length > 1
               ? `${pendingDeletePaths.length} items`
@@ -563,7 +564,7 @@ export function FileTable({ entries, currentPath, onNavigate, onSelectionChange 
               Cancel
             </Button>
             <Button variant="destructive" size="sm" onClick={confirmDelete}>
-              Delete
+              {capabilities.trash ? 'Move to Bin' : 'Delete'}
             </Button>
           </div>
         </Dialog.Content>
