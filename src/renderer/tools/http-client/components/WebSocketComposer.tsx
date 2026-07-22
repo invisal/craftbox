@@ -60,15 +60,15 @@ export const WebSocketComposer: React.FC<WebSocketComposerProps> = ({
           onKeyDown={(e) => {
             if (e.key === 'Enter' && !isConnected && !isConnecting) onConnect();
           }}
-          className="flex-1 bg-sidebar-bg border border-border-dark text-xs rounded px-3 py-1.5 focus:outline-none focus:border-accent text-zinc-200 disabled:opacity-60"
+          className="flex-1 bg-surface-2 border border-border text-xs rounded px-3 py-1.5 focus:outline-none focus:border-accent text-zinc-200 disabled:opacity-60"
         />
         <button
           onClick={isConnected ? onDisconnect : onConnect}
           disabled={isConnecting || (!isConnected && !url.trim())}
           className={`px-4 py-1.5 text-xs font-semibold rounded flex items-center gap-1.5 cursor-pointer transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
             isConnected
-              ? 'bg-red-500/80 hover:bg-red-500 text-white'
-              : 'bg-accent/80 hover:bg-accent text-white'
+              ? 'bg-red-500/80 hover:bg-red-500 text-emphasis-text'
+              : 'bg-accent/80 hover:bg-accent text-emphasis-text'
           }`}
         >
           {isConnecting ? (
@@ -99,12 +99,12 @@ export const WebSocketComposer: React.FC<WebSocketComposerProps> = ({
           }
           disabled={!isConnected}
           rows={2}
-          className="flex-1 bg-editor-bg border border-border-dark rounded px-3 py-2 text-xs font-mono text-zinc-200 focus:outline-none focus:border-accent disabled:opacity-50 resize-none"
+          className="flex-1 bg-surface-2 border border-border rounded px-3 py-2 text-xs font-mono text-zinc-200 focus:outline-none focus:border-accent disabled:opacity-50 resize-none"
         />
         <button
           onClick={onSendMessage}
           disabled={!isConnected || !messageInput.trim()}
-          className="px-4 py-2 bg-accent/80 hover:bg-accent disabled:opacity-50 disabled:cursor-not-allowed text-white text-xs font-semibold rounded flex items-center gap-1.5 cursor-pointer transition-colors shrink-0"
+          className="px-4 py-2 bg-accent/80 hover:bg-accent disabled:opacity-50 disabled:cursor-not-allowed text-emphasis-text text-xs font-semibold rounded flex items-center gap-1.5 cursor-pointer transition-colors shrink-0"
         >
           <Send size={12} />
           <span>Send</span>

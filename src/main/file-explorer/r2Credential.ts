@@ -68,10 +68,19 @@ export function getR2Credential(): R2Credential | null {
 export function registerR2CredentialHandlers(): void {
   ipcMain.handle(
     'file-explorer:get-r2-credential-status',
-    (): { configured: boolean; selectedBuckets: string[] } => {
+    (): {
+      configured: boolean;
+      accountId: string;
+      hasAccessKeys: boolean;
+      selectedBuckets: string[];
+    } => {
       const credential = getCachedCredential();
       return {
         configured: credential !== null,
+        // Not secret (see EncryptedCredentialFile) -- safe to send back to the
+        // renderer so an edit form can pre-fill it.
+        accountId: credential?.accountId ?? '',
+        hasAccessKeys: Boolean(credential?.accessKeyId && credential?.secretAccessKey),
         selectedBuckets: credential?.selectedBuckets ?? []
       };
     }
@@ -86,12 +95,25 @@ export function registerR2CredentialHandlers(): void {
       accessKeyId: string,
       secretAccessKey: string
     ): { success: true } | { error: string } => {
-      if (!accountId.trim() || !apiToken.trim()) {
-        return { error: 'Account ID and API Token are required.' };
+      const trimmedAccountId = accountId.trim();
+      if (!trimmedAccountId) {
+        return { error: 'Account ID is required.' };
       }
+
+      // Editing an existing connection never gets the real secret values back to
+      // re-display, so a blank secret field here means "keep what's already saved"
+      // rather than "clear it" -- only Disconnect clears secrets.
+      const existing = getCachedCredential();
+      const resolvedApiToken = apiToken.trim() || existing?.apiToken || '';
+      if (!resolvedApiToken) {
+        return { error: 'API Token is required.' };
+      }
+      const resolvedAccessKeyId = accessKeyId.trim() || existing?.accessKeyId || '';
+      const resolvedSecretAccessKey = secretAccessKey.trim() || existing?.secretAccessKey || '';
+
       // R2 keys are optional together -- either both are set (R2 browsing works)
       // or both are blank (Cloudflare is still connected, just without R2).
-      if (accessKeyId.trim().length > 0 !== secretAccessKey.trim().length > 0) {
+      if (resolvedAccessKeyId.length > 0 !== resolvedSecretAccessKey.length > 0) {
         return { error: 'Provide both R2 access keys, or leave both blank.' };
       }
       if (!safeStorage.isEncryptionAvailable()) {
@@ -99,16 +121,16 @@ export function registerR2CredentialHandlers(): void {
       }
 
       // Reconnecting the same account shouldn't wipe out an existing bucket selection.
-      const selectedBuckets = getCachedCredential()?.selectedBuckets ?? [];
+      const selectedBuckets = existing?.selectedBuckets ?? [];
 
       const encrypted: EncryptedCredentialFile = {
-        accountId,
-        apiToken: safeStorage.encryptString(apiToken).toString('base64'),
-        accessKeyId: accessKeyId.trim()
-          ? safeStorage.encryptString(accessKeyId).toString('base64')
+        accountId: trimmedAccountId,
+        apiToken: safeStorage.encryptString(resolvedApiToken).toString('base64'),
+        accessKeyId: resolvedAccessKeyId
+          ? safeStorage.encryptString(resolvedAccessKeyId).toString('base64')
           : undefined,
-        secretAccessKey: secretAccessKey.trim()
-          ? safeStorage.encryptString(secretAccessKey).toString('base64')
+        secretAccessKey: resolvedSecretAccessKey
+          ? safeStorage.encryptString(resolvedSecretAccessKey).toString('base64')
           : undefined,
         selectedBuckets
       };
@@ -117,10 +139,10 @@ export function registerR2CredentialHandlers(): void {
         fs.mkdirSync(path.dirname(credentialFilePath()), { recursive: true });
         fs.writeFileSync(credentialFilePath(), JSON.stringify(encrypted), { mode: 0o600 });
         cachedCredential = {
-          accountId,
-          apiToken,
-          accessKeyId: accessKeyId.trim() || undefined,
-          secretAccessKey: secretAccessKey.trim() || undefined,
+          accountId: trimmedAccountId,
+          apiToken: resolvedApiToken,
+          accessKeyId: resolvedAccessKeyId || undefined,
+          secretAccessKey: resolvedSecretAccessKey || undefined,
           selectedBuckets
         };
         return { success: true };

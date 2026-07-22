@@ -43,6 +43,8 @@ export type ClipboardFiles = { paths: string[]; mode: ClipboardMode };
 
 export interface R2CredentialStatus {
   configured: boolean;
+  accountId: string;
+  hasAccessKeys: boolean;
   selectedBuckets: string[];
 }
 

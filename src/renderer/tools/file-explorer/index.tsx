@@ -54,6 +54,7 @@ function computePreviewTarget(selection: FileEntry[]): {
 
 function FileExplorerLayout() {
   const panels = useFileExplorerStore((s) => s.panels);
+  const activePanel = useFileExplorerStore((s) => s.activePanel);
   const sidebarWidth = useFileExplorerStore((s) => s.sidebarWidth);
   const panel1Width = useFileExplorerStore((s) => s.panel1Width);
   const setPanelPath = useFileExplorerStore((s) => s.setPanelPath);
@@ -123,6 +124,26 @@ function FileExplorerLayout() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  function handleSidebarNavigate(path: string) {
+    const index: PanelIndex = activePanel === 'panel1' ? 0 : 1;
+    setPanelPath(index, path);
+    setPanelSelection(index, []);
+
+    const siblingIndex = otherPanel(index);
+    const sibling = panels[siblingIndex];
+    if (sibling.mode !== 'preview') return;
+
+    const target = computePreviewTarget([]);
+    if (!sibling.isDirty) {
+      setPanelPreviewFile(siblingIndex, target.previewFile);
+      return;
+    }
+    setPendingLeave({
+      panelIndex: siblingIndex,
+      action: { type: 'switch-file', path: target.previewFile }
+    });
+  }
+
   function handleModeToggle(index: PanelIndex, mode: PanelMode) {
     const panel = panels[index];
     if (panel.mode === 'preview' && panel.isDirty && mode === 'explorer') {
@@ -190,7 +211,7 @@ function FileExplorerLayout() {
         max={400}
         className="bg-surface-2 border-r border-border flex flex-col h-full overflow-y-auto"
       >
-        <FileExplorerSidebar />
+        <FileExplorerSidebar onNavigate={handleSidebarNavigate} />
       </ResizablePanel>
 
       <div className="flex-1 flex min-h-0 min-w-0">

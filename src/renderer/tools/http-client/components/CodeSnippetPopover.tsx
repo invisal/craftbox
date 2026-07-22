@@ -47,19 +47,19 @@ export const CodeSnippetPopover: React.FC<CodeSnippetPopoverProps> = ({
     <Popover.Root open={open} onOpenChange={setOpen}>
       <Popover.Trigger
         title="Generate code snippet"
-        className="flex items-center gap-1.5 px-3 py-1.5 bg-sidebar-bg border border-border-dark hover:border-accent text-zinc-300 hover:text-white text-xs font-semibold rounded cursor-pointer transition-colors"
+        className="flex items-center gap-1.5 px-3 py-1.5 bg-surface-2 border border-border-dark hover:border-accent text-zinc-300 hover:text-foreground text-xs font-semibold rounded cursor-pointer transition-colors"
       >
         <Code2 size={12} />
         <span>Code</span>
       </Popover.Trigger>
       <Popover.Portal>
         <Popover.Positioner sideOffset={8} align="end" className="z-50">
-          <Popover.Popup className="bg-sidebar-bg border border-border-dark rounded-lg shadow-xl w-md flex flex-col text-xs outline-none overflow-hidden">
-            <div className="flex items-center justify-between gap-2 px-3 py-2 border-b border-border-dark">
+          <Popover.Popup className="bg-surface border border-border-dark rounded-lg shadow-xl w-md flex flex-col text-xs outline-none overflow-hidden">
+            <div className="flex items-center justify-between gap-2 px-3 py-2 border-b border-border">
               <select
                 value={language}
                 onChange={(e) => setLanguage(e.target.value as SnippetLanguage)}
-                className="bg-editor-bg border border-border-dark rounded px-2 py-1 text-zinc-200 focus:outline-none focus:border-accent cursor-pointer"
+                className="bg-surface-2 border border-border rounded px-2 py-1 text-zinc-200 focus:outline-none focus:border-accent cursor-pointer"
               >
                 {SNIPPET_LANGUAGES.map((l) => (
                   <option key={l.value} value={l.value}>
@@ -69,7 +69,7 @@ export const CodeSnippetPopover: React.FC<CodeSnippetPopoverProps> = ({
               </select>
               <button
                 onClick={handleCopy}
-                className="flex items-center gap-1.5 px-2 py-1 text-[11px] font-semibold text-zinc-400 hover:text-white bg-editor-bg border border-border-dark rounded cursor-pointer transition-colors"
+                className="flex items-center gap-1.5 px-2 py-1 text-[11px] font-semibold text-zinc-400 hover:text-foreground bg-surface-2 border border-border-dark rounded cursor-pointer transition-colors"
               >
                 {copied ? <Check size={11} className="text-emerald-400" /> : <Copy size={11} />}
                 {copied ? 'Copied' : 'Copy'}
