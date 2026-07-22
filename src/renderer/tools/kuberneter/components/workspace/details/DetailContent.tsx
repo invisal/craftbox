@@ -49,6 +49,7 @@ import { NetworkPolicyDetail } from './NetworkPolicyDetail';
 import { HelmChartDetail } from './HelmChartDetail';
 import { HelmReleaseDetail } from './HelmReleaseDetail';
 import { ServiceAccountDetail } from './ServiceAccountDetail';
+import { PortForwardingDetail } from './PortForwardingDetail';
 import { type HelmChartItem, type HelmReleaseItem } from '../../../../../../preload/kuberneter/api';
 
 import { type PodData } from '../../../types/PodData';
@@ -76,6 +77,7 @@ import { type IngressData } from '../../../types/IngressData';
 import { type IngressClassData } from '../../../types/IngressClassData';
 import { type NetworkPolicyData } from '../../../types/NetworkPolicyData';
 import { type ServiceAccountData } from '../../../types/ServiceAccountData';
+import { type PortForwardData } from '../../../types/PortForwardData';
 
 interface DetailContentProps {
   contentType: string;
@@ -180,6 +182,8 @@ export const DetailContent: React.FC<DetailContentProps> = ({
       );
     case 'serviceaccount':
       return <ServiceAccountDetail payload={payload as ServiceAccountData} isTab={isTab} />;
+    case 'portforwarding':
+      return <PortForwardingDetail payload={payload as PortForwardData} isTab={isTab} />;
     case 'helm-chart':
       return <HelmChartDetail payload={payload as HelmChartItem} isTab={isTab} />;
     case 'helm-release':

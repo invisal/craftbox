@@ -80,12 +80,16 @@ export const KubeDetailDrawer: React.FC<KubeDetailDrawerProps> = ({ tabId }) => 
     validatingwebhook: 'Validating Webhook',
     serviceaccount: 'Service Account',
     'helm-chart': 'Helm Chart',
-    'helm-release': 'Helm Release'
+    'helm-release': 'Helm Release',
+    portforwarding: 'Port Forward'
   };
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const getResourceName = (data: any): string => {
     if (!data) return '';
+    if (contentType === 'portforwarding') {
+      return data.url || data.name || '';
+    }
     return (
       data.name ||
       data.metadata?.name ||
