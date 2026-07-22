@@ -26,7 +26,7 @@ export const KeyValueEditor: React.FC<KeyValueEditorProps> = ({
   const variables = useActiveEnvironmentVariables();
   const isLastRow = (id: string): boolean => rows[rows.length - 1]?.id === id;
   const keyInputClassName = (enabled: boolean): string =>
-    `bg-editor-bg border border-border-dark text-xs rounded px-2 py-1 focus:outline-none focus:border-accent w-full ${
+    `bg-surface-2 border border-border text-xs rounded px-2 py-1 focus:outline-none focus:border-accent w-full ${
       enabled ? 'text-zinc-200' : 'text-zinc-600'
     }`;
 
@@ -69,7 +69,7 @@ export const KeyValueEditor: React.FC<KeyValueEditorProps> = ({
             onChange={(value) => onUpdate(row.id, { value })}
             variables={variables}
             placeholder={valuePlaceholder}
-            className={`w-full bg-editor-bg border border-border-dark text-xs rounded px-2 py-1 focus:outline-none focus:border-accent ${
+            className={`w-full bg-surface-2 border border-border text-xs rounded px-2 py-1 focus:outline-none focus:border-accent ${
               row.enabled ? 'text-zinc-200' : 'text-zinc-600'
             }`}
           />

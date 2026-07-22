@@ -109,7 +109,7 @@ export const KeySuggestInput: React.FC<KeySuggestInputProps> = ({
         createPortal(
           <div
             style={{ position: 'fixed', top: rect.top, left: rect.left, width: rect.width }}
-            className="z-50 max-h-48 overflow-auto bg-sidebar-bg border border-border-dark rounded-md shadow-xl py-1"
+            className="z-50 max-h-48 overflow-auto bg-surface border border-border-dark rounded-md shadow-xl py-1"
           >
             {filtered.map((suggestion, index) => (
               <div

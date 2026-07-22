@@ -31,8 +31,8 @@ export const WebSocketLog: React.FC<WebSocketLogProps> = ({ log, onClear }) => {
   }, [log.length]);
 
   return (
-    <div className="flex-1 bg-sidebar-bg border border-border-dark rounded-lg overflow-hidden flex flex-col min-h-0">
-      <div className="bg-editor-bg border-b border-border-dark px-3 py-2 flex items-center justify-between text-xs shrink-0 select-none">
+    <div className="flex-1 bg-surface-2 border border-border-dark rounded-lg overflow-hidden flex flex-col min-h-0">
+      <div className="bg-surface-3 border-b border-border px-3 py-2 flex items-center justify-between text-xs shrink-0 select-none">
         <span className="text-zinc-500 font-bold uppercase tracking-wider text-[10px]">
           Live Stream Log
         </span>
@@ -40,7 +40,7 @@ export const WebSocketLog: React.FC<WebSocketLogProps> = ({ log, onClear }) => {
           onClick={onClear}
           disabled={log.length === 0}
           title="Clear log"
-          className="p-1 text-zinc-555 hover:text-white disabled:opacity-30 disabled:cursor-default cursor-pointer transition-colors"
+          className="p-1 text-zinc-555 hover:text-foreground disabled:opacity-30 disabled:cursor-default cursor-pointer transition-colors"
         >
           <Trash2 size={12} />
         </button>
