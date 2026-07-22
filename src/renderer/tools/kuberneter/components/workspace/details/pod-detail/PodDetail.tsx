@@ -13,7 +13,7 @@ import {
   type PodToleration,
   type PodVolume
 } from './types';
-import { MetricsBarChart } from './MetricsBarChart';
+import { MetricsSection } from './MetricsSection';
 import { PodTolerationsSection } from './PodTolerationsSection';
 import { PodVolumesSection } from './PodVolumesSection';
 import { PodContainersSection } from './PodContainersSection';
@@ -344,29 +344,6 @@ export const PodDetail: React.FC<PodDetailProps> = ({ payload, isTab = false }) 
     }
   );
 
-  const podMetricsSeries = [
-    {
-      name: 'CPU Usage',
-      color: '#3b82f6',
-      values: [0.04, 0.12, 0.08, 0.11, 0.15, 0.09, 0.12, 0.19, 0.07, 0.13]
-    }
-  ];
-
-  const podTimeLabels = [
-    '21:01',
-    '21:07',
-    '21:13',
-    '21:19',
-    '21:25',
-    '21:31',
-    '21:37',
-    '21:43',
-    '21:49',
-    '21:55'
-  ];
-
-  const podYTicks = ['0.200', '0.150', '0.100', '0.050', '0'];
-
   return (
     <div className={`flex flex-col gap-5 ${isTab ? 'p-6 h-full overflow-y-auto' : 'flex-1'}`}>
       {/* Metrics Section */}
@@ -374,7 +351,7 @@ export const PodDetail: React.FC<PodDetailProps> = ({ payload, isTab = false }) 
         <span className="text-[10px] font-bold text-zinc-450 uppercase tracking-wider mb-1">
           Metrics
         </span>
-        <MetricsBarChart series={podMetricsSeries} timeLabels={podTimeLabels} yTicks={podYTicks} />
+        <MetricsSection podName={payload.name} podNs={payload.ns} />
       </div>
 
       {/* Properties Section */}
@@ -402,8 +379,6 @@ export const PodDetail: React.FC<PodDetailProps> = ({ payload, isTab = false }) 
           setPortForwardModalConfig({ isOpen: true, containerPort: port, protocol })
         }
         onStopPortForward={handleStopPortForward}
-        timeLabels={podTimeLabels}
-        yTicks={podYTicks}
       />
 
       {/* Events Section */}

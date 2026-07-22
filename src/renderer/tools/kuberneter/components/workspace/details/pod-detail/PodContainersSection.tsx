@@ -1,5 +1,5 @@
 import type React from 'react';
-import { MetricsBarChart } from './MetricsBarChart';
+import { MetricsSection } from './MetricsSection';
 import { type ContainerItem, type ContainerStatusItem } from './types';
 import { type PortForwardData } from '../../../../types/PortForwardData';
 import { KubePropertiesTable, type PropertyItem } from '../KubePropertiesTable';
@@ -13,8 +13,6 @@ interface PodContainersSectionProps {
   portForwards: PortForwardData[];
   onOpenPortForwardModal: (port: number, protocol?: string) => void;
   onStopPortForward: (id: string) => void;
-  timeLabels: string[];
-  yTicks: string[];
 }
 
 export const PodContainersSection: React.FC<PodContainersSectionProps> = ({
@@ -24,9 +22,7 @@ export const PodContainersSection: React.FC<PodContainersSectionProps> = ({
   podNs,
   portForwards,
   onOpenPortForwardModal,
-  onStopPortForward,
-  timeLabels,
-  yTicks
+  onStopPortForward
 }) => {
   return (
     <div className="flex flex-col gap-4 border-t border-border-dark/60 pt-3">
@@ -41,24 +37,6 @@ export const PodContainersSection: React.FC<PodContainersSectionProps> = ({
         const mounts = c.volumeMounts || [];
         const limits = c.resources?.limits || {};
         const requests = c.resources?.requests || {};
-
-        const containerSeries = [
-          {
-            name: 'CPU Usage',
-            color: '#3b82f6',
-            values: [0.04, 0.12, 0.08, 0.11, 0.15, 0.09, 0.12, 0.19, 0.07, 0.13]
-          },
-          {
-            name: 'CPU Requests',
-            color: '#10b981',
-            values: [0.08, 0.08, 0.08, 0.08, 0.08, 0.08, 0.08, 0.08, 0.08, 0.08]
-          },
-          {
-            name: 'CPU Limits',
-            color: '#6b7280',
-            values: [0.18, 0.18, 0.18, 0.18, 0.18, 0.18, 0.18, 0.18, 0.18, 0.18]
-          }
-        ];
 
         const containerProperties: PropertyItem[] = [
           {
@@ -217,7 +195,7 @@ export const PodContainersSection: React.FC<PodContainersSectionProps> = ({
             </div>
 
             {/* Container Prometheus Metrics Chart */}
-            <MetricsBarChart series={containerSeries} timeLabels={timeLabels} yTicks={yTicks} />
+            <MetricsSection podName={podName} podNs={podNs} />
 
             {/* Container Properties Table */}
             <KubePropertiesTable properties={containerProperties} />

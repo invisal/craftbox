@@ -92,6 +92,20 @@ export interface KuberneterApi {
     targetPort: number;
   }) => Promise<{ success?: boolean; error?: string }>;
   stopPortForward: (id: string) => Promise<{ success?: boolean; error?: string }>;
+  queryPodMetricsRange: (params: {
+    kubeconfigPath?: string;
+    contextName?: string;
+    namespace: string;
+    podName: string;
+    timeRange?: '1h' | '6h' | '24h';
+  }) => Promise<{
+    timeLabels: string[];
+    cpu: { usage: number[]; requests: number[]; limits: number[] };
+    memory: { usage: number[]; requests: number[]; limits: number[] };
+    network: { rx: number[]; tx: number[] };
+    filesystem: { usage: number[]; limit: number[] };
+    error?: string;
+  }>;
 }
 
 export interface HelmChartItem {
@@ -197,5 +211,6 @@ export const kuberneterApi: KuberneterApi = {
       contextName
     ),
   startPortForward: (params) => ipcRenderer.invoke('kuberneter:start-port-forward', params),
-  stopPortForward: (id) => ipcRenderer.invoke('kuberneter:stop-port-forward', id)
+  stopPortForward: (id) => ipcRenderer.invoke('kuberneter:stop-port-forward', id),
+  queryPodMetricsRange: (params) => ipcRenderer.invoke('kuberneter:query-pod-metrics-range', params)
 };
