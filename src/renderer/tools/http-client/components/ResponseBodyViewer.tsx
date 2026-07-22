@@ -79,13 +79,13 @@ export const ResponseBodyViewer: React.FC<ResponseBodyViewerProps> = ({
           </Select.Root>
 
           {previewEnabled && (
-            <div className="flex items-center bg-editor-bg border border-border-dark rounded overflow-hidden text-[10px] font-semibold">
+            <div className="flex items-center bg-surface-3 border border-border-dark rounded overflow-hidden text-[10px] font-semibold">
               <button
                 onClick={() => setViewMode('formatted')}
                 className={`flex items-center gap-1 px-2 py-0.5 cursor-pointer transition-colors ${
                   viewMode === 'formatted'
                     ? 'bg-accent/20 text-accent'
-                    : 'text-zinc-400 hover:text-white'
+                    : 'text-zinc-400 hover:text-foreground'
                 }`}
               >
                 <FileText size={10} />
@@ -96,7 +96,7 @@ export const ResponseBodyViewer: React.FC<ResponseBodyViewerProps> = ({
                 className={`flex items-center gap-1 px-2 py-0.5 cursor-pointer transition-colors ${
                   viewMode === 'preview'
                     ? 'bg-accent/20 text-accent'
-                    : 'text-zinc-400 hover:text-white'
+                    : 'text-zinc-400 hover:text-foreground'
                 }`}
               >
                 <Eye size={10} />
@@ -109,7 +109,7 @@ export const ResponseBodyViewer: React.FC<ResponseBodyViewerProps> = ({
         <button
           onClick={handleCopy}
           title="Copy body"
-          className="flex items-center gap-1 px-2 py-0.5 text-[10px] font-semibold text-zinc-400 hover:text-white bg-editor-bg border border-border-dark rounded cursor-pointer transition-colors"
+          className="flex items-center gap-1 px-2 py-0.5 text-[10px] font-semibold text-zinc-400 hover:text-foreground bg-surface-3 border border-border-dark rounded cursor-pointer transition-colors"
         >
           {copied ? <Check size={10} className="text-emerald-400" /> : <Copy size={10} />}
           {copied ? 'Copied' : 'Copy'}

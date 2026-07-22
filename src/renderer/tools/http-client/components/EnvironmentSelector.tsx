@@ -118,14 +118,14 @@ export const EnvironmentSelector: React.FC = () => {
         if (!next) setError(null);
       }}
     >
-      <Popover.Trigger className="flex items-center gap-1.5 px-3 py-1.5 bg-sidebar-bg border border-border-dark hover:border-accent text-zinc-300 hover:text-white text-xs font-semibold rounded cursor-pointer transition-colors">
+      <Popover.Trigger className="flex items-center gap-1.5 px-3 py-1.5 bg-surface-2 border border-border-dark hover:border-accent text-zinc-300 hover:text-foreground text-xs font-semibold rounded cursor-pointer transition-colors">
         <Globe size={12} className={activeEnvironment ? 'text-accent' : 'text-zinc-500'} />
         <span className="max-w-32 truncate">{activeEnvironment?.name ?? 'No Environment'}</span>
         <ChevronDown size={11} className="text-zinc-500" />
       </Popover.Trigger>
       <Popover.Portal>
         <Popover.Positioner sideOffset={8} align="end" className="z-50">
-          <Popover.Popup className="bg-sidebar-bg border border-border-dark rounded-lg shadow-xl p-3 w-80 flex flex-col gap-3 text-xs outline-none">
+          <Popover.Popup className="bg-surface border border-border-dark rounded-lg shadow-xl p-3 w-80 flex flex-col gap-3 text-xs outline-none">
             <div className="flex items-center justify-between">
               <span className="font-bold text-zinc-300 uppercase tracking-wider text-[10px]">
                 Environment
@@ -136,7 +136,7 @@ export const EnvironmentSelector: React.FC = () => {
                   setDraftName('');
                 }}
                 title="New Environment"
-                className="p-1 text-zinc-500 hover:text-white hover:bg-border-dark/60 rounded cursor-pointer"
+                className="p-1 text-zinc-500 hover:text-foreground hover:bg-border-dark/60 rounded cursor-pointer"
               >
                 <Plus size={13} />
               </button>
@@ -157,14 +157,14 @@ export const EnvironmentSelector: React.FC = () => {
                     setDraftName('');
                   }
                 }}
-                className="bg-editor-bg border border-accent rounded px-2 py-1.5 text-zinc-200 focus:outline-none"
+                className="bg-surface-2 border border-accent rounded px-2 py-1.5 text-zinc-200 focus:outline-none"
               />
             )}
 
             <select
               value={activeEnvironmentId ?? ''}
               onChange={(e) => setActiveEnvironmentId(e.target.value || null)}
-              className="bg-editor-bg border border-border-dark rounded px-2 py-1.5 text-zinc-200 focus:outline-none focus:border-accent cursor-pointer"
+              className="bg-surface-2 border border-border rounded px-2 py-1.5 text-zinc-200 focus:outline-none focus:border-accent cursor-pointer"
             >
               <option value="">No Environment</option>
               {environments.map((env) => (
@@ -176,7 +176,7 @@ export const EnvironmentSelector: React.FC = () => {
 
             {activeEnvironment ? (
               <>
-                <div className="flex items-center justify-between border-t border-border-dark pt-2">
+                <div className="flex items-center justify-between border-t border-border pt-2">
                   {isRenaming ? (
                     <input
                       type="text"
@@ -188,7 +188,7 @@ export const EnvironmentSelector: React.FC = () => {
                         if (e.key === 'Enter') submitRename();
                         if (e.key === 'Escape') setIsRenaming(false);
                       }}
-                      className="flex-1 bg-editor-bg border border-accent rounded px-1.5 py-0.5 text-zinc-200 focus:outline-none"
+                      className="flex-1 bg-surface-2 border border-accent rounded px-1.5 py-0.5 text-zinc-200 focus:outline-none"
                     />
                   ) : (
                     <span className="text-zinc-400 font-semibold truncate">
@@ -202,7 +202,7 @@ export const EnvironmentSelector: React.FC = () => {
                         setIsRenaming(true);
                       }}
                       title="Rename environment"
-                      className="p-0.5 text-zinc-555 hover:text-white cursor-pointer"
+                      className="p-0.5 text-zinc-555 hover:text-foreground cursor-pointer"
                     >
                       <Pencil size={11} />
                     </button>

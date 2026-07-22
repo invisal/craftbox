@@ -24,11 +24,19 @@ import { ResizablePanel } from '@renderer/components/ui/ResizablePanel';
 
 const RESPONSE_PANEL_HEIGHT_KEY = 'craftbox-http-client-response-height';
 const DEFAULT_RESPONSE_PANEL_HEIGHT = 40;
+const SIDEBAR_WIDTH_KEY = 'craftbox-http-client-sidebar-width';
+const DEFAULT_SIDEBAR_WIDTH = 256;
 
 function readStoredResponsePanelHeight(): number {
   const stored = window.localStorage.getItem(RESPONSE_PANEL_HEIGHT_KEY);
   const parsed = stored ? Number(stored) : NaN;
   return Number.isFinite(parsed) ? parsed : DEFAULT_RESPONSE_PANEL_HEIGHT;
+}
+
+function readStoredSidebarWidth(): number {
+  const stored = window.localStorage.getItem(SIDEBAR_WIDTH_KEY);
+  const parsed = stored ? Number(stored) : NaN;
+  return Number.isFinite(parsed) ? parsed : DEFAULT_SIDEBAR_WIDTH;
 }
 
 // Mirrors the nav-item pattern in screen-recorder/ScreenRecorderApp.tsx, so every
@@ -52,10 +60,12 @@ const PROTOCOL_ITEMS: {
 export const HttpClientWorkspace: React.FC = () => {
   const tabs = usePostmanTabsStore((s) => s.tabs);
   const activeTabId = usePostmanTabsStore((s) => s.activeTabId);
+  const previewTabId = usePostmanTabsStore((s) => s.previewTabId);
   const selectTab = usePostmanTabsStore((s) => s.setActiveTabId);
   const closeTab = usePostmanTabsStore((s) => s.closeTab);
   const renameTab = usePostmanTabsStore((s) => s.renameTab);
   const openNewRequestTab = usePostmanTabsStore((s) => s.openNewRequestTab);
+  const pinTab = usePostmanTabsStore((s) => s.pinTab);
 
   const workspacesLoaded = useWorkspacesStore((s) => s.isLoaded);
   const loadWorkspaces = useWorkspacesStore((s) => s.load);
@@ -91,11 +101,24 @@ export const HttpClientWorkspace: React.FC = () => {
     for (const t of tabs) handleCloseTab(t.id);
   };
 
+  const [sidebarWidth, setSidebarWidth] = useState<number>(readStoredSidebarWidth);
+  const handleSidebarResize = (size: number): void => {
+    setSidebarWidth(size);
+    window.localStorage.setItem(SIDEBAR_WIDTH_KEY, String(size));
+  };
+
   return (
     <div className="flex flex-1 min-h-0">
-      <aside className="w-64 shrink-0 border-r border-border-dark overflow-y-auto p-3">
+      <ResizablePanel
+        edge="right"
+        size={sidebarWidth}
+        onResize={handleSidebarResize}
+        min={200}
+        max={480}
+        className="bg-surface-2 border-r border-border-dark overflow-y-auto p-3"
+      >
         <HttpClientSidebar />
-      </aside>
+      </ResizablePanel>
 
       <div className="flex-1 min-w-0 flex flex-col min-h-0">
         {tabs.length === 0 ? (
@@ -106,25 +129,27 @@ export const HttpClientWorkspace: React.FC = () => {
             </div>
             <button
               onClick={() => openNewRequestTab()}
-              className="mt-1 px-3 py-1.5 bg-editor-bg border border-border-dark hover:bg-border-dark/50 rounded text-xs text-zinc-300 hover:text-white cursor-pointer transition-all"
+              className="mt-1 px-3 py-1.5 bg-surface-2 border border-border-dark hover:bg-border-dark/50 rounded text-xs text-zinc-300 hover:text-foreground cursor-pointer transition-all"
             >
               New Request
             </button>
           </div>
         ) : (
           <>
-            <div className="flex h-9 bg-sidebar-bg border-b border-border-dark overflow-x-auto select-none shrink-0 scrollbar-none">
+            <div className="flex h-9 bg-surface-2 border-b border-border-dark overflow-x-auto select-none shrink-0 scrollbar-none">
               {tabs.map((tab) => (
                 <TabBarItem
                   key={tab.id}
                   tab={tab}
                   isActive={tab.id === activeTabId}
+                  isPreview={tab.id === previewTabId}
                   canCloseOthers={tabs.length > 1}
                   onActivate={() => selectTab(tab.id)}
                   onClose={() => handleCloseTab(tab.id)}
                   onCloseOthers={() => handleCloseOthers(tab.id)}
                   onCloseAll={handleCloseAll}
                   onRename={(title) => renameTab(tab.id, title)}
+                  onPin={() => pinTab(tab.id)}
                 />
               ))}
             </div>
@@ -142,28 +167,35 @@ export const HttpClientWorkspace: React.FC = () => {
 interface TabBarItemProps {
   tab: PostmanTab;
   isActive: boolean;
+  /** Shown in italic and reused by the next preview-mode open, Postman/VS Code-style. */
+  isPreview: boolean;
   canCloseOthers: boolean;
   onActivate: () => void;
   onClose: () => void;
   onCloseOthers: () => void;
   onCloseAll: () => void;
   onRename: (title: string) => void;
+  /** Promotes this tab out of preview mode into a permanent one. */
+  onPin: () => void;
 }
 
 const TabBarItem: React.FC<TabBarItemProps> = ({
   tab,
   isActive,
+  isPreview,
   canCloseOthers,
   onActivate,
   onClose,
   onCloseOthers,
   onCloseAll,
-  onRename
+  onRename,
+  onPin
 }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [draftTitle, setDraftTitle] = useState(tab.title);
 
   const startRenaming = (): void => {
+    onPin();
     setDraftTitle(tab.title);
     setIsEditing(true);
   };
@@ -176,7 +208,7 @@ const TabBarItem: React.FC<TabBarItemProps> = ({
 
   if (isEditing) {
     return (
-      <div className="flex items-center gap-2 px-3 border-r border-border-dark text-xs shrink-0 bg-editor-bg text-white border-t-2 border-t-accent">
+      <div className="flex items-center gap-2 px-3 border-r border-border-dark text-xs shrink-0 bg-surface-3 text-white border-t-2 border-t-accent">
         <FileText size={12} className="text-accent" />
         <input
           type="text"
@@ -205,15 +237,19 @@ const TabBarItem: React.FC<TabBarItemProps> = ({
           <div
             onClick={onActivate}
             onDoubleClick={startRenaming}
-            title="Double-click to rename · Right-click for more options"
+            title={
+              isPreview
+                ? 'Preview tab · double-click to keep open, or edit the request'
+                : 'Double-click to rename · Right-click for more options'
+            }
             className={`flex items-center gap-2 px-3 border-r border-border-dark cursor-pointer text-xs transition-colors shrink-0 group ${
               isActive
-                ? 'bg-editor-bg text-white border-t-2 border-t-accent'
-                : 'bg-sidebar-bg text-zinc-550 hover:bg-editor-bg/40 hover:text-zinc-300'
+                ? 'bg-surface-3 text-white border-t-2 border-t-accent'
+                : 'bg-surface-2 text-zinc-550 hover:bg-surface-3 hover:text-zinc-300'
             }`}
           >
             <FileText size={12} className={isActive ? 'text-accent' : 'text-zinc-600'} />
-            <span className="truncate max-w-30">{tab.title}</span>
+            <span className={cn('truncate max-w-30', isPreview && 'italic')}>{tab.title}</span>
             {!tab.meta?.savedRequestId && (
               <span
                 title="Not saved to a collection"
@@ -226,7 +262,7 @@ const TabBarItem: React.FC<TabBarItemProps> = ({
                 onClose();
               }}
               title="Close tab"
-              className="p-0.5 rounded-full hover:bg-border-dark/65 text-zinc-555 group-hover:text-zinc-400 hover:text-white"
+              className="p-0.5 rounded-full hover:bg-border-dark/65 text-zinc-555 group-hover:text-zinc-400 hover:text-foreground"
             >
               <X size={10} />
             </button>
@@ -234,6 +270,7 @@ const TabBarItem: React.FC<TabBarItemProps> = ({
         }
       />
       <ContextMenu.Content>
+        {isPreview && <ContextMenu.Item onClick={onPin}>Keep Tab Open</ContextMenu.Item>}
         <ContextMenu.Item onClick={startRenaming}>Rename</ContextMenu.Item>
         <ContextMenu.Separator />
         <ContextMenu.Item onClick={onClose}>Close</ContextMenu.Item>
@@ -250,6 +287,13 @@ const HttpClientRequestPanel: React.FC<{ tabId: string }> = ({ tabId }) => {
   const client = useApiClient(tabId);
   const tab = usePostmanTabsStore((s) => s.tabs.find((t) => t.id === tabId));
   const renameTab = usePostmanTabsStore((s) => s.renameTab);
+  const isPreviewTab = usePostmanTabsStore((s) => s.previewTabId === tabId);
+  const pinTab = usePostmanTabsStore((s) => s.pinTab);
+  // Editing a preview tab's request promotes it to a permanent tab, same as Postman/VS Code:
+  // previewing is read-only in spirit, and any real edit means the user wants to keep working here.
+  const pinIfPreview = (): void => {
+    if (isPreviewTab) pinTab(tabId);
+  };
   const seed = tab?.meta as PostmanTabSeed | undefined;
   const [saveError, setSaveError] = useState<string | null>(null);
   const [responsePanelHeight, setResponsePanelHeight] = useState<number>(
@@ -318,7 +362,7 @@ const HttpClientRequestPanel: React.FC<{ tabId: string }> = ({ tabId }) => {
   return (
     <div className="flex-1 flex flex-col gap-3 min-h-0">
       {saveError && (
-        <div className="shrink-0 rounded px-2 py-1.5 text-[10px] leading-snug border bg-red-950/30 border-red-900/40 text-red-400">
+        <div className="shrink-0 rounded px-2 py-1.5 text-[10px] leading-snug border bg-red-500/10 border-red-500/20 text-red-400">
           {saveError}
         </div>
       )}
@@ -327,7 +371,7 @@ const HttpClientRequestPanel: React.FC<{ tabId: string }> = ({ tabId }) => {
         onValueChange={(value) => client.setProtocol(value as ProtocolTab)}
         className="flex flex-col gap-3 min-h-0 flex-1"
       >
-        <nav className="flex items-center justify-between gap-2 shrink-0 border-b border-border-dark pb-2">
+        <nav className="flex items-center justify-between gap-2 shrink-0 border-b border-border pb-2">
           <Tabs.List className="flex items-center gap-1">
             {PROTOCOL_ITEMS.map(({ value, label, icon: Icon }) => (
               <Tabs.Tab
@@ -337,7 +381,7 @@ const HttpClientRequestPanel: React.FC<{ tabId: string }> = ({ tabId }) => {
                   'flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium cursor-pointer transition-colors',
                   client.protocol === value
                     ? 'bg-accent/10 text-accent'
-                    : 'text-zinc-500 hover:bg-editor-bg hover:text-zinc-300'
+                    : 'text-zinc-500 hover:bg-surface-2 hover:text-zinc-300'
                 )}
               >
                 <Icon size={13} />
@@ -381,24 +425,48 @@ const HttpClientRequestPanel: React.FC<{ tabId: string }> = ({ tabId }) => {
           <div className="flex-1 min-h-0 overflow-auto flex flex-col gap-3">
             <RequestComposer
               method={client.http.state.method}
-              onMethodChange={client.http.setMethod}
+              onMethodChange={(method) => {
+                pinIfPreview();
+                client.http.setMethod(method);
+              }}
               url={client.http.state.url}
-              onUrlChange={client.http.setUrl}
+              onUrlChange={(url) => {
+                pinIfPreview();
+                client.http.setUrl(url);
+              }}
               isLoading={client.http.state.isLoading}
               onSend={client.http.send}
             />
 
             <RequestEditorPanel
               params={client.http.state.params}
-              onUpdateParam={client.http.updateParamRow}
-              onRemoveParam={client.http.removeParamRow}
+              onUpdateParam={(id, patch) => {
+                pinIfPreview();
+                client.http.updateParamRow(id, patch);
+              }}
+              onRemoveParam={(id) => {
+                pinIfPreview();
+                client.http.removeParamRow(id);
+              }}
               headers={client.http.state.headers}
-              onUpdateHeader={client.http.updateHeaderRow}
-              onRemoveHeader={client.http.removeHeaderRow}
+              onUpdateHeader={(id, patch) => {
+                pinIfPreview();
+                client.http.updateHeaderRow(id, patch);
+              }}
+              onRemoveHeader={(id) => {
+                pinIfPreview();
+                client.http.removeHeaderRow(id);
+              }}
               bodyType={client.http.state.bodyType}
-              onBodyTypeChange={client.http.setBodyType}
+              onBodyTypeChange={(bodyType) => {
+                pinIfPreview();
+                client.http.setBodyType(bodyType);
+              }}
               body={client.http.state.body}
-              onBodyChange={client.http.setBody}
+              onBodyChange={(body) => {
+                pinIfPreview();
+                client.http.setBody(body);
+              }}
             />
           </div>
 
@@ -409,7 +477,7 @@ const HttpClientRequestPanel: React.FC<{ tabId: string }> = ({ tabId }) => {
             min={15}
             max={75}
             unit="%"
-            className="flex flex-col min-h-0"
+            className="flex flex-col min-h-0 -mx-4 -mb-4"
           >
             <ResponseInspector
               response={client.http.state.response}
@@ -421,7 +489,10 @@ const HttpClientRequestPanel: React.FC<{ tabId: string }> = ({ tabId }) => {
         <Tabs.Panel value="WEBSOCKET" className="flex flex-col gap-3 min-h-0 flex-1">
           <WebSocketComposer
             url={client.ws.state.url}
-            onUrlChange={client.ws.setUrl}
+            onUrlChange={(url) => {
+              pinIfPreview();
+              client.ws.setUrl(url);
+            }}
             status={client.ws.state.status}
             onConnect={client.ws.connect}
             onDisconnect={client.ws.disconnect}

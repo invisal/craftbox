@@ -159,7 +159,7 @@ export const BodyEditor: React.FC<BodyEditorProps> = ({
             <button
               onClick={handleBeautify}
               title="Beautify JSON"
-              className="flex items-center gap-1 px-2 py-0.5 text-[10px] font-semibold text-zinc-400 hover:text-white bg-editor-bg border border-border-dark rounded cursor-pointer transition-colors"
+              className="flex items-center gap-1 px-2 py-0.5 text-[10px] font-semibold text-zinc-400 hover:text-foreground bg-surface-2 border border-border-dark rounded cursor-pointer transition-colors"
             >
               <AlignLeft size={10} />
               Beautify
@@ -167,7 +167,7 @@ export const BodyEditor: React.FC<BodyEditorProps> = ({
             <button
               onClick={handleMinify}
               title="Minify JSON"
-              className="flex items-center gap-1 px-2 py-0.5 text-[10px] font-semibold text-zinc-400 hover:text-white bg-editor-bg border border-border-dark rounded cursor-pointer transition-colors"
+              className="flex items-center gap-1 px-2 py-0.5 text-[10px] font-semibold text-zinc-400 hover:text-foreground bg-surface-2 border border-border-dark rounded cursor-pointer transition-colors"
             >
               <Minimize2 size={10} />
               Minify
@@ -185,10 +185,10 @@ export const BodyEditor: React.FC<BodyEditorProps> = ({
         </div>
       )}
 
-      <div className="relative flex h-40 bg-editor-bg border border-border-dark rounded overflow-hidden focus-within:border-accent">
+      <div className="relative flex h-40 bg-surface-2 border border-border rounded overflow-hidden focus-within:border-accent">
         <div
           ref={gutterRef}
-          className="w-9 shrink-0 overflow-hidden py-2 border-r border-border-dark select-none"
+          className="w-9 shrink-0 overflow-hidden py-2 border-r border-border select-none"
         >
           {Array.from({ length: lineCount }, (_, i) => (
             <div
@@ -270,7 +270,7 @@ export const BodyEditor: React.FC<BodyEditorProps> = ({
         createPortal(
           <div
             style={{ position: 'fixed', top: rect.top, left: rect.left, width: rect.width }}
-            className="z-50 max-h-48 overflow-auto bg-sidebar-bg border border-border-dark rounded-md shadow-xl py-1"
+            className="z-50 max-h-48 overflow-auto bg-surface border border-border-dark rounded-md shadow-xl py-1"
           >
             {filtered.map((name, index) => (
               <div
