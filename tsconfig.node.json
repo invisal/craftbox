@@ -2,7 +2,8 @@
   "compilerOptions": {
     "target": "ES2022",
     "lib": [
-      "ES2022"
+      "ES2022",
+      "DOM"
     ],
     "module": "ESNext",
     "moduleResolution": "Bundler",
@@ -29,5 +30,12 @@
     "src/preload/**/*",
     "src/shared/**/*",
     "electron.vite.config.ts",
-    "src/renderer/tools/screen-recorder/types/**/*"]
+    "src/renderer/tools/screen-recorder/types/**/*"],
+  "exclude": [
+    // Reference-only source from another product, kept for adapting native
+    // recording helpers from -- see src/main/screen-recorder/.gitignore.
+    // Not part of this app; imports its own repo's paths that don't exist here.
+    "src/main/screen-recorder/native/**",
+    "src/main/screen-recorder/native-bridge/**"
+  ]
 }
