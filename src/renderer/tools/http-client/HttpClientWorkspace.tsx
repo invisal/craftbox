@@ -477,7 +477,7 @@ const HttpClientRequestPanel: React.FC<{ tabId: string }> = ({ tabId }) => {
             min={15}
             max={75}
             unit="%"
-            className="flex flex-col min-h-0"
+            className="flex flex-col min-h-0 -mx-4 -mb-4"
           >
             <ResponseInspector
               response={client.http.state.response}
