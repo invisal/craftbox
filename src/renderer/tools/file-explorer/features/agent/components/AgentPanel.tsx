@@ -1,17 +1,17 @@
 import { useEffect, useRef, useState } from 'react';
-import { Send, Settings2 } from 'lucide-react';
-import { cn } from 'cnfast';
+import { Settings2 } from 'lucide-react';
+import { Chat, type ChatPermissionStatus } from '@renderer/components/ui/Chat';
 import { Button } from '@renderer/components/ui/Button';
 import type { AgentMessage, AgentToolCall } from '../../../../../../preload/file-explorer/api';
 import { deniedToolMessage, runToolCall, splitToolCalls } from '../lib/agentLoop';
-import { calculateCost, getModelPricing, type SessionUsage } from '../lib/models';
-import { MessageBubble } from './MessageBubble';
-import { ToolApprovalCard, type ToolApprovalStatus } from './ToolApprovalCard';
+import { AGENT_MODELS, calculateCost, getModelPricing, type SessionUsage } from '../lib/models';
+import { describeToolCall } from '../lib/toolDescriptions';
 import { ConnectAiGatewayDialog } from './ConnectAiGatewayDialog';
 
 type TimelineItem =
   | { kind: 'text'; id: string; role: 'user' | 'assistant'; content: string }
-  | { kind: 'approval'; id: string; call: AgentToolCall; status: ToolApprovalStatus };
+  | { kind: 'approval'; id: string; call: AgentToolCall; status: ChatPermissionStatus }
+  | { kind: 'tool-call'; id: string; call: AgentToolCall };
 
 interface PendingTurn {
   /** Conversation up to and including the assistant message that requested these tool calls. */
@@ -41,6 +41,7 @@ const EMPTY_USAGE: SessionUsage = { promptTokens: 0, completionTokens: 0, cached
 export function AgentPanel({ workingDirectory }: AgentPanelProps) {
   const [connected, setConnected] = useState<boolean | null>(null);
   const [connectOpen, setConnectOpen] = useState(false);
+  const [gatewayId, setGatewayId] = useState('');
   const [modelId, setModelId] = useState<string | null>(null);
   const [usage, setUsage] = useState<SessionUsage>(EMPTY_USAGE);
   // Excludes the system message -- that's derived fresh from `workingDirectoryRef`
@@ -64,6 +65,7 @@ export function AgentPanel({ workingDirectory }: AgentPanelProps) {
     if (connectOpen) return;
     window.fileExplorer.getAiGatewayCredentialStatus().then((res) => {
       setConnected(res.configured);
+      setGatewayId(res.gatewayId);
       setModelId(res.model || null);
     });
   }, [connectOpen]);
@@ -74,6 +76,7 @@ export function AgentPanel({ workingDirectory }: AgentPanelProps) {
 
   const pricing = modelId ? getModelPricing(modelId) : null;
   const sessionCost = pricing ? calculateCost(usage, pricing) : null;
+  const sessionTokens = usage.promptTokens + usage.completionTokens;
 
   async function runTurn(currentMessages: AgentMessage[]) {
     const systemMessage: AgentMessage = {
@@ -126,6 +129,12 @@ export function AgentPanel({ workingDirectory }: AgentPanelProps) {
     }
 
     const { readOnly, mutating } = splitToolCalls(toolCalls);
+    if (readOnly.length > 0) {
+      setTimeline((t) => [
+        ...t,
+        ...readOnly.map((call): TimelineItem => ({ kind: 'tool-call', id: call.id, call }))
+      ]);
+    }
     const results = new Map<string, AgentMessage>();
     for (const call of readOnly) {
       results.set(call.id, await runToolCall(call));
@@ -156,7 +165,11 @@ export function AgentPanel({ workingDirectory }: AgentPanelProps) {
     // busy stays true -- input remains disabled until every approval card resolves.
   }
 
-  function resolvePending(call: AgentToolCall, message: AgentMessage, status: ToolApprovalStatus) {
+  function resolvePending(
+    call: AgentToolCall,
+    message: AgentMessage,
+    status: ChatPermissionStatus
+  ) {
     setTimeline((t) =>
       t.map((item) =>
         item.kind === 'approval' && item.id === call.id ? { ...item, status } : item
@@ -190,6 +203,11 @@ export function AgentPanel({ workingDirectory }: AgentPanelProps) {
 
   function handleDeny(call: AgentToolCall) {
     resolvePending(call, deniedToolMessage(call), 'denied');
+  }
+
+  async function handleModelChange(nextModelId: string) {
+    setModelId(nextModelId);
+    await window.fileExplorer.setAiGatewayCredential(gatewayId, nextModelId);
   }
 
   async function handleSend() {
@@ -227,12 +245,13 @@ export function AgentPanel({ workingDirectory }: AgentPanelProps) {
     );
   }
 
+  const lastItem = timeline[timeline.length - 1];
+  const awaitingApproval = lastItem?.kind === 'approval' && lastItem.status === 'pending';
+  const showThinking = busy && !awaitingApproval;
+
   return (
     <div className="flex-1 flex flex-col min-h-0">
-      <div className="flex items-center justify-between border-b border-border px-2 py-1">
-        <span className="text-xs text-muted-foreground">
-          {sessionCost !== null ? `Session cost: $${sessionCost.toFixed(4)}` : ''}
-        </span>
+      <div className="flex items-center justify-end border-b border-border px-2 py-1">
         <Button
           variant="ghost"
           size="sm"
@@ -243,50 +262,48 @@ export function AgentPanel({ workingDirectory }: AgentPanelProps) {
         </Button>
       </div>
 
-      <div className="flex-1 min-h-0 overflow-y-auto px-3 py-3 flex flex-col gap-2">
-        {timeline.map((item) =>
-          item.kind === 'text' ? (
-            <MessageBubble key={item.id} role={item.role} content={item.content} />
-          ) : (
-            <ToolApprovalCard
-              key={item.id}
-              call={item.call}
-              status={item.status}
-              onApprove={() => void handleApprove(item.call)}
-              onDeny={() => handleDeny(item.call)}
-            />
-          )
-        )}
-        <div ref={bottomRef} />
-      </div>
+      <Chat.Root>
+        <Chat.MessageContainer>
+          {timeline.map((item) =>
+            item.kind === 'text' ? (
+              item.role === 'user' ? (
+                <Chat.UserMessage key={item.id}>{item.content}</Chat.UserMessage>
+              ) : (
+                <Chat.AssistantMessage key={item.id}>{item.content}</Chat.AssistantMessage>
+              )
+            ) : item.kind === 'tool-call' ? (
+              <Chat.ToolCall key={item.id}>
+                {describeToolCall(item.call.name, item.call.arguments)}
+              </Chat.ToolCall>
+            ) : (
+              <Chat.PermissionRequest
+                key={item.id}
+                status={item.status}
+                onApprove={() => void handleApprove(item.call)}
+                onDeny={() => handleDeny(item.call)}
+              >
+                {describeToolCall(item.call.name, item.call.arguments)}
+              </Chat.PermissionRequest>
+            )
+          )}
+          {showThinking && <Chat.Thinking />}
+          <div ref={bottomRef} />
+        </Chat.MessageContainer>
 
-      <div className="border-t border-border p-2 flex items-end gap-2">
-        <textarea
+        <Chat.Input
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' && !e.shiftKey) {
-              e.preventDefault();
-              void handleSend();
-            }
-          }}
+          onSend={() => void handleSend()}
+          loading={busy}
           disabled={busy || connected === null}
           placeholder="Ask the agent…"
-          rows={2}
-          className={cn(
-            'flex-1 resize-none rounded-md border border-border bg-surface px-2.5 py-1.5 text-xs',
-            'text-foreground focus-visible:outline-none disabled:opacity-50'
-          )}
+          models={AGENT_MODELS}
+          modelId={modelId}
+          onModelChange={(id) => void handleModelChange(id)}
+          tokens={sessionTokens > 0 ? sessionTokens : null}
+          cost={sessionCost}
         />
-        <Button
-          variant="primary"
-          size="sm"
-          onClick={() => void handleSend()}
-          disabled={busy || connected === null || !input.trim()}
-        >
-          <Send size={14} />
-        </Button>
-      </div>
+      </Chat.Root>
 
       <ConnectAiGatewayDialog
         open={connectOpen}

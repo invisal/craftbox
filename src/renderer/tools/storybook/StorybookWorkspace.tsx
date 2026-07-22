@@ -4,6 +4,7 @@ import { ButtonGallery } from './components/ButtonGallery';
 import { InputGallery } from './components/InputGallery';
 import { SelectGallery } from './components/SelectGallery';
 import { DialogGallery } from './components/DialogGallery';
+import { ChatGallery } from './components/ChatGallery';
 import { MenuGallery } from './components/MenuGallery';
 import { ContextMenuGallery } from './components/ContextMenuGallery';
 import { PopoverGallery } from './components/PopoverGallery';
@@ -31,6 +32,7 @@ const NAV_ITEMS: NavItem[] = [
   { id: 'input', label: 'Input', group: 'Components', Component: InputGallery },
   { id: 'select', label: 'Select', group: 'Components', Component: SelectGallery },
   { id: 'dialog', label: 'Dialog', group: 'Components', Component: DialogGallery },
+  { id: 'chat', label: 'Chat', group: 'Components', Component: ChatGallery },
   { id: 'menu', label: 'Menu', group: 'Components', Component: MenuGallery },
   { id: 'context-menu', label: 'Context Menu', group: 'Components', Component: ContextMenuGallery },
   { id: 'popover', label: 'Popover', group: 'Components', Component: PopoverGallery },

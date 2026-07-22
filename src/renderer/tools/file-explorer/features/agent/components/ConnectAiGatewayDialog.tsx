@@ -2,7 +2,6 @@ import { useEffect, useState, type ReactNode } from 'react';
 import { Dialog } from '@renderer/components/ui/Dialog';
 import { Button } from '@renderer/components/ui/Button';
 import { Input } from '@renderer/components/ui/Input';
-import { Select } from '@renderer/components/ui/Select';
 import { AGENT_MODELS } from '../lib/models';
 
 type Status = 'loading' | 'configured' | 'empty' | 'no-cloudflare';
@@ -29,6 +28,9 @@ export function ConnectAiGatewayDialog({
 }: ConnectAiGatewayDialogProps) {
   const [status, setStatus] = useState<Status>('loading');
   const [gatewayId, setGatewayId] = useState('');
+  // No field for this in the dialog -- the model is picked from the ChatInput
+  // toolbar instead. Kept here only so `handleSave` has a value to persist on
+  // first connect, before any model has been chosen from the chat.
   const [model, setModel] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -101,20 +103,6 @@ export function ConnectAiGatewayDialog({
             <div className="flex flex-col gap-3">
               <Field label="Gateway ID">
                 <Input size="sm" value={gatewayId} onChange={(e) => setGatewayId(e.target.value)} />
-              </Field>
-              <Field label="Model">
-                <Select.Root value={model} onValueChange={(value) => setModel(value as string)}>
-                  <Select.Trigger size="sm">
-                    <Select.Value />
-                  </Select.Trigger>
-                  <Select.Content side="bottom" align="start">
-                    {AGENT_MODELS.map((option) => (
-                      <Select.Item key={option.id} value={option.id}>
-                        <Select.ItemText>{option.label}</Select.ItemText>
-                      </Select.Item>
-                    ))}
-                  </Select.Content>
-                </Select.Root>
               </Field>
               {error && <p className="text-xs text-red-400">{error}</p>}
               <div className="flex gap-2">

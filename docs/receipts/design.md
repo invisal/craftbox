@@ -9,6 +9,7 @@ isn't covered here.
 - `Button` — styled `<button>`; `variant` (primary/secondary/destructive/ghost/outline) x `size` (sm/md/lg).
 - `Input` — styled `<input>`; same `size` scale as `Button`.
 - `Dialog` — modal (`Dialog.Root/Trigger/Content/Title/Description`), built on `@base-ui/react`.
+- `Chat` — agent chat surface (`Chat.Root/MessageContainer/UserMessage/AssistantMessage/Thinking/PermissionRequest/Input`).
 - `ContextMenu` — right-click menu (`ContextMenu.Root/Trigger/Content/Item/CheckboxItem/RadioItem/GroupLabel/Separator/SubmenuTrigger`).
 - `Menu` — click-to-open dropdown menu (`Menu.Root/Trigger/Content/Item/GroupLabel/Separator`), same visual language as `ContextMenu`.
 - `Select` — dropdown select (`Select.Trigger/Content/Item`), `SelectTrigger` renders as a `Button`.

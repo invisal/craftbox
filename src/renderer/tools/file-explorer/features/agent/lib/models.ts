@@ -13,8 +13,15 @@ export interface AgentModelOption {
   pricing: ModelPricing;
 }
 
-// Extend this list as more models get BYOK'd onto the gateway.
+// Tool-calling-capable Workers AI models, priced per developers.cloudflare.com/workers-ai/platform/pricing.
+// Kept to Kimi models only -- the other tool-calling models tried (Qwen3, Llama 3.3, Gemma 4, GLM 5.2)
+// use a different prompt format than what the agent's tool-calling loop is built for.
 export const AGENT_MODELS: AgentModelOption[] = [
+  {
+    id: '@cf/moonshotai/kimi-k2.6',
+    label: 'Kimi K2.6 (Workers AI)',
+    pricing: { inputPerM: 0.95, outputPerM: 4.0, cachedInputPerM: 0.16 }
+  },
   {
     id: '@cf/moonshotai/kimi-k2.7-code',
     label: 'Kimi K2.7 Code (Workers AI)',

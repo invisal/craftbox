@@ -15,11 +15,22 @@ export function ToolbarRoot({ className, ...props }: ComponentProps<typeof Toolb
   );
 }
 
+type ToolbarButtonVariant = 'default' | 'primary';
+
+const toolbarButtonVariantClasses: Record<ToolbarButtonVariant, string> = {
+  default: 'hover:bg-surface-3 hover:text-text-base',
+  primary: 'bg-accent text-emphasis-text hover:brightness-[1.05]'
+};
+
 export function ToolbarButton({
   className,
   shape = 'default',
+  variant = 'default',
   ...props
-}: ComponentProps<typeof ToolbarPrimitive.Button> & { shape?: 'square' | 'default' }) {
+}: ComponentProps<typeof ToolbarPrimitive.Button> & {
+  shape?: 'square' | 'default';
+  variant?: ToolbarButtonVariant;
+}) {
   return (
     <ToolbarPrimitive.Button
       className={cn(
@@ -27,8 +38,8 @@ export function ToolbarButton({
         'inline-flex items-center justify-center',
         'cursor-pointer',
         'text-xs',
-        'hover:bg-surface-3 hover:text-text-base',
         'data-[disabled]:pointer-events-none data-[disabled]:opacity-50',
+        toolbarButtonVariantClasses[variant],
         shape === 'square' && 'aspect-square px-0',
         className
       )}
