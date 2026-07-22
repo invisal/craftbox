@@ -60,10 +60,12 @@ const PROTOCOL_ITEMS: {
 export const HttpClientWorkspace: React.FC = () => {
   const tabs = usePostmanTabsStore((s) => s.tabs);
   const activeTabId = usePostmanTabsStore((s) => s.activeTabId);
+  const previewTabId = usePostmanTabsStore((s) => s.previewTabId);
   const selectTab = usePostmanTabsStore((s) => s.setActiveTabId);
   const closeTab = usePostmanTabsStore((s) => s.closeTab);
   const renameTab = usePostmanTabsStore((s) => s.renameTab);
   const openNewRequestTab = usePostmanTabsStore((s) => s.openNewRequestTab);
+  const pinTab = usePostmanTabsStore((s) => s.pinTab);
 
   const workspacesLoaded = useWorkspacesStore((s) => s.isLoaded);
   const loadWorkspaces = useWorkspacesStore((s) => s.load);
@@ -140,12 +142,14 @@ export const HttpClientWorkspace: React.FC = () => {
                   key={tab.id}
                   tab={tab}
                   isActive={tab.id === activeTabId}
+                  isPreview={tab.id === previewTabId}
                   canCloseOthers={tabs.length > 1}
                   onActivate={() => selectTab(tab.id)}
                   onClose={() => handleCloseTab(tab.id)}
                   onCloseOthers={() => handleCloseOthers(tab.id)}
                   onCloseAll={handleCloseAll}
                   onRename={(title) => renameTab(tab.id, title)}
+                  onPin={() => pinTab(tab.id)}
                 />
               ))}
             </div>
@@ -163,28 +167,35 @@ export const HttpClientWorkspace: React.FC = () => {
 interface TabBarItemProps {
   tab: PostmanTab;
   isActive: boolean;
+  /** Shown in italic and reused by the next preview-mode open, Postman/VS Code-style. */
+  isPreview: boolean;
   canCloseOthers: boolean;
   onActivate: () => void;
   onClose: () => void;
   onCloseOthers: () => void;
   onCloseAll: () => void;
   onRename: (title: string) => void;
+  /** Promotes this tab out of preview mode into a permanent one. */
+  onPin: () => void;
 }
 
 const TabBarItem: React.FC<TabBarItemProps> = ({
   tab,
   isActive,
+  isPreview,
   canCloseOthers,
   onActivate,
   onClose,
   onCloseOthers,
   onCloseAll,
-  onRename
+  onRename,
+  onPin
 }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [draftTitle, setDraftTitle] = useState(tab.title);
 
   const startRenaming = (): void => {
+    onPin();
     setDraftTitle(tab.title);
     setIsEditing(true);
   };
@@ -226,7 +237,11 @@ const TabBarItem: React.FC<TabBarItemProps> = ({
           <div
             onClick={onActivate}
             onDoubleClick={startRenaming}
-            title="Double-click to rename · Right-click for more options"
+            title={
+              isPreview
+                ? 'Preview tab · double-click to keep open, or edit the request'
+                : 'Double-click to rename · Right-click for more options'
+            }
             className={`flex items-center gap-2 px-3 border-r border-border-dark cursor-pointer text-xs transition-colors shrink-0 group ${
               isActive
                 ? 'bg-editor-bg text-white border-t-2 border-t-accent'
@@ -234,7 +249,7 @@ const TabBarItem: React.FC<TabBarItemProps> = ({
             }`}
           >
             <FileText size={12} className={isActive ? 'text-accent' : 'text-zinc-600'} />
-            <span className="truncate max-w-30">{tab.title}</span>
+            <span className={cn('truncate max-w-30', isPreview && 'italic')}>{tab.title}</span>
             {!tab.meta?.savedRequestId && (
               <span
                 title="Not saved to a collection"
@@ -255,6 +270,7 @@ const TabBarItem: React.FC<TabBarItemProps> = ({
         }
       />
       <ContextMenu.Content>
+        {isPreview && <ContextMenu.Item onClick={onPin}>Keep Tab Open</ContextMenu.Item>}
         <ContextMenu.Item onClick={startRenaming}>Rename</ContextMenu.Item>
         <ContextMenu.Separator />
         <ContextMenu.Item onClick={onClose}>Close</ContextMenu.Item>
@@ -271,6 +287,13 @@ const HttpClientRequestPanel: React.FC<{ tabId: string }> = ({ tabId }) => {
   const client = useApiClient(tabId);
   const tab = usePostmanTabsStore((s) => s.tabs.find((t) => t.id === tabId));
   const renameTab = usePostmanTabsStore((s) => s.renameTab);
+  const isPreviewTab = usePostmanTabsStore((s) => s.previewTabId === tabId);
+  const pinTab = usePostmanTabsStore((s) => s.pinTab);
+  // Editing a preview tab's request promotes it to a permanent tab, same as Postman/VS Code:
+  // previewing is read-only in spirit, and any real edit means the user wants to keep working here.
+  const pinIfPreview = (): void => {
+    if (isPreviewTab) pinTab(tabId);
+  };
   const seed = tab?.meta as PostmanTabSeed | undefined;
   const [saveError, setSaveError] = useState<string | null>(null);
   const [responsePanelHeight, setResponsePanelHeight] = useState<number>(
@@ -402,24 +425,48 @@ const HttpClientRequestPanel: React.FC<{ tabId: string }> = ({ tabId }) => {
           <div className="flex-1 min-h-0 overflow-auto flex flex-col gap-3">
             <RequestComposer
               method={client.http.state.method}
-              onMethodChange={client.http.setMethod}
+              onMethodChange={(method) => {
+                pinIfPreview();
+                client.http.setMethod(method);
+              }}
               url={client.http.state.url}
-              onUrlChange={client.http.setUrl}
+              onUrlChange={(url) => {
+                pinIfPreview();
+                client.http.setUrl(url);
+              }}
               isLoading={client.http.state.isLoading}
               onSend={client.http.send}
             />
 
             <RequestEditorPanel
               params={client.http.state.params}
-              onUpdateParam={client.http.updateParamRow}
-              onRemoveParam={client.http.removeParamRow}
+              onUpdateParam={(id, patch) => {
+                pinIfPreview();
+                client.http.updateParamRow(id, patch);
+              }}
+              onRemoveParam={(id) => {
+                pinIfPreview();
+                client.http.removeParamRow(id);
+              }}
               headers={client.http.state.headers}
-              onUpdateHeader={client.http.updateHeaderRow}
-              onRemoveHeader={client.http.removeHeaderRow}
+              onUpdateHeader={(id, patch) => {
+                pinIfPreview();
+                client.http.updateHeaderRow(id, patch);
+              }}
+              onRemoveHeader={(id) => {
+                pinIfPreview();
+                client.http.removeHeaderRow(id);
+              }}
               bodyType={client.http.state.bodyType}
-              onBodyTypeChange={client.http.setBodyType}
+              onBodyTypeChange={(bodyType) => {
+                pinIfPreview();
+                client.http.setBodyType(bodyType);
+              }}
               body={client.http.state.body}
-              onBodyChange={client.http.setBody}
+              onBodyChange={(body) => {
+                pinIfPreview();
+                client.http.setBody(body);
+              }}
             />
           </div>
 
@@ -442,7 +489,10 @@ const HttpClientRequestPanel: React.FC<{ tabId: string }> = ({ tabId }) => {
         <Tabs.Panel value="WEBSOCKET" className="flex flex-col gap-3 min-h-0 flex-1">
           <WebSocketComposer
             url={client.ws.state.url}
-            onUrlChange={client.ws.setUrl}
+            onUrlChange={(url) => {
+              pinIfPreview();
+              client.ws.setUrl(url);
+            }}
             status={client.ws.state.status}
             onConnect={client.ws.connect}
             onDisconnect={client.ws.disconnect}

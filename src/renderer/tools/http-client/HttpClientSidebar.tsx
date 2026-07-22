@@ -22,6 +22,7 @@ import {
 import { usePostmanTabsStore } from './store/tabs.store';
 import { useCollectionsStore } from './store/collections.store';
 import { useEnvironmentsStore } from './store/environments.store';
+import { disposeApiClientTab } from './hooks/useApiClient';
 import { WorkspaceSelector } from './components/WorkspaceSelector';
 import type {
   Collection,
@@ -180,7 +181,12 @@ export const HttpClientSidebar: React.FC = () => {
     });
   };
 
-  const openSavedRequest = (collection: Collection, request: SavedRequest): void => {
+  const openSavedRequest = (
+    collection: Collection,
+    request: SavedRequest,
+    options?: { preview?: boolean }
+  ): void => {
+    const preview = options?.preview ?? true;
     const tabId = `postman-saved-${collection.id}-${request.id}`;
     const seed: PostmanTabSeed =
       request.protocol === 'WEBSOCKET'
@@ -201,11 +207,18 @@ export const HttpClientSidebar: React.FC = () => {
             savedCollectionId: collection.id,
             savedRequestId: request.id
           };
-    openTab({
-      id: tabId,
-      title: request.name,
-      meta: seed
-    });
+    // Single-click opens in preview mode (Postman/VS Code-style italic tab that gets
+    // reused/replaced by the next preview click, until the user edits it, pins it, or
+    // double-clicks it in the sidebar to open it permanently right away).
+    const { replacedTabId } = openTab(
+      {
+        id: tabId,
+        title: request.name,
+        meta: seed
+      },
+      { preview }
+    );
+    if (replacedTabId && replacedTabId !== tabId) disposeApiClientTab(replacedTabId);
   };
 
   /** Runs a store mutation and surfaces a failure in the status banner instead of letting it fail silently. */
@@ -385,7 +398,7 @@ export const HttpClientSidebar: React.FC = () => {
               onRename={(name) => runMutation(() => renameCollection(collection.id, name))}
               onDelete={() => runMutation(() => deleteCollection(collection.id))}
               onExport={() => handleExportCollection(collection.id)}
-              onOpenRequest={(request) => openSavedRequest(collection, request)}
+              onOpenRequest={(request, options) => openSavedRequest(collection, request, options)}
               onRenameRequest={(requestId, name) =>
                 runMutation(() => renameRequest(collection.id, requestId, name))
               }
@@ -585,7 +598,7 @@ interface CollectionItemProps {
   onRename: (name: string) => void;
   onDelete: () => void;
   onExport: () => void;
-  onOpenRequest: (request: SavedRequest) => void;
+  onOpenRequest: (request: SavedRequest, options?: { preview?: boolean }) => void;
   onRenameRequest: (requestId: string, name: string) => void;
   onDeleteRequest: (requestId: string) => void;
   onMoveRequest: (requestId: string, targetFolderId: string | null) => void;
@@ -819,7 +832,7 @@ const CollectionItem: React.FC<CollectionItemProps> = ({
               key={request.id}
               request={request}
               collectionId={collection.id}
-              onOpen={() => onOpenRequest(request)}
+              onOpen={(options) => onOpenRequest(request, options)}
               onRename={(name) => onRenameRequest(request.id, name)}
               onDelete={() => onDeleteRequest(request.id)}
               moveFolders={collection.folders}
@@ -840,7 +853,7 @@ interface FolderItemProps {
   onToggle: (folderId: string) => void;
   rootFolders: CollectionFolder[];
   collectionId: string;
-  onOpenRequest: (request: SavedRequest) => void;
+  onOpenRequest: (request: SavedRequest, options?: { preview?: boolean }) => void;
   onRenameRequest: (requestId: string, name: string) => void;
   onDeleteRequest: (requestId: string) => void;
   onMoveRequest: (requestId: string, targetFolderId: string | null) => void;
@@ -1113,7 +1126,7 @@ const FolderItem: React.FC<FolderItemProps> = ({
               request={request}
               indent={depth + 1}
               collectionId={collectionId}
-              onOpen={() => onOpenRequest(request)}
+              onOpen={(options) => onOpenRequest(request, options)}
               onRename={(name) => onRenameRequest(request.id, name)}
               onDelete={() => onDeleteRequest(request.id)}
               moveFolders={rootFolders}
@@ -1131,7 +1144,8 @@ interface RequestItemProps {
   request: SavedRequest;
   indent?: number;
   collectionId: string;
-  onOpen: () => void;
+  /** Single-click previews; pass `{ preview: false }` (double-click) to open/pin it permanently. */
+  onOpen: (options?: { preview?: boolean }) => void;
   onRename: (name: string) => void;
   onDelete: () => void;
   /** The collection's whole folder tree — used to build the "Move to..." target list. */
@@ -1201,16 +1215,15 @@ const RequestItem: React.FC<RequestItemProps> = ({
 
   return (
     <div
-      onClick={onOpen}
+      onClick={() => onOpen()}
       onDoubleClick={(e) => {
         e.stopPropagation();
-        setDraftName(request.name);
-        setIsRenaming(true);
+        onOpen({ preview: false });
       }}
       draggable
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
-      title={request.url}
+      title={`${request.url}\nDouble-click to open in a permanent tab`}
       style={style}
       className={`flex items-center gap-2 p-1.5 hover:bg-editor-bg rounded text-xs cursor-grab active:cursor-grabbing border transition-all group ${
         isDragging ? 'opacity-40' : ''
