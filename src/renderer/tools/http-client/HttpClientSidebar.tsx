@@ -302,7 +302,7 @@ export const HttpClientSidebar: React.FC = () => {
         <button
           onClick={handleNewPostmanRequest}
           title="Create Request"
-          className="p-1 text-zinc-400 hover:text-white hover:bg-border-dark/60 rounded cursor-pointer transition-colors"
+          className="p-1 text-zinc-400 hover:text-foreground hover:bg-border-dark/60 rounded cursor-pointer transition-colors"
         >
           <Plus size={16} />
         </button>
@@ -310,7 +310,7 @@ export const HttpClientSidebar: React.FC = () => {
 
       <button
         onClick={handleNewPostmanRequest}
-        className="w-full flex items-center justify-center gap-1.5 py-1.5 bg-editor-bg border border-border-dark hover:bg-border-dark/50 rounded text-xs text-zinc-300 hover:text-white cursor-pointer transition-all"
+        className="w-full flex items-center justify-center gap-1.5 py-1.5 bg-surface-3 border border-border-dark hover:bg-border-dark/50 rounded text-xs text-zinc-300 hover:text-foreground cursor-pointer transition-all"
       >
         <Send size={12} className="text-zinc-500" />
         <span>New Request</span>
@@ -323,7 +323,7 @@ export const HttpClientSidebar: React.FC = () => {
             <button
               onClick={handleImportCollection}
               title="Import Postman Collection — supports Collection Format v2.0 and v2.1 (.json)"
-              className="p-1 text-zinc-500 hover:text-white hover:bg-border-dark/60 rounded cursor-pointer transition-colors"
+              className="p-1 text-zinc-500 hover:text-foreground hover:bg-border-dark/60 rounded cursor-pointer transition-colors"
             >
               <Upload size={13} />
             </button>
@@ -333,7 +333,7 @@ export const HttpClientSidebar: React.FC = () => {
                 setDraftCollectionName('');
               }}
               title="New Collection"
-              className="p-1 text-zinc-500 hover:text-white hover:bg-border-dark/60 rounded cursor-pointer transition-colors"
+              className="p-1 text-zinc-500 hover:text-foreground hover:bg-border-dark/60 rounded cursor-pointer transition-colors"
             >
               <FolderPlus size={13} />
             </button>
@@ -344,8 +344,8 @@ export const HttpClientSidebar: React.FC = () => {
           <div
             className={`flex items-start justify-between gap-2 rounded px-2 py-1.5 text-[10px] leading-snug border ${
               statusMessage.type === 'error'
-                ? 'bg-red-950/30 border-red-900/40 text-red-400'
-                : 'bg-emerald-950/30 border-emerald-900/40 text-emerald-400'
+                ? 'bg-red-500/10 border-red-500/20 text-red-400'
+                : 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400'
             }`}
           >
             <span>{statusMessage.text}</span>
@@ -374,7 +374,7 @@ export const HttpClientSidebar: React.FC = () => {
                 setDraftCollectionName('');
               }
             }}
-            className="bg-editor-bg border border-accent rounded px-2 py-1 text-xs text-zinc-200 focus:outline-none"
+            className="bg-surface-3 border border-accent rounded px-2 py-1 text-xs text-zinc-200 focus:outline-none"
           />
         )}
 
@@ -441,8 +441,8 @@ interface MenuButtonProps {
 const MenuButton: React.FC<MenuButtonProps> = ({ icon, label, onClick, danger }) => (
   <button
     onClick={onClick}
-    className={`flex items-center gap-2 text-left px-2 py-1.5 rounded hover:bg-editor-bg cursor-pointer ${
-      danger ? 'text-red-400 hover:text-red-300' : 'text-zinc-300 hover:text-white'
+    className={`flex items-center gap-2 text-left px-2 py-1.5 rounded hover:bg-border-dark/60 cursor-pointer ${
+      danger ? 'text-red-400 hover:text-red-300' : 'text-zinc-300 hover:text-foreground'
     }`}
   >
     {icon}
@@ -486,7 +486,7 @@ const ActionsMenu: React.FC<ActionsMenuProps> = ({
   actions,
   moveTo,
   triggerTitle = 'More actions',
-  triggerClassName = 'p-0.5 text-zinc-555 hover:text-white cursor-pointer'
+  triggerClassName = 'p-0.5 text-zinc-555 hover:text-foreground cursor-pointer'
 }) => {
   const [open, setOpen] = useState(false);
   const [view, setView] = useState<'menu' | 'move'>('menu');
@@ -520,7 +520,7 @@ const ActionsMenu: React.FC<ActionsMenuProps> = ({
           <Popover.Positioner sideOffset={4} align="start" className="z-50">
             <Popover.Popup
               onClick={(e) => e.stopPropagation()}
-              className="bg-sidebar-bg border border-border-dark rounded-lg shadow-xl p-1 w-48 max-h-72 overflow-y-auto flex flex-col gap-0.5 text-xs outline-none"
+              className="bg-surface border border-border-dark rounded-lg shadow-xl p-1 w-48 max-h-72 overflow-y-auto flex flex-col gap-0.5 text-xs outline-none"
             >
               {view === 'menu' ? (
                 <>
@@ -548,7 +548,7 @@ const ActionsMenu: React.FC<ActionsMenuProps> = ({
                 <>
                   <button
                     onClick={() => setView('menu')}
-                    className="flex items-center gap-1 text-left px-2 py-1.5 rounded hover:bg-editor-bg text-zinc-400 hover:text-white cursor-pointer"
+                    className="flex items-center gap-1 text-left px-2 py-1.5 rounded hover:bg-border-dark/60 text-zinc-400 hover:text-foreground cursor-pointer"
                   >
                     <ChevronLeft size={12} />
                     <span>Back</span>
@@ -559,7 +559,7 @@ const ActionsMenu: React.FC<ActionsMenuProps> = ({
                       close();
                       moveTo!.onSelect(null);
                     }}
-                    className="text-left px-2 py-1.5 rounded hover:bg-editor-bg text-zinc-300 hover:text-white cursor-pointer"
+                    className="text-left px-2 py-1.5 rounded hover:bg-border-dark/60 text-zinc-300 hover:text-foreground cursor-pointer"
                   >
                     Collection Root
                   </button>
@@ -571,7 +571,7 @@ const ActionsMenu: React.FC<ActionsMenuProps> = ({
                         moveTo!.onSelect(opt.id);
                       }}
                       style={{ paddingLeft: 8 + opt.depth * 12 }}
-                      className="text-left px-2 py-1.5 rounded hover:bg-editor-bg text-zinc-300 hover:text-white cursor-pointer truncate"
+                      className="text-left px-2 py-1.5 rounded hover:bg-border-dark/60 text-zinc-300 hover:text-foreground cursor-pointer truncate"
                     >
                       {opt.name}
                     </button>
@@ -694,18 +694,18 @@ const CollectionItem: React.FC<CollectionItemProps> = ({
         onDragLeave={handleRootDragLeave}
         onDrop={handleRootDrop}
         title="Drop here to move to collection root"
-        className={`flex items-center gap-1 group px-1 py-1 rounded hover:bg-editor-bg/60 ${
+        className={`flex items-center gap-1 group px-1 py-1 rounded hover:bg-surface-3/60 ${
           isRootDropTarget
             ? 'ring-1 ring-accent bg-accent/10'
             : containsActive
-              ? 'bg-editor-bg/40'
+              ? 'bg-surface-3/40'
               : ''
         }`}
       >
         <button
           onClick={onToggle}
           title={isExpanded ? 'Collapse' : 'Expand'}
-          className="text-zinc-500 hover:text-white cursor-pointer shrink-0"
+          className="text-zinc-500 hover:text-foreground cursor-pointer shrink-0"
         >
           {isExpanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
         </button>
@@ -724,7 +724,7 @@ const CollectionItem: React.FC<CollectionItemProps> = ({
                 setIsRenaming(false);
               }
             }}
-            className="flex-1 bg-editor-bg border border-accent rounded px-1.5 py-0.5 text-xs text-zinc-200 focus:outline-none"
+            className="flex-1 bg-surface-3 border border-accent rounded px-1.5 py-0.5 text-xs text-zinc-200 focus:outline-none"
           />
         ) : (
           <span
@@ -794,7 +794,7 @@ const CollectionItem: React.FC<CollectionItemProps> = ({
                   setDraftFolderName('');
                 }
               }}
-              className="bg-editor-bg border border-accent rounded px-2 py-1 text-xs text-zinc-200 focus:outline-none"
+              className="bg-surface-3 border border-accent rounded px-2 py-1 text-xs text-zinc-200 focus:outline-none"
             />
           )}
 
@@ -975,11 +975,11 @@ const FolderItem: React.FC<FolderItemProps> = ({
         onDrop={handleDrop}
         style={{ paddingLeft: indent }}
         title={isExpanded ? 'Collapse folder' : 'Expand folder'}
-        className={`flex items-center gap-1 group px-1 py-1 rounded hover:bg-editor-bg/60 cursor-grab active:cursor-grabbing ${
+        className={`flex items-center gap-1 group px-1 py-1 rounded hover:bg-surface-3/60 cursor-grab active:cursor-grabbing ${
           isDragging ? 'opacity-40' : ''
-        } ${isDropTarget ? 'ring-1 ring-accent bg-accent/10' : containsActive ? 'bg-editor-bg/40' : ''}`}
+        } ${isDropTarget ? 'ring-1 ring-accent bg-accent/10' : containsActive ? 'bg-surface-3/40' : ''}`}
       >
-        <span className="text-zinc-500 hover:text-white shrink-0">
+        <span className="text-zinc-500 hover:text-foreground shrink-0">
           {isExpanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
         </span>
         {isExpanded ? (
@@ -1003,7 +1003,7 @@ const FolderItem: React.FC<FolderItemProps> = ({
                 setIsRenaming(false);
               }
             }}
-            className="flex-1 bg-editor-bg border border-accent rounded px-1.5 py-0.5 text-xs text-zinc-200 focus:outline-none"
+            className="flex-1 bg-surface-3 border border-accent rounded px-1.5 py-0.5 text-xs text-zinc-200 focus:outline-none"
           />
         ) : (
           <span
@@ -1077,7 +1077,7 @@ const FolderItem: React.FC<FolderItemProps> = ({
             }
           }}
           style={{ marginLeft: indent + 16 }}
-          className="bg-editor-bg border border-accent rounded px-2 py-1 text-xs text-zinc-200 focus:outline-none mt-0.5"
+          className="bg-surface-3 border border-accent rounded px-2 py-1 text-xs text-zinc-200 focus:outline-none mt-0.5"
         />
       )}
 
@@ -1191,7 +1191,7 @@ const RequestItem: React.FC<RequestItemProps> = ({
     return (
       <div
         style={style}
-        className="flex items-center gap-2 p-1.5 rounded border border-accent bg-editor-bg"
+        className="flex items-center gap-2 p-1.5 rounded border border-accent bg-surface-3"
       >
         <RequestMethodBadge request={request} />
         <input
@@ -1225,18 +1225,18 @@ const RequestItem: React.FC<RequestItemProps> = ({
       onDragEnd={handleDragEnd}
       title={`${request.url}\nDouble-click to open in a permanent tab`}
       style={style}
-      className={`flex items-center gap-2 p-1.5 hover:bg-editor-bg rounded text-xs cursor-grab active:cursor-grabbing border transition-all group ${
+      className={`flex items-center gap-2 p-1.5 hover:bg-surface-3 rounded text-xs cursor-grab active:cursor-grabbing border transition-all group ${
         isDragging ? 'opacity-40' : ''
       } ${
         isActive
           ? 'bg-accent/10 border-accent/60'
-          : 'bg-editor-bg/40 border-transparent hover:border-border-dark'
+          : 'bg-surface-3/40 border-transparent hover:border-border-dark'
       }`}
     >
       {isActive && <span className="w-1 h-1 rounded-full bg-accent shrink-0" />}
       <RequestMethodBadge request={request} />
       <span
-        className={`truncate flex-1 ${isActive ? 'text-white' : 'text-zinc-300 group-hover:text-white'}`}
+        className={`truncate flex-1 ${isActive ? 'text-foreground' : 'text-zinc-300 group-hover:text-foreground'}`}
       >
         {request.name}
       </span>

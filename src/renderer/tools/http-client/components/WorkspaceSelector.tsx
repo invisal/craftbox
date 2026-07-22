@@ -66,14 +66,14 @@ export const WorkspaceSelector: React.FC = () => {
     >
       <Popover.Trigger className="flex items-center gap-1.5 min-w-0 cursor-pointer text-left outline-none">
         <FolderOpen size={13} className="text-accent shrink-0" />
-        <span className="truncate text-[10px] font-bold tracking-wider text-zinc-300 uppercase hover:text-white">
+        <span className="truncate text-[10px] font-bold tracking-wider text-zinc-300 uppercase hover:text-foreground">
           {activeWorkspace?.name ?? 'Select Workspace'}
         </span>
         <ChevronDown size={11} className="text-zinc-500 shrink-0" />
       </Popover.Trigger>
       <Popover.Portal>
         <Popover.Positioner sideOffset={8} align="start" className="z-50">
-          <Popover.Popup className="bg-sidebar-bg border border-border-dark rounded-lg shadow-xl p-3 w-72 flex flex-col gap-3 text-xs outline-none">
+          <Popover.Popup className="bg-surface border border-border-dark rounded-lg shadow-xl p-3 w-72 flex flex-col gap-3 text-xs outline-none">
             <div className="flex items-center justify-between">
               <span className="font-bold text-zinc-300 uppercase tracking-wider text-[10px]">
                 Workspace
@@ -84,7 +84,7 @@ export const WorkspaceSelector: React.FC = () => {
                   setDraftName('');
                 }}
                 title="New Workspace"
-                className="p-1 text-zinc-500 hover:text-white hover:bg-border-dark/60 rounded cursor-pointer"
+                className="p-1 text-zinc-500 hover:text-foreground hover:bg-border-dark/60 rounded cursor-pointer"
               >
                 <Plus size={13} />
               </button>
@@ -105,14 +105,14 @@ export const WorkspaceSelector: React.FC = () => {
                     setDraftName('');
                   }
                 }}
-                className="bg-editor-bg border border-accent rounded px-2 py-1.5 text-zinc-200 focus:outline-none"
+                className="bg-surface-2 border border-accent rounded px-2 py-1.5 text-zinc-200 focus:outline-none"
               />
             )}
 
             <select
               value={activeWorkspaceId ?? ''}
               onChange={(e) => setActiveWorkspaceId(e.target.value)}
-              className="bg-editor-bg border border-border-dark rounded px-2 py-1.5 text-zinc-200 focus:outline-none focus:border-accent cursor-pointer"
+              className="bg-surface-2 border border-border rounded px-2 py-1.5 text-zinc-200 focus:outline-none focus:border-accent cursor-pointer"
             >
               {workspaces.map((ws) => (
                 <option key={ws.id} value={ws.id}>
@@ -122,7 +122,7 @@ export const WorkspaceSelector: React.FC = () => {
             </select>
 
             {activeWorkspace && (
-              <div className="flex items-center justify-between border-t border-border-dark pt-2">
+              <div className="flex items-center justify-between border-t border-border pt-2">
                 {isRenaming ? (
                   <input
                     type="text"
@@ -134,7 +134,7 @@ export const WorkspaceSelector: React.FC = () => {
                       if (e.key === 'Enter') submitRename();
                       if (e.key === 'Escape') setIsRenaming(false);
                     }}
-                    className="flex-1 bg-editor-bg border border-accent rounded px-1.5 py-0.5 text-zinc-200 focus:outline-none"
+                    className="flex-1 bg-surface-2 border border-accent rounded px-1.5 py-0.5 text-zinc-200 focus:outline-none"
                   />
                 ) : (
                   <span className="text-zinc-400 font-semibold truncate">
@@ -148,7 +148,7 @@ export const WorkspaceSelector: React.FC = () => {
                       setIsRenaming(true);
                     }}
                     title="Rename workspace"
-                    className="p-0.5 text-zinc-555 hover:text-white cursor-pointer"
+                    className="p-0.5 text-zinc-555 hover:text-foreground cursor-pointer"
                   >
                     <Pencil size={11} />
                   </button>

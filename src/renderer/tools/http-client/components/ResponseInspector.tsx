@@ -43,8 +43,8 @@ export const ResponseInspector: React.FC<ResponseInspectorProps> = ({ response, 
   );
 
   return (
-    <div className="h-full bg-sidebar-bg border border-border-dark rounded-lg overflow-hidden flex flex-col min-h-0">
-      <div className="bg-editor-bg border-b border-border-dark px-3 py-2 flex items-center justify-between text-xs shrink-0 select-none">
+    <div className="h-full bg-surface-2 border border-border-dark rounded-lg overflow-hidden flex flex-col min-h-0">
+      <div className="bg-surface-3 border-b border-border px-3 py-2 flex items-center justify-between text-xs shrink-0 select-none">
         <span className="text-zinc-500 font-bold uppercase tracking-wider text-[10px]">
           Response
         </span>
@@ -76,7 +76,7 @@ export const ResponseInspector: React.FC<ResponseInspectorProps> = ({ response, 
               onValueChange={(value) => setActiveTab(value as ResponseTabValue)}
               className="flex flex-col min-h-0 flex-1"
             >
-              <Tabs.List className="flex gap-4 border-b border-border-dark px-3 text-xs select-none shrink-0">
+              <Tabs.List className="flex gap-4 border-b border-border px-3 text-xs select-none shrink-0">
                 <Tabs.Tab
                   value="body"
                   className={`py-1.5 border-b -mb-px cursor-pointer transition-colors ${

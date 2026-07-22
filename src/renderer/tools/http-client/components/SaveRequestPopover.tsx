@@ -156,14 +156,14 @@ export const SaveRequestPopover: React.FC<SaveRequestPopoverProps> = ({
     <Popover.Root open={open} onOpenChange={setOpen}>
       <Popover.Trigger
         title="Save to a collection (Ctrl+S / ⌘S quick-saves if already saved)"
-        className="px-3 py-1.5 bg-sidebar-bg border border-border-dark hover:border-accent text-zinc-300 hover:text-white text-xs font-semibold rounded flex items-center gap-1.5 cursor-pointer transition-colors"
+        className="px-3 py-1.5 bg-surface-2 border border-border-dark hover:border-accent text-zinc-300 hover:text-foreground text-xs font-semibold rounded flex items-center gap-1.5 cursor-pointer transition-colors"
       >
         <Save size={12} />
         <span>Save</span>
       </Popover.Trigger>
       <Popover.Portal>
         <Popover.Positioner sideOffset={8} align="end" className="z-50">
-          <Popover.Popup className="bg-sidebar-bg border border-border-dark rounded-lg shadow-xl p-3 w-72 flex flex-col gap-3 text-xs outline-none">
+          <Popover.Popup className="bg-surface border border-border-dark rounded-lg shadow-xl p-3 w-72 flex flex-col gap-3 text-xs outline-none">
             <div className="font-bold text-zinc-300 uppercase tracking-wider text-[10px]">
               Save Request
             </div>
@@ -175,7 +175,7 @@ export const SaveRequestPopover: React.FC<SaveRequestPopoverProps> = ({
                 autoFocus
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                className="bg-editor-bg border border-border-dark rounded px-2 py-1.5 text-zinc-200 focus:outline-none focus:border-accent"
+                className="bg-surface-2 border border-border rounded px-2 py-1.5 text-zinc-200 focus:outline-none focus:border-accent"
               />
             </label>
 
@@ -187,7 +187,7 @@ export const SaveRequestPopover: React.FC<SaveRequestPopoverProps> = ({
                   placeholder="New collection name..."
                   value={newCollectionName}
                   onChange={(e) => setNewCollectionName(e.target.value)}
-                  className="bg-editor-bg border border-accent rounded px-2 py-1.5 text-zinc-200 focus:outline-none"
+                  className="bg-surface-2 border border-accent rounded px-2 py-1.5 text-zinc-200 focus:outline-none"
                 />
               ) : (
                 <select
@@ -196,7 +196,7 @@ export const SaveRequestPopover: React.FC<SaveRequestPopoverProps> = ({
                     setCollectionId(e.target.value);
                     setFolderId('');
                   }}
-                  className="bg-editor-bg border border-border-dark rounded px-2 py-1.5 text-zinc-200 focus:outline-none focus:border-accent cursor-pointer"
+                  className="bg-surface-2 border border-border rounded px-2 py-1.5 text-zinc-200 focus:outline-none focus:border-accent cursor-pointer"
                 >
                   {collections.map((c) => (
                     <option key={c.id} value={c.id}>
@@ -222,7 +222,7 @@ export const SaveRequestPopover: React.FC<SaveRequestPopoverProps> = ({
                 <select
                   value={folderId}
                   onChange={(e) => setFolderId(e.target.value)}
-                  className="bg-editor-bg border border-border-dark rounded px-2 py-1.5 text-zinc-200 focus:outline-none focus:border-accent cursor-pointer"
+                  className="bg-surface-2 border border-border rounded px-2 py-1.5 text-zinc-200 focus:outline-none focus:border-accent cursor-pointer"
                 >
                   <option value="">Collection Root</option>
                   {folderOptions.map((f) => (
@@ -235,13 +235,13 @@ export const SaveRequestPopover: React.FC<SaveRequestPopoverProps> = ({
             )}
 
             <div className="flex justify-end gap-2 mt-1">
-              <Popover.Close className="px-3 py-1.5 text-zinc-400 hover:text-white text-xs cursor-pointer">
+              <Popover.Close className="px-3 py-1.5 text-zinc-400 hover:text-foreground text-xs cursor-pointer">
                 Cancel
               </Popover.Close>
               <button
                 onClick={handleConfirm}
                 disabled={!canConfirm || isSaving}
-                className="px-3 py-1.5 bg-accent/80 hover:bg-accent disabled:opacity-50 disabled:cursor-not-allowed text-white rounded cursor-pointer font-semibold transition-colors"
+                className="px-3 py-1.5 bg-accent/80 hover:bg-accent disabled:opacity-50 disabled:cursor-not-allowed text-emphasis-text rounded cursor-pointer font-semibold transition-colors"
               >
                 {isSaving ? 'Saving...' : 'Save'}
               </button>

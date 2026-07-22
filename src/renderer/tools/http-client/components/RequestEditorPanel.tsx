@@ -54,7 +54,7 @@ export const RequestEditorPanel: React.FC<RequestEditorPanelProps> = ({
       onValueChange={(value) => setActiveTab(value as RequestTabValue)}
       className="flex flex-col gap-3 shrink-0"
     >
-      <Tabs.List className="flex gap-4 border-b border-border-dark text-xs select-none">
+      <Tabs.List className="flex gap-4 border-b border-border text-xs select-none">
         <Tabs.Tab
           value="params"
           className={`py-1 border-b -mb-px cursor-pointer transition-colors ${

@@ -115,7 +115,7 @@ export const HttpClientWorkspace: React.FC = () => {
         onResize={handleSidebarResize}
         min={200}
         max={480}
-        className="border-r border-border-dark overflow-y-auto p-3"
+        className="bg-surface-2 border-r border-border-dark overflow-y-auto p-3"
       >
         <HttpClientSidebar />
       </ResizablePanel>
@@ -129,14 +129,14 @@ export const HttpClientWorkspace: React.FC = () => {
             </div>
             <button
               onClick={() => openNewRequestTab()}
-              className="mt-1 px-3 py-1.5 bg-editor-bg border border-border-dark hover:bg-border-dark/50 rounded text-xs text-zinc-300 hover:text-white cursor-pointer transition-all"
+              className="mt-1 px-3 py-1.5 bg-surface-2 border border-border-dark hover:bg-border-dark/50 rounded text-xs text-zinc-300 hover:text-foreground cursor-pointer transition-all"
             >
               New Request
             </button>
           </div>
         ) : (
           <>
-            <div className="flex h-9 bg-sidebar-bg border-b border-border-dark overflow-x-auto select-none shrink-0 scrollbar-none">
+            <div className="flex h-9 bg-surface-2 border-b border-border-dark overflow-x-auto select-none shrink-0 scrollbar-none">
               {tabs.map((tab) => (
                 <TabBarItem
                   key={tab.id}
@@ -208,7 +208,7 @@ const TabBarItem: React.FC<TabBarItemProps> = ({
 
   if (isEditing) {
     return (
-      <div className="flex items-center gap-2 px-3 border-r border-border-dark text-xs shrink-0 bg-editor-bg text-white border-t-2 border-t-accent">
+      <div className="flex items-center gap-2 px-3 border-r border-border-dark text-xs shrink-0 bg-surface-3 text-white border-t-2 border-t-accent">
         <FileText size={12} className="text-accent" />
         <input
           type="text"
@@ -244,8 +244,8 @@ const TabBarItem: React.FC<TabBarItemProps> = ({
             }
             className={`flex items-center gap-2 px-3 border-r border-border-dark cursor-pointer text-xs transition-colors shrink-0 group ${
               isActive
-                ? 'bg-editor-bg text-white border-t-2 border-t-accent'
-                : 'bg-sidebar-bg text-zinc-550 hover:bg-editor-bg/40 hover:text-zinc-300'
+                ? 'bg-surface-3 text-white border-t-2 border-t-accent'
+                : 'bg-surface-2 text-zinc-550 hover:bg-surface-3 hover:text-zinc-300'
             }`}
           >
             <FileText size={12} className={isActive ? 'text-accent' : 'text-zinc-600'} />
@@ -262,7 +262,7 @@ const TabBarItem: React.FC<TabBarItemProps> = ({
                 onClose();
               }}
               title="Close tab"
-              className="p-0.5 rounded-full hover:bg-border-dark/65 text-zinc-555 group-hover:text-zinc-400 hover:text-white"
+              className="p-0.5 rounded-full hover:bg-border-dark/65 text-zinc-555 group-hover:text-zinc-400 hover:text-foreground"
             >
               <X size={10} />
             </button>
@@ -362,7 +362,7 @@ const HttpClientRequestPanel: React.FC<{ tabId: string }> = ({ tabId }) => {
   return (
     <div className="flex-1 flex flex-col gap-3 min-h-0">
       {saveError && (
-        <div className="shrink-0 rounded px-2 py-1.5 text-[10px] leading-snug border bg-red-950/30 border-red-900/40 text-red-400">
+        <div className="shrink-0 rounded px-2 py-1.5 text-[10px] leading-snug border bg-red-500/10 border-red-500/20 text-red-400">
           {saveError}
         </div>
       )}
@@ -371,7 +371,7 @@ const HttpClientRequestPanel: React.FC<{ tabId: string }> = ({ tabId }) => {
         onValueChange={(value) => client.setProtocol(value as ProtocolTab)}
         className="flex flex-col gap-3 min-h-0 flex-1"
       >
-        <nav className="flex items-center justify-between gap-2 shrink-0 border-b border-border-dark pb-2">
+        <nav className="flex items-center justify-between gap-2 shrink-0 border-b border-border pb-2">
           <Tabs.List className="flex items-center gap-1">
             {PROTOCOL_ITEMS.map(({ value, label, icon: Icon }) => (
               <Tabs.Tab
@@ -381,7 +381,7 @@ const HttpClientRequestPanel: React.FC<{ tabId: string }> = ({ tabId }) => {
                   'flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium cursor-pointer transition-colors',
                   client.protocol === value
                     ? 'bg-accent/10 text-accent'
-                    : 'text-zinc-500 hover:bg-editor-bg hover:text-zinc-300'
+                    : 'text-zinc-500 hover:bg-surface-2 hover:text-zinc-300'
                 )}
               >
                 <Icon size={13} />

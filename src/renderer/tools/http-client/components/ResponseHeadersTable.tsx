@@ -53,7 +53,7 @@ export const ResponseHeadersTable: React.FC<ResponseHeadersTableProps> = ({ head
         <button
           onClick={copyAll}
           title="Copy all headers"
-          className="flex items-center gap-1 px-1.5 py-0.5 text-[10px] font-semibold text-zinc-500 hover:text-white cursor-pointer transition-colors shrink-0"
+          className="flex items-center gap-1 px-1.5 py-0.5 text-[10px] font-semibold text-zinc-500 hover:text-foreground cursor-pointer transition-colors shrink-0"
         >
           {copiedAll ? <Check size={10} className="text-emerald-400" /> : <Copy size={10} />}
           Copy all
@@ -69,7 +69,7 @@ export const ResponseHeadersTable: React.FC<ResponseHeadersTableProps> = ({ head
           <button
             onClick={() => copy(value, key)}
             title="Copy value"
-            className="p-0.5 text-zinc-600 hover:text-white cursor-pointer transition-colors justify-self-center"
+            className="p-0.5 text-zinc-600 hover:text-foreground cursor-pointer transition-colors justify-self-center"
           >
             {copiedKey === key ? (
               <Check size={11} className="text-emerald-400" />
