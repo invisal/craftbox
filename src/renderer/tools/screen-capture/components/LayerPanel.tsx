@@ -8,6 +8,7 @@ import {
   Eye,
   EyeOff,
   MoveUpRight,
+  Pencil,
   Square,
   Tag,
   Trash2,
@@ -31,6 +32,7 @@ const KIND_ICONS = {
   rect: Square,
   circle: Circle,
   arrow: MoveUpRight,
+  pen: Pencil,
   blur: Droplets
 } as const;
 
@@ -52,6 +54,8 @@ function layerLabel(annotation: CaptureAnnotation): string {
       return 'Circle';
     case 'arrow':
       return 'Arrow';
+    case 'pen':
+      return 'Free draw';
     case 'blur':
       return 'Blur';
   }
@@ -154,7 +158,8 @@ function LayerProperties({ annotation }: { annotation: CaptureAnnotation }): JSX
 
       {(annotation.kind === 'rect' ||
         annotation.kind === 'circle' ||
-        annotation.kind === 'arrow') && (
+        annotation.kind === 'arrow' ||
+        annotation.kind === 'pen') && (
         <div className="flex items-center gap-1">
           {STROKE_TIERS.map(({ label, value }) => (
             <button

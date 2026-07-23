@@ -1,5 +1,5 @@
 export type EditorTool =
-  'select' | 'text' | 'label' | 'rect' | 'circle' | 'arrow' | 'blur' | 'crop';
+  'select' | 'text' | 'label' | 'rect' | 'circle' | 'arrow' | 'pen' | 'blur' | 'crop';
 
 /** Background frame the (cropped, annotated) capture is composited onto at export. Null = off. */
 export interface BackgroundConfig {
@@ -85,6 +85,14 @@ export interface ArrowAnnotation extends AnnotationBase {
   strokeWidth: number;
 }
 
+/** Freehand stroke — polyline of image-space points. */
+export interface PenAnnotation extends AnnotationBase {
+  kind: 'pen';
+  points: { x: number; y: number }[];
+  color: string;
+  strokeWidth: number;
+}
+
 export interface BlurAnnotation extends AnnotationBase {
   kind: 'blur';
   x: number;
@@ -102,4 +110,5 @@ export type CaptureAnnotation =
   | RectAnnotation
   | CircleAnnotation
   | ArrowAnnotation
+  | PenAnnotation
   | BlurAnnotation;

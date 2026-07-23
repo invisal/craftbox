@@ -17,6 +17,7 @@ import {
   labelTextColor,
   lockDragEnd,
   normalizeRect,
+  pointsToPathD,
   resizeRect,
   type Rect
 } from '../lib/flatten';
@@ -24,6 +25,7 @@ import type {
   BlurAnnotation,
   CaptureAnnotation,
   CircleAnnotation,
+  PenAnnotation,
   RectAnnotation,
   TextAnnotation
 } from '../types/editor';
@@ -51,6 +53,13 @@ interface Draft {
   startY: number;
   endX: number;
   endY: number;
+}
+
+/** In-progress freehand stroke (not yet in the store). */
+interface PenDraft {
+  points: { x: number; y: number }[];
+  color: string;
+  strokeWidth: number;
 }
 
 type DragMove = (dxImg: number, dyImg: number) => void;
@@ -158,6 +167,7 @@ export function CaptureEditor({ dataUrl }: CaptureEditorProps): JSX.Element {
   const stageRef = useRef<HTMLDivElement>(null);
   const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
   const [draft, setDraft] = useState<Draft | null>(null);
+  const [penDraft, setPenDraft] = useState<PenDraft | null>(null);
   const [cropRect, setCropRect] = useState<Rect | null>(null);
   const activeDrag = useRef<{ move: (e: PointerEvent) => void; up: () => void } | null>(null);
 
@@ -407,6 +417,44 @@ export function CaptureEditor({ dataUrl }: CaptureEditorProps): JSX.Element {
       return;
     }
 
+    if (tool === 'pen') {
+      event.preventDefault();
+      const color = s.color;
+      const strokeWidth = s.strokeTier * unit;
+      const points = [point];
+      setPenDraft({ points: [...points], color, strokeWidth });
+      const append = (e: PointerEvent): void => {
+        const p = toImagePoint(e);
+        const last = points[points.length - 1];
+        if (Math.hypot(p.x - last.x, p.y - last.y) < 1) return;
+        points.push(p);
+        setPenDraft({ points: [...points], color, strokeWidth });
+      };
+      const finish = (e: PointerEvent): void => {
+        window.removeEventListener('pointermove', append);
+        const p = toImagePoint(e);
+        const last = points[points.length - 1];
+        if (Math.hypot(p.x - last.x, p.y - last.y) >= 1) points.push(p);
+        let length = 0;
+        for (let i = 1; i < points.length; i++) {
+          length += Math.hypot(points[i].x - points[i - 1].x, points[i].y - points[i - 1].y);
+        }
+        setPenDraft(null);
+        if (points.length >= 2 && length >= MIN_DRAG_PX) {
+          store.getState().addAnnotation({
+            id: crypto.randomUUID(),
+            kind: 'pen',
+            points: [...points],
+            color,
+            strokeWidth
+          });
+        }
+      };
+      window.addEventListener('pointermove', append);
+      window.addEventListener('pointerup', finish, { once: true });
+      return;
+    }
+
     if (tool === 'crop') {
       event.preventDefault();
       const start = point;
@@ -629,6 +677,51 @@ export function CaptureEditor({ dataUrl }: CaptureEditorProps): JSX.Element {
       );
     }
 
+    if (annotation.kind === 'pen') {
+      const strokeWidth = Math.max(1.5, annotation.strokeWidth * scale);
+      const d = pointsToPathD(annotation.points.map((p) => ({ x: p.x * scale, y: p.y * scale })));
+      return (
+        <svg
+          key={annotation.id}
+          className="pointer-events-none absolute inset-0 h-full w-full overflow-visible"
+        >
+          {isSelected && (
+            <path
+              d={d}
+              fill="none"
+              stroke="var(--color-accent)"
+              strokeOpacity={0.5}
+              strokeWidth={strokeWidth + 5}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          )}
+          <path
+            d={d}
+            fill="none"
+            stroke={annotation.color}
+            strokeWidth={strokeWidth}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+          <path
+            d={d}
+            fill="none"
+            stroke="transparent"
+            strokeWidth={Math.max(12, strokeWidth)}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className={cn(interactive && 'pointer-events-auto cursor-move')}
+            onPointerDown={startDrag(annotation.id, (dx, dy) =>
+              store.getState().moveAnnotation(annotation.id, {
+                points: annotation.points.map((p) => ({ x: p.x + dx, y: p.y + dy }))
+              } satisfies Partial<PenAnnotation>)
+            )}
+          />
+        </svg>
+      );
+    }
+
     if (annotation.kind === 'chip') {
       const m = chipMetrics(annotation.fontSize);
       return (
@@ -760,6 +853,22 @@ export function CaptureEditor({ dataUrl }: CaptureEditorProps): JSX.Element {
     );
   }
 
+  function renderPenDraft(d: PenDraft): JSX.Element {
+    const strokeWidth = Math.max(1.5, d.strokeWidth * scale);
+    return (
+      <svg className="pointer-events-none absolute inset-0 h-full w-full overflow-visible">
+        <path
+          d={pointsToPathD(d.points.map((p) => ({ x: p.x * scale, y: p.y * scale })))}
+          fill="none"
+          stroke={d.color}
+          strokeWidth={strokeWidth}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      </svg>
+    );
+  }
+
   const sized = stageWidth > 0;
   /** Non-null when the gradient frame is shown around the stage (narrowed refs for JSX below). */
   const framed = frame && inner && frameFit > 0 && sized ? { frame, inner } : null;
@@ -780,6 +889,7 @@ export function CaptureEditor({ dataUrl }: CaptureEditorProps): JSX.Element {
     <>
       {annotations.filter((a) => !a.hidden).map(renderAnnotation)}
       {draft && renderDraft(draft)}
+      {penDraft && renderPenDraft(penDraft)}
 
       {pendingCrop && (
         <div

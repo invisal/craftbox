@@ -7,6 +7,7 @@ import type {
   ChipAnnotation,
   CircleAnnotation,
   LabelAnnotation,
+  PenAnnotation,
   RectAnnotation,
   TextAnnotation
 } from '../types/editor';
@@ -45,6 +46,15 @@ export function arrowHeadPoints(
 
 export function arrowHeadLength(strokeWidth: number): number {
   return strokeWidth * 4;
+}
+
+/** SVG path `d` for a polyline — shared by the live preview and kept in sync with canvas `drawPen`. */
+export function pointsToPathD(points: { x: number; y: number }[]): string {
+  if (points.length === 0) return '';
+  const [first, ...rest] = points;
+  let d = `M ${first.x} ${first.y}`;
+  for (const p of rest) d += ` L ${p.x} ${p.y}`;
+  return d;
 }
 
 /** Number color inside a label badge — dark on light fills, white otherwise. */
@@ -126,6 +136,12 @@ export function resizeRect(
 export function shiftAnnotation<T extends CaptureAnnotation>(a: T, dx: number, dy: number): T {
   if (a.kind === 'arrow') {
     return { ...a, x1: a.x1 + dx, y1: a.y1 + dy, x2: a.x2 + dx, y2: a.y2 + dy };
+  }
+  if (a.kind === 'pen') {
+    return {
+      ...a,
+      points: a.points.map((p) => ({ x: p.x + dx, y: p.y + dy }))
+    };
   }
   return { ...a, x: a.x + dx, y: a.y + dy };
 }
@@ -413,6 +429,20 @@ function drawArrow(ctx: CanvasRenderingContext2D, arrow: ArrowAnnotation): void 
   ctx.stroke();
 }
 
+function drawPen(ctx: CanvasRenderingContext2D, pen: PenAnnotation): void {
+  if (pen.points.length === 0) return;
+  ctx.strokeStyle = pen.color;
+  ctx.lineWidth = pen.strokeWidth;
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  ctx.beginPath();
+  ctx.moveTo(pen.points[0].x, pen.points[0].y);
+  for (let i = 1; i < pen.points.length; i++) {
+    ctx.lineTo(pen.points[i].x, pen.points[i].y);
+  }
+  ctx.stroke();
+}
+
 function drawLabel(ctx: CanvasRenderingContext2D, label: LabelAnnotation): void {
   ctx.beginPath();
   ctx.arc(label.x, label.y, label.radius, 0, Math.PI * 2);
@@ -490,6 +520,7 @@ function drawAnnotations(
       if (a.kind === 'rect') drawRect(ctx, a);
       else if (a.kind === 'circle') drawCircle(ctx, a);
       else if (a.kind === 'arrow') drawArrow(ctx, a);
+      else if (a.kind === 'pen') drawPen(ctx, a);
       else if (a.kind === 'label') drawLabel(ctx, a);
       else if (a.kind === 'chip') drawChip(ctx, a);
       else drawText(ctx, a);

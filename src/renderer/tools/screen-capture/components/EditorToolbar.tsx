@@ -7,6 +7,7 @@ import {
   Droplets,
   MousePointer2,
   MoveUpRight,
+  Pencil,
   Redo2,
   Square,
   Squircle,
@@ -56,6 +57,7 @@ function addChip(): void {
 // 'chip' is an action button (adds a text label immediately), not a stage tool.
 const TOOLS: { id: EditorTool | 'chip'; label: string; icon: typeof MousePointer2 }[] = [
   { id: 'select', label: 'Select', icon: MousePointer2 },
+  { id: 'pen', label: 'Free draw', icon: Pencil },
   { id: 'text', label: 'Text', icon: Type },
   { id: 'chip', label: 'Text label', icon: Captions },
   { id: 'label', label: 'Numbered label', icon: Tag },
