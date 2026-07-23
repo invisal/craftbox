@@ -82,9 +82,6 @@ export function BackgroundPicker(): JSX.Element {
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-col gap-2">
-        <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-          Background
-        </span>
         <div className="flex gap-1 rounded-lg border border-border p-1">
           {TABS.map((tab) => (
             <button
