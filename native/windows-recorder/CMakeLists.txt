@@ -43,6 +43,17 @@ target_compile_definitions(benpocket-windows-recorder-helper PRIVATE
   NOMINMAX
   WIN32_LEAN_AND_MEAN
   _WIN32_WINNT=0x0A00
+  # /await below (MSVC's pre-C++20 coroutine extension, needed by the WGC
+  # session's winrt-based async code) pulls in <experimental/coroutine>.
+  # Newer MSVC toolchains (14.5x+) turn that header's deprecation notice
+  # into a hard compile error (C2338) unless explicitly silenced -- this is
+  # the exact workaround Microsoft's own error message suggests. Migrating
+  # off /await to standard C++20 <coroutine> would be the "real" fix, but
+  # that means touching the vendored WGC session code's actual async
+  # control flow, which can't be verified at all from a non-Windows
+  # machine -- not worth that risk for what's currently just a toolchain
+  # compatibility shim.
+  _SILENCE_EXPERIMENTAL_COROUTINE_DEPRECATION_WARNINGS
 )
 
 target_compile_options(benpocket-windows-recorder-helper PRIVATE /EHsc /W4 /utf-8 /await)
