@@ -1,5 +1,15 @@
 export type EditorTool =
-  'select' | 'text' | 'label' | 'rect' | 'circle' | 'arrow' | 'line' | 'pen' | 'blur' | 'crop';
+  | 'select'
+  | 'text'
+  | 'label'
+  | 'rect'
+  | 'circle'
+  | 'arrow'
+  | 'line'
+  | 'pen'
+  | 'highlight'
+  | 'blur'
+  | 'crop';
 
 /** Background frame the (cropped, annotated) capture is composited onto at export. Null = off. */
 export interface BackgroundConfig {
@@ -104,6 +114,16 @@ export interface PenAnnotation extends AnnotationBase {
   strokeWidth: number;
 }
 
+/** Wide freehand marker — same polyline as pen, thicker stroke. */
+export interface HighlightAnnotation extends AnnotationBase {
+  kind: 'highlight';
+  points: { x: number; y: number }[];
+  color: string;
+  strokeWidth: number;
+  /** Flat marker tip when 'square'; soft brush when 'round'. */
+  lineCap: 'round' | 'square';
+}
+
 export interface BlurAnnotation extends AnnotationBase {
   kind: 'blur';
   x: number;
@@ -123,4 +143,5 @@ export type CaptureAnnotation =
   | ArrowAnnotation
   | LineAnnotation
   | PenAnnotation
+  | HighlightAnnotation
   | BlurAnnotation;

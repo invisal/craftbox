@@ -9,6 +9,7 @@ import type {
   LabelAnnotation,
   LineAnnotation,
   PenAnnotation,
+  HighlightAnnotation,
   RectAnnotation,
   TextAnnotation
 } from '../types/editor';
@@ -138,7 +139,7 @@ export function shiftAnnotation<T extends CaptureAnnotation>(a: T, dx: number, d
   if (a.kind === 'arrow' || a.kind === 'line') {
     return { ...a, x1: a.x1 + dx, y1: a.y1 + dy, x2: a.x2 + dx, y2: a.y2 + dy };
   }
-  if (a.kind === 'pen') {
+  if (a.kind === 'pen' || a.kind === 'highlight') {
     return {
       ...a,
       points: a.points.map((p) => ({ x: p.x + dx, y: p.y + dy }))
@@ -440,18 +441,22 @@ function drawLine(ctx: CanvasRenderingContext2D, line: LineAnnotation): void {
   ctx.stroke();
 }
 
-function drawPen(ctx: CanvasRenderingContext2D, pen: PenAnnotation): void {
+function drawPen(ctx: CanvasRenderingContext2D, pen: PenAnnotation | HighlightAnnotation): void {
   if (pen.points.length === 0) return;
+  const square = pen.kind === 'highlight' && pen.lineCap === 'square';
+  ctx.save();
+  if (pen.kind === 'highlight') ctx.globalAlpha = 0.45;
   ctx.strokeStyle = pen.color;
   ctx.lineWidth = pen.strokeWidth;
-  ctx.lineCap = 'round';
-  ctx.lineJoin = 'round';
+  ctx.lineCap = square ? 'square' : 'round';
+  ctx.lineJoin = square ? 'miter' : 'round';
   ctx.beginPath();
   ctx.moveTo(pen.points[0].x, pen.points[0].y);
   for (let i = 1; i < pen.points.length; i++) {
     ctx.lineTo(pen.points[i].x, pen.points[i].y);
   }
   ctx.stroke();
+  ctx.restore();
 }
 
 function drawLabel(ctx: CanvasRenderingContext2D, label: LabelAnnotation): void {
@@ -532,7 +537,7 @@ function drawAnnotations(
       else if (a.kind === 'circle') drawCircle(ctx, a);
       else if (a.kind === 'arrow') drawArrow(ctx, a);
       else if (a.kind === 'line') drawLine(ctx, a);
-      else if (a.kind === 'pen') drawPen(ctx, a);
+      else if (a.kind === 'pen' || a.kind === 'highlight') drawPen(ctx, a);
       else if (a.kind === 'label') drawLabel(ctx, a);
       else if (a.kind === 'chip') drawChip(ctx, a);
       else drawText(ctx, a);

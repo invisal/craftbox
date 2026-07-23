@@ -12,6 +12,9 @@ export const STROKE_TIERS = [
   { label: 'Thick', value: 7 }
 ];
 
+/** Highlight stroke = strokeTier × unit × this (pen uses 1). */
+export const HIGHLIGHT_STROKE_MULT = 4;
+
 export const FONT_TIERS = [
   { label: 'Small text', value: 16 },
   { label: 'Medium text', value: 24 },
@@ -50,7 +53,7 @@ export const DEFAULT_BACKGROUND: BackgroundConfig = {
 
 /** Annotation/tool kinds that own independent color/stroke/font/blur defaults. */
 export type StyleTool =
-  'text' | 'chip' | 'label' | 'rect' | 'circle' | 'arrow' | 'line' | 'pen' | 'blur';
+  'text' | 'chip' | 'label' | 'rect' | 'circle' | 'arrow' | 'line' | 'pen' | 'highlight' | 'blur';
 
 const STYLE_TOOLS: StyleTool[] = [
   'text',
@@ -61,6 +64,7 @@ const STYLE_TOOLS: StyleTool[] = [
   'arrow',
   'line',
   'pen',
+  'highlight',
   'blur'
 ];
 
@@ -92,6 +96,7 @@ export function defaultToolStyles(): Record<StyleTool, ToolStyle> {
     arrow: { ...base },
     line: { ...base },
     pen: { ...base },
+    highlight: { ...base },
     blur: { ...base }
   };
 }
@@ -131,6 +136,8 @@ interface EditorState {
   watermark: boolean;
   /** When on, freehand strokes snap to line/rect/circle (Shift still forces freehand). */
   penSnap: boolean;
+  /** Highlight tool default: flat square tips (real marker) vs soft round. */
+  highlightSquareEnds: boolean;
   /** Last color/stroke/font/blur per drawing tool — independent across tools. */
   toolStyles: Record<StyleTool, ToolStyle>;
   tool: EditorTool;
@@ -162,6 +169,7 @@ interface EditorState {
   setBackground: (background: BackgroundConfig | null) => void;
   setWatermark: (watermark: boolean) => void;
   setPenSnap: (penSnap: boolean) => void;
+  setHighlightSquareEnds: (square: boolean) => void;
   setSelectedId: (id: string | null) => void;
   setEditingId: (id: string | null) => void;
   addAnnotation: (annotation: CaptureAnnotation) => void;
@@ -241,6 +249,7 @@ const initialState = {
   background: null as BackgroundConfig | null,
   watermark: true,
   penSnap: true,
+  highlightSquareEnds: true,
   toolStyles: defaultToolStyles(),
   tool: 'select' as EditorTool,
   selectedId: null,
@@ -257,6 +266,7 @@ const initialState = {
 type PersistedEditorPrefs = {
   toolStyles: Record<StyleTool, ToolStyle>;
   penSnap: boolean;
+  highlightSquareEnds: boolean;
   watermark: boolean;
   background: BackgroundConfig | null;
   cornerRadiusUnits: number;
@@ -344,6 +354,7 @@ function sanitizePrefs(raw: unknown): Partial<PersistedEditorPrefs> {
   }
 
   if (typeof v.penSnap === 'boolean') out.penSnap = v.penSnap;
+  if (typeof v.highlightSquareEnds === 'boolean') out.highlightSquareEnds = v.highlightSquareEnds;
   if (typeof v.watermark === 'boolean') out.watermark = v.watermark;
   if ('background' in v) out.background = sanitizeBackground(v.background);
   if (typeof v.cornerRadiusUnits === 'number' && Number.isFinite(v.cornerRadiusUnits)) {
@@ -362,6 +373,7 @@ function sessionPrefs(
   EditorState,
   | 'toolStyles'
   | 'penSnap'
+  | 'highlightSquareEnds'
   | 'watermark'
   | 'background'
   | 'cornerRadiusUnits'
@@ -373,6 +385,7 @@ function sessionPrefs(
   return {
     toolStyles: state.toolStyles,
     penSnap: state.penSnap,
+    highlightSquareEnds: state.highlightSquareEnds,
     watermark: state.watermark,
     background: state.background,
     cornerRadiusUnits: state.cornerRadiusUnits,
@@ -481,7 +494,7 @@ export const useCaptureEditorStore = create<EditorState>()(
 
       setStrokeTier: (strokeTier, id) =>
         set((state) => {
-          const strokeKinds: StyleTool[] = ['rect', 'circle', 'arrow', 'line', 'pen'];
+          const strokeKinds: StyleTool[] = ['rect', 'circle', 'arrow', 'line', 'pen', 'highlight'];
           const target = state.annotations.find((a) => a.id === (id ?? state.selectedId));
           const key = styleKeyForWrite(state, id, strokeKinds);
           const toolStyles = key
@@ -499,13 +512,14 @@ export const useCaptureEditorStore = create<EditorState>()(
               ...(target ? { selectedId: target.id } : {})
             };
           }
+          const widthMult = target.kind === 'highlight' ? HIGHLIGHT_STROKE_MULT : 1;
           return {
             ...working,
             toolStyles,
             selectedId: target.id,
             ...pushPast(state),
             annotations: applyPatch(state.annotations, target.id, {
-              strokeWidth: strokeTier * state.unit
+              strokeWidth: strokeTier * state.unit * widthMult
             })
           };
         }),
@@ -583,6 +597,8 @@ export const useCaptureEditorStore = create<EditorState>()(
       setWatermark: (watermark) => set({ watermark }),
 
       setPenSnap: (penSnap) => set({ penSnap }),
+
+      setHighlightSquareEnds: (highlightSquareEnds) => set({ highlightSquareEnds }),
 
       setSelectedId: (selectedId) => set({ selectedId }),
 
@@ -680,6 +696,7 @@ export const useCaptureEditorStore = create<EditorState>()(
       partialize: (state): PersistedEditorPrefs => ({
         toolStyles: state.toolStyles,
         penSnap: state.penSnap,
+        highlightSquareEnds: state.highlightSquareEnds,
         watermark: state.watermark,
         background: state.background,
         cornerRadiusUnits: state.cornerRadiusUnits

@@ -5,6 +5,7 @@ import {
   Circle,
   Crop,
   Droplets,
+  Highlighter,
   MousePointer2,
   MoveUpRight,
   Minus,
@@ -59,6 +60,7 @@ function addChip(): void {
 const TOOLS: { id: EditorTool | 'chip'; label: string; icon: typeof MousePointer2 }[] = [
   { id: 'select', label: 'Select', icon: MousePointer2 },
   { id: 'pen', label: 'Free draw', icon: Pencil },
+  { id: 'highlight', label: 'Highlight', icon: Highlighter },
   { id: 'text', label: 'Text', icon: Type },
   { id: 'chip', label: 'Text label', icon: Captions },
   { id: 'label', label: 'Numbered label', icon: Tag },
@@ -300,6 +302,8 @@ export function EditorToolbar(): JSX.Element {
   const setWatermark = useCaptureEditorStore((s) => s.setWatermark);
   const penSnap = useCaptureEditorStore((s) => s.penSnap);
   const setPenSnap = useCaptureEditorStore((s) => s.setPenSnap);
+  const highlightSquareEnds = useCaptureEditorStore((s) => s.highlightSquareEnds);
+  const setHighlightSquareEnds = useCaptureEditorStore((s) => s.setHighlightSquareEnds);
   const unit = useCaptureEditorStore((s) => s.unit);
   const canUndo = useCaptureEditorStore((s) => s.past.length > 0);
   const canRedo = useCaptureEditorStore((s) => s.future.length > 0);
@@ -330,11 +334,47 @@ export function EditorToolbar(): JSX.Element {
                     onChange={(e) => setPenSnap(e.target.checked)}
                     className="accent-(--color-accent)"
                   />
-                  Snap to line / rect / circle
+                  Snap straight
                 </label>
                 {penSnap && (
                   <p className="mt-1 px-1 text-[11px] text-text-dim/80">Hold Shift for freehand</p>
                 )}
+              </Popover.Content>
+            </Popover.Root>
+          ) : id === 'highlight' ? (
+            <Popover.Root key={id}>
+              <RailTooltip label={label}>
+                <Popover.Trigger
+                  aria-label={label}
+                  aria-pressed={tool === 'highlight'}
+                  className={railButtonClass(tool === 'highlight')}
+                  onClick={() => setTool('highlight')}
+                >
+                  <Icon size={16} strokeWidth={1.75} />
+                </Popover.Trigger>
+              </RailTooltip>
+              <Popover.Content side="right" align="start" className="w-56">
+                <label className="flex cursor-pointer items-center gap-2 px-1 py-0.5 text-xs text-text-dim select-none">
+                  <input
+                    type="checkbox"
+                    checked={penSnap}
+                    onChange={(e) => setPenSnap(e.target.checked)}
+                    className="accent-(--color-accent)"
+                  />
+                  Snap straight
+                </label>
+                {penSnap && (
+                  <p className="mt-1 px-1 text-[11px] text-text-dim/80">Hold Shift for freehand</p>
+                )}
+                <label className="mt-2 flex cursor-pointer items-center gap-2 px-1 py-0.5 text-xs text-text-dim select-none">
+                  <input
+                    type="checkbox"
+                    checked={highlightSquareEnds}
+                    onChange={(e) => setHighlightSquareEnds(e.target.checked)}
+                    className="accent-(--color-accent)"
+                  />
+                  Square ends (marker tip)
+                </label>
               </Popover.Content>
             </Popover.Root>
           ) : (

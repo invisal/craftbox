@@ -7,6 +7,7 @@ import {
   Droplets,
   Eye,
   EyeOff,
+  Highlighter,
   MoveUpRight,
   Minus,
   Pencil,
@@ -21,6 +22,7 @@ import {
   BLUR_TIERS,
   EDITOR_COLORS,
   FONT_TIERS,
+  HIGHLIGHT_STROKE_MULT,
   STROKE_TIERS,
   useCaptureEditorStore
 } from '../store/editor.store';
@@ -35,6 +37,7 @@ const KIND_ICONS = {
   arrow: MoveUpRight,
   line: Minus,
   pen: Pencil,
+  highlight: Highlighter,
   blur: Droplets
 } as const;
 
@@ -60,6 +63,8 @@ function layerLabel(annotation: CaptureAnnotation): string {
       return 'Line';
     case 'pen':
       return 'Free draw';
+    case 'highlight':
+      return 'Highlight';
     case 'blur':
       return 'Blur';
   }
@@ -183,30 +188,52 @@ function LayerProperties({ annotation }: { annotation: CaptureAnnotation }): JSX
         </div>
       )}
 
+      {annotation.kind === 'highlight' && (
+        <label className="flex cursor-pointer items-center gap-2 text-xs text-text-dim select-none">
+          <input
+            type="checkbox"
+            checked={annotation.lineCap === 'square'}
+            onChange={(e) => {
+              focusLayer();
+              patchAnnotation(annotation.id, {
+                lineCap: e.target.checked ? 'square' : 'round'
+              });
+            }}
+            className="accent-(--color-accent)"
+          />
+          Square ends
+        </label>
+      )}
+
       {(annotation.kind === 'rect' ||
         annotation.kind === 'circle' ||
         annotation.kind === 'arrow' ||
         annotation.kind === 'line' ||
-        annotation.kind === 'pen') && (
+        annotation.kind === 'pen' ||
+        annotation.kind === 'highlight') && (
         <div className="flex items-center gap-1">
-          {STROKE_TIERS.map(({ label, value }) => (
-            <button
-              key={value}
-              type="button"
-              aria-label={`${label} stroke`}
-              aria-pressed={Math.round(annotation.strokeWidth / unit) === value}
-              onClick={() => {
-                focusLayer();
-                setStrokeTier(value, annotation.id);
-              }}
-              className={tierButtonClass(Math.round(annotation.strokeWidth / unit) === value)}
-            >
-              <span
-                className="w-3.5 rounded-full bg-current"
-                style={{ height: Math.max(1.5, value) }}
-              />
-            </button>
-          ))}
+          {STROKE_TIERS.map(({ label, value }) => {
+            const widthMult = annotation.kind === 'highlight' ? HIGHLIGHT_STROKE_MULT : 1;
+            const active = Math.round(annotation.strokeWidth / unit / widthMult) === value;
+            return (
+              <button
+                key={value}
+                type="button"
+                aria-label={`${label} stroke`}
+                aria-pressed={active}
+                onClick={() => {
+                  focusLayer();
+                  setStrokeTier(value, annotation.id);
+                }}
+                className={tierButtonClass(active)}
+              >
+                <span
+                  className="w-3.5 rounded-full bg-current"
+                  style={{ height: Math.max(1.5, value) }}
+                />
+              </button>
+            );
+          })}
         </div>
       )}
 

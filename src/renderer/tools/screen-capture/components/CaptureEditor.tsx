@@ -21,7 +21,7 @@ import {
   resizeRect,
   type Rect
 } from '../lib/flatten';
-import { recognizeStroke } from '../lib/recognize-stroke';
+import { straightenStroke } from '../lib/recognize-stroke';
 import type {
   BlurAnnotation,
   CaptureAnnotation,
@@ -30,6 +30,7 @@ import type {
   RectAnnotation,
   TextAnnotation
 } from '../types/editor';
+import { HIGHLIGHT_STROKE_MULT } from '../store/editor.store';
 
 interface CaptureEditorProps {
   dataUrl: string;
@@ -61,6 +62,7 @@ interface PenDraft {
   points: { x: number; y: number }[];
   color: string;
   strokeWidth: number;
+  lineCap: 'round' | 'square';
 }
 
 type DragMove = (dxImg: number, dyImg: number) => void;
@@ -418,18 +420,22 @@ export function CaptureEditor({ dataUrl }: CaptureEditorProps): JSX.Element {
       return;
     }
 
-    if (tool === 'pen') {
+    if (tool === 'pen' || tool === 'highlight') {
       event.preventDefault();
+      const kind = tool;
       const color = s.color;
-      const strokeWidth = s.strokeTier * unit;
+      const widthMult = kind === 'highlight' ? HIGHLIGHT_STROKE_MULT : 1;
+      const strokeWidth = s.strokeTier * unit * widthMult;
+      const lineCap =
+        kind === 'highlight' && s.highlightSquareEnds ? ('square' as const) : ('round' as const);
       const points = [point];
-      setPenDraft({ points: [...points], color, strokeWidth });
+      setPenDraft({ points: [...points], color, strokeWidth, lineCap });
       const append = (e: PointerEvent): void => {
         const p = toImagePoint(e);
         const last = points[points.length - 1];
         if (Math.hypot(p.x - last.x, p.y - last.y) < 1) return;
         points.push(p);
-        setPenDraft({ points: [...points], color, strokeWidth });
+        setPenDraft({ points: [...points], color, strokeWidth, lineCap });
       };
       const finish = (e: PointerEvent): void => {
         window.removeEventListener('pointermove', append);
@@ -444,20 +450,27 @@ export function CaptureEditor({ dataUrl }: CaptureEditorProps): JSX.Element {
         if (points.length >= 2 && length >= MIN_DRAG_PX) {
           const id = crypto.randomUUID();
           const snap = store.getState().penSnap && !e.shiftKey;
-          if (snap) {
-            const shape = recognizeStroke(points);
-            if (shape) {
-              store.getState().addAnnotation({ id, ...shape, color, strokeWidth });
-              return;
-            }
+          // Snap only straightens — keep pen/highlight, never convert to line/rect/circle.
+          const straightened = snap ? straightenStroke(points) : null;
+          const strokePoints = straightened ? [...straightened] : [...points];
+          if (kind === 'pen') {
+            store.getState().addAnnotation({
+              id,
+              kind: 'pen',
+              points: strokePoints,
+              color,
+              strokeWidth
+            });
+          } else {
+            store.getState().addAnnotation({
+              id,
+              kind: 'highlight',
+              points: strokePoints,
+              color,
+              strokeWidth,
+              lineCap
+            });
           }
-          store.getState().addAnnotation({
-            id,
-            kind: 'pen',
-            points: [...points],
-            color,
-            strokeWidth
-          });
         }
       };
       window.addEventListener('pointermove', append);
@@ -764,9 +777,11 @@ export function CaptureEditor({ dataUrl }: CaptureEditorProps): JSX.Element {
       );
     }
 
-    if (annotation.kind === 'pen') {
+    if (annotation.kind === 'pen' || annotation.kind === 'highlight') {
       const strokeWidth = Math.max(1.5, annotation.strokeWidth * scale);
       const d = pointsToPathD(annotation.points.map((p) => ({ x: p.x * scale, y: p.y * scale })));
+      const isHighlight = annotation.kind === 'highlight';
+      const square = isHighlight && annotation.lineCap === 'square';
       return (
         <svg
           key={annotation.id}
@@ -779,25 +794,26 @@ export function CaptureEditor({ dataUrl }: CaptureEditorProps): JSX.Element {
               stroke="var(--color-accent)"
               strokeOpacity={0.5}
               strokeWidth={strokeWidth + 5}
-              strokeLinecap="round"
-              strokeLinejoin="round"
+              strokeLinecap={square ? 'square' : 'round'}
+              strokeLinejoin={square ? 'miter' : 'round'}
             />
           )}
           <path
             d={d}
             fill="none"
             stroke={annotation.color}
+            strokeOpacity={isHighlight ? 0.45 : 1}
             strokeWidth={strokeWidth}
-            strokeLinecap="round"
-            strokeLinejoin="round"
+            strokeLinecap={square ? 'square' : 'round'}
+            strokeLinejoin={square ? 'miter' : 'round'}
           />
           <path
             d={d}
             fill="none"
             stroke="transparent"
             strokeWidth={Math.max(12, strokeWidth)}
-            strokeLinecap="round"
-            strokeLinejoin="round"
+            strokeLinecap={square ? 'square' : 'round'}
+            strokeLinejoin={square ? 'miter' : 'round'}
             className={cn(interactive && 'pointer-events-auto cursor-move')}
             onPointerDown={startDrag(annotation.id, (dx, dy) =>
               store.getState().moveAnnotation(annotation.id, {
@@ -942,15 +958,17 @@ export function CaptureEditor({ dataUrl }: CaptureEditorProps): JSX.Element {
 
   function renderPenDraft(d: PenDraft): JSX.Element {
     const strokeWidth = Math.max(1.5, d.strokeWidth * scale);
+    const square = d.lineCap === 'square';
     return (
       <svg className="pointer-events-none absolute inset-0 h-full w-full overflow-visible">
         <path
           d={pointsToPathD(d.points.map((p) => ({ x: p.x * scale, y: p.y * scale })))}
           fill="none"
           stroke={d.color}
+          strokeOpacity={tool === 'highlight' ? 0.45 : 1}
           strokeWidth={strokeWidth}
-          strokeLinecap="round"
-          strokeLinejoin="round"
+          strokeLinecap={square ? 'square' : 'round'}
+          strokeLinejoin={square ? 'miter' : 'round'}
         />
       </svg>
     );
