@@ -7,6 +7,7 @@ import type {
   ChipAnnotation,
   CircleAnnotation,
   LabelAnnotation,
+  LineAnnotation,
   PenAnnotation,
   RectAnnotation,
   TextAnnotation
@@ -93,7 +94,7 @@ export function normalizeRect(ax: number, ay: number, bx: number, by: number): R
  * a square (larger axis wins, drag direction preserved).
  */
 export function lockDragEnd(
-  kind: 'rect' | 'circle' | 'blur' | 'arrow',
+  kind: 'rect' | 'circle' | 'blur' | 'arrow' | 'line',
   startX: number,
   startY: number,
   endX: number,
@@ -101,7 +102,7 @@ export function lockDragEnd(
 ): { x: number; y: number } {
   const dx = endX - startX;
   const dy = endY - startY;
-  if (kind === 'arrow') {
+  if (kind === 'arrow' || kind === 'line') {
     const length = Math.hypot(dx, dy);
     const angle = Math.round(Math.atan2(dy, dx) / (Math.PI / 4)) * (Math.PI / 4);
     return { x: startX + length * Math.cos(angle), y: startY + length * Math.sin(angle) };
@@ -134,7 +135,7 @@ export function resizeRect(
 
 /** Translates an annotation by (dx, dy) in image px — used to map source-image coordinates into cropped-output coordinates. */
 export function shiftAnnotation<T extends CaptureAnnotation>(a: T, dx: number, dy: number): T {
-  if (a.kind === 'arrow') {
+  if (a.kind === 'arrow' || a.kind === 'line') {
     return { ...a, x1: a.x1 + dx, y1: a.y1 + dy, x2: a.x2 + dx, y2: a.y2 + dy };
   }
   if (a.kind === 'pen') {
@@ -429,6 +430,16 @@ function drawArrow(ctx: CanvasRenderingContext2D, arrow: ArrowAnnotation): void 
   ctx.stroke();
 }
 
+function drawLine(ctx: CanvasRenderingContext2D, line: LineAnnotation): void {
+  ctx.strokeStyle = line.color;
+  ctx.lineWidth = line.strokeWidth;
+  ctx.lineCap = 'round';
+  ctx.beginPath();
+  ctx.moveTo(line.x1, line.y1);
+  ctx.lineTo(line.x2, line.y2);
+  ctx.stroke();
+}
+
 function drawPen(ctx: CanvasRenderingContext2D, pen: PenAnnotation): void {
   if (pen.points.length === 0) return;
   ctx.strokeStyle = pen.color;
@@ -520,6 +531,7 @@ function drawAnnotations(
       if (a.kind === 'rect') drawRect(ctx, a);
       else if (a.kind === 'circle') drawCircle(ctx, a);
       else if (a.kind === 'arrow') drawArrow(ctx, a);
+      else if (a.kind === 'line') drawLine(ctx, a);
       else if (a.kind === 'pen') drawPen(ctx, a);
       else if (a.kind === 'label') drawLabel(ctx, a);
       else if (a.kind === 'chip') drawChip(ctx, a);

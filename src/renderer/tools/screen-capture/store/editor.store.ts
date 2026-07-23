@@ -65,12 +65,14 @@ interface EditorState {
   crop: Rect | null;
   /** Baked into the exported PNG as a rounded-rect clip. In image px. */
   cornerRadius: number;
-  // ponytail: like cornerRadius, background/watermark are not undo-tracked —
+  // ponytail: like cornerRadius, background/watermark/penSnap are not undo-tracked —
   // every popover/toggle is self-reverting. Upgrade path: fold into Snapshot.
   /** Frame the export is composited onto, or null for the bare capture. */
   background: BackgroundConfig | null;
   /** Draws "benpocket/screen-capture" in the output's bottom-right corner. On by default. */
   watermark: boolean;
+  /** When on, freehand strokes snap to line/rect/circle (Shift still forces freehand). */
+  penSnap: boolean;
   tool: EditorTool;
   selectedId: string | null;
   /** Text annotation currently showing its inline text input. */
@@ -98,6 +100,7 @@ interface EditorState {
   setCornerRadius: (radius: number) => void;
   setBackground: (background: BackgroundConfig | null) => void;
   setWatermark: (watermark: boolean) => void;
+  setPenSnap: (penSnap: boolean) => void;
   setSelectedId: (id: string | null) => void;
   setEditingId: (id: string | null) => void;
   addAnnotation: (annotation: CaptureAnnotation) => void;
@@ -151,6 +154,7 @@ const initialState = {
   cornerRadius: 0,
   background: null as BackgroundConfig | null,
   watermark: true,
+  penSnap: true,
   tool: 'select' as EditorTool,
   selectedId: null,
   editingId: null,
@@ -175,6 +179,7 @@ export const useCaptureEditorStore = create<EditorState>((set, get) => ({
       strokeTier: state.strokeTier,
       fontTier: state.fontTier,
       blurTier: state.blurTier,
+      penSnap: state.penSnap,
       imageWidth,
       imageHeight,
       unit: imageUnit(imageWidth)
@@ -186,7 +191,8 @@ export const useCaptureEditorStore = create<EditorState>((set, get) => ({
       color: state.color,
       strokeTier: state.strokeTier,
       fontTier: state.fontTier,
-      blurTier: state.blurTier
+      blurTier: state.blurTier,
+      penSnap: state.penSnap
     })),
 
   setTool: (tool) => set({ tool, selectedId: null, editingId: null }),
@@ -210,6 +216,7 @@ export const useCaptureEditorStore = create<EditorState>((set, get) => ({
         (target.kind !== 'rect' &&
           target.kind !== 'circle' &&
           target.kind !== 'arrow' &&
+          target.kind !== 'line' &&
           target.kind !== 'pen')
       )
         return { strokeTier };
@@ -254,6 +261,8 @@ export const useCaptureEditorStore = create<EditorState>((set, get) => ({
   setBackground: (background) => set({ background }),
 
   setWatermark: (watermark) => set({ watermark }),
+
+  setPenSnap: (penSnap) => set({ penSnap }),
 
   setSelectedId: (selectedId) => set({ selectedId }),
 

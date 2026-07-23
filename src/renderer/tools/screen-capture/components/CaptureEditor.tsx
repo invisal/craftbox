@@ -21,6 +21,7 @@ import {
   resizeRect,
   type Rect
 } from '../lib/flatten';
+import { recognizeStroke } from '../lib/recognize-stroke';
 import type {
   BlurAnnotation,
   CaptureAnnotation,
@@ -48,7 +49,7 @@ const CORNER_CLASSES: Record<Corner, string> = {
 const MIN_DRAG_PX = 4;
 
 interface Draft {
-  kind: 'rect' | 'circle' | 'blur' | 'arrow';
+  kind: 'rect' | 'circle' | 'blur' | 'arrow' | 'line';
   startX: number;
   startY: number;
   endX: number;
@@ -441,8 +442,17 @@ export function CaptureEditor({ dataUrl }: CaptureEditorProps): JSX.Element {
         }
         setPenDraft(null);
         if (points.length >= 2 && length >= MIN_DRAG_PX) {
+          const id = crypto.randomUUID();
+          const snap = store.getState().penSnap && !e.shiftKey;
+          if (snap) {
+            const shape = recognizeStroke(points);
+            if (shape) {
+              store.getState().addAnnotation({ id, ...shape, color, strokeWidth });
+              return;
+            }
+          }
           store.getState().addAnnotation({
-            id: crypto.randomUUID(),
+            id,
             kind: 'pen',
             points: [...points],
             color,
@@ -475,9 +485,9 @@ export function CaptureEditor({ dataUrl }: CaptureEditorProps): JSX.Element {
       return;
     }
 
-    // rect / circle / arrow / blur: drag-to-create via a local draft,
+    // rect / circle / arrow / line / blur: drag-to-create via a local draft,
     // committed to the store (one undo entry) only if the drag is big enough
-    // to be intentional. Ctrl/Cmd locks the drag: square shapes, 45° arrows.
+    // to be intentional. Ctrl/Cmd locks the drag: square shapes, 45° arrows/lines.
     event.preventDefault();
     const start: Draft = {
       kind: tool,
@@ -514,10 +524,10 @@ export function CaptureEditor({ dataUrl }: CaptureEditorProps): JSX.Element {
       return;
     }
 
-    if (d.kind === 'arrow') {
+    if (d.kind === 'arrow' || d.kind === 'line') {
       s.addAnnotation({
         id: crypto.randomUUID(),
-        kind: 'arrow',
+        kind: d.kind,
         x1: d.startX,
         y1: d.startY,
         x2: d.endX,
@@ -636,6 +646,83 @@ export function CaptureEditor({ dataUrl }: CaptureEditorProps): JSX.Element {
             strokeLinecap="round"
           />
           {/* Invisible fat hit line so the whole arrow is grabbable, not just endpoints. */}
+          <line
+            x1={x1}
+            y1={y1}
+            x2={x2}
+            y2={y2}
+            stroke="transparent"
+            strokeWidth={Math.max(12, strokeWidth)}
+            className={cn(interactive && 'pointer-events-auto cursor-move')}
+            onPointerDown={startDrag(annotation.id, (dx, dy) =>
+              store.getState().moveAnnotation(annotation.id, {
+                x1: annotation.x1 + dx,
+                y1: annotation.y1 + dy,
+                x2: annotation.x2 + dx,
+                y2: annotation.y2 + dy
+              })
+            )}
+          />
+          {isSelected &&
+            endpoints.map(({ keyX, keyY, cx, cy }) => (
+              <circle
+                key={keyX}
+                cx={cx}
+                cy={cy}
+                r={6}
+                className={cn(
+                  'fill-accent/30 stroke-accent',
+                  interactive && 'pointer-events-auto cursor-grab active:cursor-grabbing'
+                )}
+                strokeWidth={1.5}
+                onPointerDown={startDrag(annotation.id, (dx, dy) =>
+                  store.getState().moveAnnotation(annotation.id, {
+                    [keyX]: annotation[keyX] + dx,
+                    [keyY]: annotation[keyY] + dy
+                  })
+                )}
+              />
+            ))}
+        </svg>
+      );
+    }
+
+    if (annotation.kind === 'line') {
+      const x1 = annotation.x1 * scale;
+      const y1 = annotation.y1 * scale;
+      const x2 = annotation.x2 * scale;
+      const y2 = annotation.y2 * scale;
+      const strokeWidth = Math.max(1.5, annotation.strokeWidth * scale);
+      const endpoints = [
+        { keyX: 'x1', keyY: 'y1', cx: x1, cy: y1 },
+        { keyX: 'x2', keyY: 'y2', cx: x2, cy: y2 }
+      ] as const;
+      return (
+        <svg
+          key={annotation.id}
+          className="pointer-events-none absolute inset-0 h-full w-full overflow-visible"
+        >
+          {isSelected && (
+            <line
+              x1={x1}
+              y1={y1}
+              x2={x2}
+              y2={y2}
+              stroke="var(--color-accent)"
+              strokeOpacity={0.5}
+              strokeWidth={strokeWidth + 5}
+              strokeLinecap="round"
+            />
+          )}
+          <line
+            x1={x1}
+            y1={y1}
+            x2={x2}
+            y2={y2}
+            stroke={annotation.color}
+            strokeWidth={strokeWidth}
+            strokeLinecap="round"
+          />
           <line
             x1={x1}
             y1={y1}
@@ -819,7 +906,7 @@ export function CaptureEditor({ dataUrl }: CaptureEditorProps): JSX.Element {
   }
 
   function renderDraft(d: Draft): JSX.Element {
-    if (d.kind === 'arrow') {
+    if (d.kind === 'arrow' || d.kind === 'line') {
       return (
         <svg className="pointer-events-none absolute inset-0 h-full w-full overflow-visible">
           <line

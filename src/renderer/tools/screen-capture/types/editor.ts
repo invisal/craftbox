@@ -1,5 +1,5 @@
 export type EditorTool =
-  'select' | 'text' | 'label' | 'rect' | 'circle' | 'arrow' | 'pen' | 'blur' | 'crop';
+  'select' | 'text' | 'label' | 'rect' | 'circle' | 'arrow' | 'line' | 'pen' | 'blur' | 'crop';
 
 /** Background frame the (cropped, annotated) capture is composited onto at export. Null = off. */
 export interface BackgroundConfig {
@@ -85,6 +85,17 @@ export interface ArrowAnnotation extends AnnotationBase {
   strokeWidth: number;
 }
 
+/** Plain segment (no arrowhead) — produced by pen shape snap. */
+export interface LineAnnotation extends AnnotationBase {
+  kind: 'line';
+  x1: number;
+  y1: number;
+  x2: number;
+  y2: number;
+  color: string;
+  strokeWidth: number;
+}
+
 /** Freehand stroke — polyline of image-space points. */
 export interface PenAnnotation extends AnnotationBase {
   kind: 'pen';
@@ -110,5 +121,6 @@ export type CaptureAnnotation =
   | RectAnnotation
   | CircleAnnotation
   | ArrowAnnotation
+  | LineAnnotation
   | PenAnnotation
   | BlurAnnotation;
