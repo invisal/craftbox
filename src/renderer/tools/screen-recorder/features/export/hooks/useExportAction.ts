@@ -9,6 +9,15 @@ import { isExportCancelled } from '../engine/cancel';
 
 export type ExportStatus = 'idle' | 'exporting' | 'error';
 
+/** "Screen-Record-2026-07-23 14.30.05" -- periods (not colons) in the time so it's a valid file name on every OS. */
+function defaultExportFileName(): string {
+  const now = new Date();
+  const pad = (n: number): string => String(n).padStart(2, '0');
+  const date = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+  const time = `${pad(now.getHours())}.${pad(now.getMinutes())}.${pad(now.getSeconds())}`;
+  return `Screen-Record-${date} ${time}`;
+}
+
 export interface ExportProgressState {
   percent: number;
   stage: string;
@@ -53,7 +62,7 @@ export function useExportAction(): UseExportActionResult {
     }
 
     const outputPath = await window.screenRecorder.dialog.showSaveExportPath(
-      `export.${store.format}`,
+      `${defaultExportFileName()}.${store.format}`,
       store.format
     );
     if (!outputPath) return;
