@@ -10,12 +10,10 @@ import {
   MoveUpRight,
   Minus,
   Pencil,
-  Redo2,
   Square,
   Squircle,
   Tag,
   Type,
-  Undo2,
   Wallpaper,
   Copyright
 } from 'lucide-react';
@@ -305,10 +303,6 @@ export function EditorToolbar(): JSX.Element {
   const highlightSquareEnds = useCaptureEditorStore((s) => s.highlightSquareEnds);
   const setHighlightSquareEnds = useCaptureEditorStore((s) => s.setHighlightSquareEnds);
   const unit = useCaptureEditorStore((s) => s.unit);
-  const canUndo = useCaptureEditorStore((s) => s.past.length > 0);
-  const canRedo = useCaptureEditorStore((s) => s.future.length > 0);
-  const undo = useCaptureEditorStore((s) => s.undo);
-  const redo = useCaptureEditorStore((s) => s.redo);
 
   return (
     <Tooltip.Provider delay={200} closeDelay={0}>
@@ -459,31 +453,6 @@ export function EditorToolbar(): JSX.Element {
             className={railButtonClass(watermark)}
           >
             <Copyright size={16} strokeWidth={1.75} />
-          </button>
-        </RailTooltip>
-
-        <div className="my-1.5 h-px w-6 bg-border-dark" />
-
-        <RailTooltip label="Undo">
-          <button
-            type="button"
-            aria-label="Undo"
-            disabled={!canUndo}
-            onClick={undo}
-            className={railButtonClass(false)}
-          >
-            <Undo2 size={16} strokeWidth={1.75} />
-          </button>
-        </RailTooltip>
-        <RailTooltip label="Redo">
-          <button
-            type="button"
-            aria-label="Redo"
-            disabled={!canRedo}
-            onClick={redo}
-            className={railButtonClass(false)}
-          >
-            <Redo2 size={16} strokeWidth={1.75} />
           </button>
         </RailTooltip>
       </nav>

@@ -11,10 +11,12 @@ import {
   MoveUpRight,
   Minus,
   Pencil,
+  Redo2,
   Square,
   Tag,
   Trash2,
-  Type
+  Type,
+  Undo2
 } from 'lucide-react';
 import { cn } from 'cnfast';
 import { Input } from '@renderer/components/ui/Input';
@@ -298,6 +300,10 @@ export function LayerPanel(): JSX.Element {
   const moveLayer = useCaptureEditorStore((s) => s.moveLayer);
   const removeAnnotation = useCaptureEditorStore((s) => s.removeAnnotation);
   const patchAnnotation = useCaptureEditorStore((s) => s.patchAnnotation);
+  const canUndo = useCaptureEditorStore((s) => s.past.length > 0);
+  const canRedo = useCaptureEditorStore((s) => s.future.length > 0);
+  const undo = useCaptureEditorStore((s) => s.undo);
+  const redo = useCaptureEditorStore((s) => s.redo);
   const [dragId, setDragId] = useState<string | null>(null);
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -313,8 +319,28 @@ export function LayerPanel(): JSX.Element {
 
   return (
     <aside className="flex w-56 shrink-0 flex-col overflow-hidden rounded-lg border border-border bg-surface-2">
-      <header className="shrink-0 border-b border-border px-3 py-2 text-xs font-medium text-text-dim">
-        Layers
+      <header className="flex shrink-0 items-center gap-1 border-b border-border px-3 py-2">
+        <span className="min-w-0 flex-1 text-xs font-medium text-text-dim">Layers</span>
+        <button
+          type="button"
+          aria-label="Undo"
+          title="Undo"
+          disabled={!canUndo}
+          onClick={undo}
+          className="cursor-pointer rounded p-0.5 text-text-dim transition-colors hover:text-text-base disabled:cursor-default disabled:opacity-30 disabled:hover:text-text-dim"
+        >
+          <Undo2 size={14} strokeWidth={1.75} />
+        </button>
+        <button
+          type="button"
+          aria-label="Redo"
+          title="Redo"
+          disabled={!canRedo}
+          onClick={redo}
+          className="cursor-pointer rounded p-0.5 text-text-dim transition-colors hover:text-text-base disabled:cursor-default disabled:opacity-30 disabled:hover:text-text-dim"
+        >
+          <Redo2 size={14} strokeWidth={1.75} />
+        </button>
       </header>
       <div className="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto p-1.5">
         {topFirst.length === 0 && <p className="px-2 py-3 text-xs text-text-dim">No edits yet.</p>}
