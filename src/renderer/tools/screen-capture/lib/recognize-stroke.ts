@@ -95,10 +95,10 @@ function tryRect(
   if (box.width < 12 || box.height < 12) return null;
   const edgeErr = rectEdgeError(points, box);
   const circErr = circleRadialError(points, box);
-  const aspect = box.width / box.height;
-  // Prefer rect when edge fit is good and better than circle, or when clearly non-square.
   if (edgeErr > 0.14) return null;
-  if (circErr < 0.12 && aspect > 0.85 && aspect < 1.15 && edgeErr > circErr * 0.85) return null;
+  // Circles/ellipses also hug the bbox edges (they touch mid-sides), so edgeErr
+  // alone is not enough. Only claim rect when edges fit *better* than the ellipse.
+  if (circErr <= edgeErr) return null;
   return {
     kind: 'rect',
     x: box.x,
@@ -214,8 +214,21 @@ function assertRecognizeStrokeSelfCheck(): void {
   const rect = recognizeStroke(sampleRect(20, 30, 120, 80));
   assert(rect?.kind === 'rect', `expected rect, got ${JSON.stringify(rect)}`);
 
+  const square = recognizeStroke(sampleRect(20, 30, 100, 100));
+  assert(square?.kind === 'rect', `expected square→rect, got ${JSON.stringify(square)}`);
+
   const circ = recognizeStroke(sampleCircle(100, 100, 50));
   assert(circ?.kind === 'circle', `expected circle, got ${JSON.stringify(circ)}`);
+
+  // Slightly oblong ellipse used to be stolen by tryRect (aspect outside the
+  // old 0.85–1.15 veto window while still clearing edgeErr < 0.14).
+  const ellipsePts: Point[] = [];
+  for (let i = 0; i <= 48; i++) {
+    const a = (i / 48) * Math.PI * 2;
+    ellipsePts.push({ x: 100 + 60 * Math.cos(a), y: 100 + 50 * Math.sin(a) });
+  }
+  const ellipse = recognizeStroke(ellipsePts);
+  assert(ellipse?.kind === 'circle', `expected ellipse→circle, got ${JSON.stringify(ellipse)}`);
 
   const scribble = recognizeStroke([
     { x: 0, y: 0 },
