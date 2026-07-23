@@ -5,14 +5,15 @@ import {
   Circle,
   Crop,
   Droplets,
+  Highlighter,
   MousePointer2,
   MoveUpRight,
-  Redo2,
+  Minus,
+  Pencil,
   Square,
   Squircle,
   Tag,
   Type,
-  Undo2,
   Wallpaper,
   Copyright
 } from 'lucide-react';
@@ -26,7 +27,6 @@ import { defaultChipPosition } from '../lib/flatten';
 import {
   BACKGROUND_SIZE_PRESETS,
   DEFAULT_BACKGROUND,
-  FONT_TIERS,
   MAX_CORNER_RADIUS_UNITS,
   useCaptureEditorStore
 } from '../store/editor.store';
@@ -41,6 +41,7 @@ import type { EditorTool } from '../types/editor';
 function addChip(): void {
   const s = useCaptureEditorStore.getState();
   const { x, y } = defaultChipPosition(s.imageWidth, s.imageHeight, s.unit, s.crop, s.background);
+  const style = s.toolStyles.chip;
   s.setTool('select');
   s.addAnnotation({
     id: crypto.randomUUID(),
@@ -48,20 +49,23 @@ function addChip(): void {
     x,
     y,
     text: 'Before',
-    color: '#ffffff',
-    fontSize: FONT_TIERS.at(-1)!.value * s.unit
+    color: style.color,
+    fontSize: style.fontTier * s.unit
   });
 }
 
 // 'chip' is an action button (adds a text label immediately), not a stage tool.
 const TOOLS: { id: EditorTool | 'chip'; label: string; icon: typeof MousePointer2 }[] = [
   { id: 'select', label: 'Select', icon: MousePointer2 },
+  { id: 'pen', label: 'Free draw', icon: Pencil },
+  { id: 'highlight', label: 'Highlight', icon: Highlighter },
   { id: 'text', label: 'Text', icon: Type },
   { id: 'chip', label: 'Text label', icon: Captions },
   { id: 'label', label: 'Numbered label', icon: Tag },
   { id: 'rect', label: 'Rectangle', icon: Square },
   { id: 'circle', label: 'Circle', icon: Circle },
   { id: 'arrow', label: 'Arrow', icon: MoveUpRight },
+  { id: 'line', label: 'Line', icon: Minus },
   { id: 'blur', label: 'Blur', icon: Droplets },
   { id: 'crop', label: 'Crop', icon: Crop }
 ];
@@ -294,28 +298,93 @@ export function EditorToolbar(): JSX.Element {
   const hasBackground = useCaptureEditorStore((s) => s.background !== null);
   const watermark = useCaptureEditorStore((s) => s.watermark);
   const setWatermark = useCaptureEditorStore((s) => s.setWatermark);
+  const penSnap = useCaptureEditorStore((s) => s.penSnap);
+  const setPenSnap = useCaptureEditorStore((s) => s.setPenSnap);
+  const highlightSquareEnds = useCaptureEditorStore((s) => s.highlightSquareEnds);
+  const setHighlightSquareEnds = useCaptureEditorStore((s) => s.setHighlightSquareEnds);
   const unit = useCaptureEditorStore((s) => s.unit);
-  const canUndo = useCaptureEditorStore((s) => s.past.length > 0);
-  const canRedo = useCaptureEditorStore((s) => s.future.length > 0);
-  const undo = useCaptureEditorStore((s) => s.undo);
-  const redo = useCaptureEditorStore((s) => s.redo);
 
   return (
     <Tooltip.Provider delay={200} closeDelay={0}>
       <nav className="flex w-12 shrink-0 flex-col items-center gap-0.5 self-start rounded-lg border border-border bg-surface-2 py-2">
-        {TOOLS.map(({ id, label, icon: Icon }) => (
-          <RailTooltip key={id} label={label}>
-            <button
-              type="button"
-              aria-label={label}
-              aria-pressed={tool === id}
-              onClick={() => (id === 'chip' ? addChip() : setTool(id))}
-              className={railButtonClass(tool === id)}
-            >
-              <Icon size={16} strokeWidth={1.75} />
-            </button>
-          </RailTooltip>
-        ))}
+        {TOOLS.map(({ id, label, icon: Icon }) =>
+          id === 'pen' ? (
+            <Popover.Root key={id}>
+              <RailTooltip label={label}>
+                <Popover.Trigger
+                  aria-label={label}
+                  aria-pressed={tool === 'pen'}
+                  className={railButtonClass(tool === 'pen')}
+                  onClick={() => setTool('pen')}
+                >
+                  <Icon size={16} strokeWidth={1.75} />
+                </Popover.Trigger>
+              </RailTooltip>
+              <Popover.Content side="right" align="start" className="w-56">
+                <label className="flex cursor-pointer items-center gap-2 px-1 py-0.5 text-xs text-text-dim select-none">
+                  <input
+                    type="checkbox"
+                    checked={penSnap}
+                    onChange={(e) => setPenSnap(e.target.checked)}
+                    className="accent-(--color-accent)"
+                  />
+                  Snap straight
+                </label>
+                {penSnap && (
+                  <p className="mt-1 px-1 text-[11px] text-text-dim/80">Hold Shift for freehand</p>
+                )}
+              </Popover.Content>
+            </Popover.Root>
+          ) : id === 'highlight' ? (
+            <Popover.Root key={id}>
+              <RailTooltip label={label}>
+                <Popover.Trigger
+                  aria-label={label}
+                  aria-pressed={tool === 'highlight'}
+                  className={railButtonClass(tool === 'highlight')}
+                  onClick={() => setTool('highlight')}
+                >
+                  <Icon size={16} strokeWidth={1.75} />
+                </Popover.Trigger>
+              </RailTooltip>
+              <Popover.Content side="right" align="start" className="w-56">
+                <label className="flex cursor-pointer items-center gap-2 px-1 py-0.5 text-xs text-text-dim select-none">
+                  <input
+                    type="checkbox"
+                    checked={penSnap}
+                    onChange={(e) => setPenSnap(e.target.checked)}
+                    className="accent-(--color-accent)"
+                  />
+                  Snap straight
+                </label>
+                {penSnap && (
+                  <p className="mt-1 px-1 text-[11px] text-text-dim/80">Hold Shift for freehand</p>
+                )}
+                <label className="mt-2 flex cursor-pointer items-center gap-2 px-1 py-0.5 text-xs text-text-dim select-none">
+                  <input
+                    type="checkbox"
+                    checked={highlightSquareEnds}
+                    onChange={(e) => setHighlightSquareEnds(e.target.checked)}
+                    className="accent-(--color-accent)"
+                  />
+                  Square ends (marker tip)
+                </label>
+              </Popover.Content>
+            </Popover.Root>
+          ) : (
+            <RailTooltip key={id} label={label}>
+              <button
+                type="button"
+                aria-label={label}
+                aria-pressed={tool === id}
+                onClick={() => (id === 'chip' ? addChip() : setTool(id))}
+                className={railButtonClass(tool === id)}
+              >
+                <Icon size={16} strokeWidth={1.75} />
+              </button>
+            </RailTooltip>
+          )
+        )}
 
         <div className="my-1.5 h-px w-6 bg-border-dark" />
 
@@ -384,31 +453,6 @@ export function EditorToolbar(): JSX.Element {
             className={railButtonClass(watermark)}
           >
             <Copyright size={16} strokeWidth={1.75} />
-          </button>
-        </RailTooltip>
-
-        <div className="my-1.5 h-px w-6 bg-border-dark" />
-
-        <RailTooltip label="Undo">
-          <button
-            type="button"
-            aria-label="Undo"
-            disabled={!canUndo}
-            onClick={undo}
-            className={railButtonClass(false)}
-          >
-            <Undo2 size={16} strokeWidth={1.75} />
-          </button>
-        </RailTooltip>
-        <RailTooltip label="Redo">
-          <button
-            type="button"
-            aria-label="Redo"
-            disabled={!canRedo}
-            onClick={redo}
-            className={railButtonClass(false)}
-          >
-            <Redo2 size={16} strokeWidth={1.75} />
           </button>
         </RailTooltip>
       </nav>

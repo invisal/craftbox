@@ -7,11 +7,16 @@ import {
   Droplets,
   Eye,
   EyeOff,
+  Highlighter,
   MoveUpRight,
+  Minus,
+  Pencil,
+  Redo2,
   Square,
   Tag,
   Trash2,
-  Type
+  Type,
+  Undo2
 } from 'lucide-react';
 import { cn } from 'cnfast';
 import { Input } from '@renderer/components/ui/Input';
@@ -19,6 +24,7 @@ import {
   BLUR_TIERS,
   EDITOR_COLORS,
   FONT_TIERS,
+  HIGHLIGHT_STROKE_MULT,
   STROKE_TIERS,
   useCaptureEditorStore
 } from '../store/editor.store';
@@ -31,6 +37,9 @@ const KIND_ICONS = {
   rect: Square,
   circle: Circle,
   arrow: MoveUpRight,
+  line: Minus,
+  pen: Pencil,
+  highlight: Highlighter,
   blur: Droplets
 } as const;
 
@@ -52,6 +61,12 @@ function layerLabel(annotation: CaptureAnnotation): string {
       return 'Circle';
     case 'arrow':
       return 'Arrow';
+    case 'line':
+      return 'Line';
+    case 'pen':
+      return 'Free draw';
+    case 'highlight':
+      return 'Highlight';
     case 'blur':
       return 'Blur';
   }
@@ -77,14 +92,27 @@ function LayerProperties({ annotation }: { annotation: CaptureAnnotation }): JSX
   const setFontTier = useCaptureEditorStore((s) => s.setFontTier);
   const setBlurTier = useCaptureEditorStore((s) => s.setBlurTier);
   const patchAnnotation = useCaptureEditorStore((s) => s.patchAnnotation);
+  const setSelectedId = useCaptureEditorStore((s) => s.setSelectedId);
   const unit = useCaptureEditorStore((s) => s.unit);
   // Pre-edit text stashed on focus so an emptied field can revert on blur.
   const textBeforeEdit = useRef('');
 
   const isCustomChip = annotation.kind === 'chip' && !CHIP_PRESETS.includes(annotation.text);
 
+  /** Keep stage selection on this layer while editing its properties. */
+  function focusLayer(): void {
+    setSelectedId(annotation.id);
+  }
+
   return (
-    <div className="flex flex-col gap-2 px-2 pt-1 pb-2" onClick={(e) => e.stopPropagation()}>
+    <div
+      className="flex flex-col gap-2 px-2 pt-1 pb-2"
+      onPointerDown={(e) => {
+        e.stopPropagation();
+        focusLayer();
+      }}
+      onClick={(e) => e.stopPropagation()}
+    >
       {annotation.kind === 'chip' && (
         <div className="flex items-center gap-1">
           {CHIP_PRESETS.map((preset) => (
@@ -92,7 +120,10 @@ function LayerProperties({ annotation }: { annotation: CaptureAnnotation }): JSX
               key={preset}
               type="button"
               aria-pressed={annotation.text === preset}
-              onClick={() => patchAnnotation(annotation.id, { text: preset })}
+              onClick={() => {
+                focusLayer();
+                patchAnnotation(annotation.id, { text: preset });
+              }}
               className={cn(tierButtonClass(annotation.text === preset), 'w-auto px-2 text-xs')}
             >
               {preset}
@@ -101,7 +132,10 @@ function LayerProperties({ annotation }: { annotation: CaptureAnnotation }): JSX
           <button
             type="button"
             aria-pressed={isCustomChip}
-            onClick={() => patchAnnotation(annotation.id, { text: 'Custom' })}
+            onClick={() => {
+              focusLayer();
+              patchAnnotation(annotation.id, { text: 'Custom' });
+            }}
             className={cn(tierButtonClass(isCustomChip), 'w-auto px-2 text-xs')}
           >
             Custom
@@ -115,6 +149,7 @@ function LayerProperties({ annotation }: { annotation: CaptureAnnotation }): JSX
           aria-label="Text content"
           value={annotation.text}
           onFocus={() => {
+            focusLayer();
             textBeforeEdit.current = annotation.text;
             useCaptureEditorStore.getState().beginGesture();
           }}
@@ -141,7 +176,10 @@ function LayerProperties({ annotation }: { annotation: CaptureAnnotation }): JSX
               type="button"
               aria-label={`Color ${c}`}
               aria-pressed={annotation.color === c}
-              onClick={() => setColor(c, annotation.id)}
+              onClick={() => {
+                focusLayer();
+                setColor(c, annotation.id);
+              }}
               className={cn(
                 'h-3.5 w-3.5 cursor-pointer rounded-full border border-border-dark transition-transform',
                 annotation.color === c && 'scale-110 ring-2 ring-accent'
@@ -152,25 +190,52 @@ function LayerProperties({ annotation }: { annotation: CaptureAnnotation }): JSX
         </div>
       )}
 
+      {annotation.kind === 'highlight' && (
+        <label className="flex cursor-pointer items-center gap-2 text-xs text-text-dim select-none">
+          <input
+            type="checkbox"
+            checked={annotation.lineCap === 'square'}
+            onChange={(e) => {
+              focusLayer();
+              patchAnnotation(annotation.id, {
+                lineCap: e.target.checked ? 'square' : 'round'
+              });
+            }}
+            className="accent-(--color-accent)"
+          />
+          Square ends
+        </label>
+      )}
+
       {(annotation.kind === 'rect' ||
         annotation.kind === 'circle' ||
-        annotation.kind === 'arrow') && (
+        annotation.kind === 'arrow' ||
+        annotation.kind === 'line' ||
+        annotation.kind === 'pen' ||
+        annotation.kind === 'highlight') && (
         <div className="flex items-center gap-1">
-          {STROKE_TIERS.map(({ label, value }) => (
-            <button
-              key={value}
-              type="button"
-              aria-label={`${label} stroke`}
-              aria-pressed={Math.round(annotation.strokeWidth / unit) === value}
-              onClick={() => setStrokeTier(value, annotation.id)}
-              className={tierButtonClass(Math.round(annotation.strokeWidth / unit) === value)}
-            >
-              <span
-                className="w-3.5 rounded-full bg-current"
-                style={{ height: Math.max(1.5, value) }}
-              />
-            </button>
-          ))}
+          {STROKE_TIERS.map(({ label, value }) => {
+            const widthMult = annotation.kind === 'highlight' ? HIGHLIGHT_STROKE_MULT : 1;
+            const active = Math.round(annotation.strokeWidth / unit / widthMult) === value;
+            return (
+              <button
+                key={value}
+                type="button"
+                aria-label={`${label} stroke`}
+                aria-pressed={active}
+                onClick={() => {
+                  focusLayer();
+                  setStrokeTier(value, annotation.id);
+                }}
+                className={tierButtonClass(active)}
+              >
+                <span
+                  className="w-3.5 rounded-full bg-current"
+                  style={{ height: Math.max(1.5, value) }}
+                />
+              </button>
+            );
+          })}
         </div>
       )}
 
@@ -182,7 +247,10 @@ function LayerProperties({ annotation }: { annotation: CaptureAnnotation }): JSX
               type="button"
               aria-label={label}
               aria-pressed={Math.round(annotation.fontSize / unit) === value}
-              onClick={() => setFontTier(value, annotation.id)}
+              onClick={() => {
+                focusLayer();
+                setFontTier(value, annotation.id);
+              }}
               className={cn(
                 tierButtonClass(Math.round(annotation.fontSize / unit) === value),
                 'items-end pb-0.5 font-medium'
@@ -203,7 +271,10 @@ function LayerProperties({ annotation }: { annotation: CaptureAnnotation }): JSX
               type="button"
               aria-label={label}
               aria-pressed={Math.round(annotation.blurRadius / unit) === value}
-              onClick={() => setBlurTier(value, annotation.id)}
+              onClick={() => {
+                focusLayer();
+                setBlurTier(value, annotation.id);
+              }}
               className={tierButtonClass(Math.round(annotation.blurRadius / unit) === value)}
             >
               <Droplets size={10 + index * 3} />
@@ -229,6 +300,10 @@ export function LayerPanel(): JSX.Element {
   const moveLayer = useCaptureEditorStore((s) => s.moveLayer);
   const removeAnnotation = useCaptureEditorStore((s) => s.removeAnnotation);
   const patchAnnotation = useCaptureEditorStore((s) => s.patchAnnotation);
+  const canUndo = useCaptureEditorStore((s) => s.past.length > 0);
+  const canRedo = useCaptureEditorStore((s) => s.future.length > 0);
+  const undo = useCaptureEditorStore((s) => s.undo);
+  const redo = useCaptureEditorStore((s) => s.redo);
   const [dragId, setDragId] = useState<string | null>(null);
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -244,15 +319,37 @@ export function LayerPanel(): JSX.Element {
 
   return (
     <aside className="flex w-56 shrink-0 flex-col overflow-hidden rounded-lg border border-border bg-surface-2">
-      <header className="shrink-0 border-b border-border px-3 py-2 text-xs font-medium text-text-dim">
-        Layers
+      <header className="flex shrink-0 items-center gap-1 border-b border-border px-3 py-2">
+        <span className="min-w-0 flex-1 text-xs font-medium text-text-dim">Layers</span>
+        <button
+          type="button"
+          aria-label="Undo"
+          title="Undo"
+          disabled={!canUndo}
+          onClick={undo}
+          className="cursor-pointer rounded p-0.5 text-text-dim transition-colors hover:text-text-base disabled:cursor-default disabled:opacity-30 disabled:hover:text-text-dim"
+        >
+          <Undo2 size={14} strokeWidth={1.75} />
+        </button>
+        <button
+          type="button"
+          aria-label="Redo"
+          title="Redo"
+          disabled={!canRedo}
+          onClick={redo}
+          className="cursor-pointer rounded p-0.5 text-text-dim transition-colors hover:text-text-base disabled:cursor-default disabled:opacity-30 disabled:hover:text-text-dim"
+        >
+          <Redo2 size={14} strokeWidth={1.75} />
+        </button>
       </header>
       <div className="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto p-1.5">
         {topFirst.length === 0 && <p className="px-2 py-3 text-xs text-text-dim">No edits yet.</p>}
         {topFirst.map((annotation) => {
           const Icon = KIND_ICONS[annotation.kind];
           const isRenaming = renamingId === annotation.id;
-          const isExpanded = expandedId === annotation.id;
+          // Only show props for the selected layer — avoids editing one row
+          // while the stage selection (and accent border) points at another.
+          const isExpanded = expandedId === annotation.id && selectedId === annotation.id;
           return (
             <div
               key={annotation.id}
