@@ -5,7 +5,7 @@ import { evaluateSceneAtMs } from './rendering/timeline-evaluator';
 import { PixiSceneRenderer } from './rendering/pixi-scene-renderer';
 import { resolveCropRect, centerSquareCrop } from './rendering/crop';
 import { StreamingVideoDecoder } from './streaming-decoder';
-import { createVideoEncoder, getEncoderPreferences } from './video-encoder';
+import { createVideoEncoder, getEncoderPreferences, resolveCodecCandidate } from './video-encoder';
 import { WebcamFrameQueue } from './webcam-frame-queue';
 import { EXPORT_CANCELLED_MESSAGE, isExportCancelled } from './cancel';
 
@@ -86,7 +86,8 @@ export async function exportVideoOnly(
   const { options, sourceFile, webcamFile } = request;
   let lastError: Error | null = null;
 
-  for (const hardwareAcceleration of getEncoderPreferences()) {
+  const { muxerCodec } = resolveCodecCandidate(options.format, options.codec);
+  for (const hardwareAcceleration of getEncoderPreferences(muxerCodec)) {
     try {
       return await runOnce(
         options,
