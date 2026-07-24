@@ -397,12 +397,13 @@ function toNativeRecordingSource(
  * cursor at the compositor level and capturing system/mic audio natively.
  * Webcam stays a separate, unchanged sidecar recording either way.
  *
- * A crop region ("Area" mode) only goes through this path on a platform
- * whose helper can actually honor it natively (`supportsCrop` -- macOS via
- * ScreenCaptureKit's `sourceRect`, see NativeRecordingSource.cropFraction)
- * and only for a 'screen' source, matching what the helper actually
- * implements. Everything else with a crop region set still falls back to
- * the legacy canvas-crop-relay path below, same as before this existed.
+ * A crop region ("Area" mode) only goes through this path when the
+ * platform's helper reports `supportsCrop` (all three do, once a helper
+ * binary is found -- see NativeRecordingSource.cropFraction for how each
+ * implements it) and only for a 'screen' source, matching what every
+ * helper actually implements (none support cropping a window source).
+ * Everything else with a crop region set still falls back to the legacy
+ * canvas-crop-relay path below, same as before this existed.
  *
  * Returns `null` (never throws) on any other failure -- unsupported
  * platform, missing helper binary, permission denied, helper failed to

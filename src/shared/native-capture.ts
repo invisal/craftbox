@@ -31,10 +31,12 @@ export interface NativeRecordingSource {
    * points/pixels so it doesn't matter whether the renderer measured in DIP
    * or bitmap-pixel space (see capture-region.ts's `imageSpace` caveat);
    * each helper converts to its own real points/pixels from its own
-   * authoritative display data. macOS only for now (ScreenCaptureKit's
-   * `sourceRect` makes this a real native crop there) -- gated by
-   * `NativeRecordingSupport.supportsCrop`, see `tryStartNativeRecording` in
-   * capture-engine.ts.
+   * authoritative display data: ScreenCaptureKit's `sourceRect` on macOS, a
+   * D3D11 `CopySubresourceRegion` crop of the captured texture on Windows,
+   * an `XShmGetImage` source-offset on Linux. See `tryStartNativeRecording`
+   * in capture-engine.ts for the gating (`NativeRecordingSupport.
+   * supportsCrop`, and display sources only -- none of the three helpers
+   * support cropping a window source).
    */
   cropFraction?: { x: number; y: number; width: number; height: number };
 }
@@ -62,7 +64,7 @@ export interface NativeRecordingOptions extends NativeRecordingRequest {
 export interface NativeRecordingSupport {
   /** Whether a helper binary exists for the current platform/arch -- a cheap file-existence check, not a permission check. */
   supported: boolean;
-  /** Whether this platform's helper can honor `NativeRecordingSource.cropFraction` -- macOS only for now, see that field's doc. */
+  /** Whether this platform's helper can honor `NativeRecordingSource.cropFraction` -- see that field's doc. True on every platform once a helper binary is found. */
   supportsCrop: boolean;
 }
 

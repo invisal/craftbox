@@ -132,6 +132,11 @@ const WINDOWS_ADAPTER: HelperAdapter = {
       displayW: options.source.bounds?.width ?? 0,
       displayH: options.source.bounds?.height ?? 0,
       hasDisplayBounds: options.source.bounds != null,
+      hasCropFraction: options.source.cropFraction != null,
+      cropFractionX: options.source.cropFraction?.x ?? 0,
+      cropFractionY: options.source.cropFraction?.y ?? 0,
+      cropFractionW: options.source.cropFraction?.width ?? 1,
+      cropFractionH: options.source.cropFraction?.height ?? 1,
       captureSystemAudio: options.systemAudioEnabled,
       captureMic: options.microphoneEnabled,
       // Inverted from `hideCursor` -- adopted verbatim from the reference,
@@ -191,6 +196,11 @@ const LINUX_ADAPTER: HelperAdapter = {
       boundsY: options.source.bounds?.y ?? 0,
       boundsW: options.source.bounds?.width ?? 0,
       boundsH: options.source.bounds?.height ?? 0,
+      hasCropFraction: options.source.cropFraction != null,
+      cropFractionX: options.source.cropFraction?.x ?? 0,
+      cropFractionY: options.source.cropFraction?.y ?? 0,
+      cropFractionW: options.source.cropFraction?.width ?? 1,
+      cropFractionH: options.source.cropFraction?.height ?? 1,
       fps: options.frameRate,
       width: options.width,
       height: options.height,
@@ -299,7 +309,10 @@ export function checkNativeRecordingSupport(): NativeRecordingSupport {
   const adapter = adapterForPlatform();
   if (!adapter) return { supported: false, supportsCrop: false };
   const supported = findHelperPath(adapter) !== null;
-  return { supported, supportsCrop: supported && process.platform === 'darwin' };
+  // All three helpers now implement `cropFraction` (ScreenCaptureKit's
+  // sourceRect on macOS, a D3D11 CopySubresourceRegion crop on Windows, an
+  // XShmGetImage source-rect offset on Linux) -- see each's own main.
+  return { supported, supportsCrop: supported };
 }
 
 function wireStreamEvents(

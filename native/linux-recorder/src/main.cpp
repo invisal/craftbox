@@ -46,6 +46,7 @@
 #include <algorithm>
 #include <atomic>
 #include <chrono>
+#include <cmath>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -108,6 +109,20 @@ long long findInt(const std::string& json, const std::string& key, long long fal
     }
 }
 
+double findDouble(const std::string& json, const std::string& key, double fallback) {
+    auto pos = json.find("\"" + key + "\"");
+    if (pos == std::string::npos) return fallback;
+    pos = json.find(':', pos);
+    if (pos == std::string::npos) return fallback;
+    pos += 1;
+    while (pos < json.size() && std::isspace(static_cast<unsigned char>(json[pos]))) pos += 1;
+    try {
+        return std::stod(json.substr(pos));
+    } catch (...) {
+        return fallback;
+    }
+}
+
 bool findBool(const std::string& json, const std::string& key, bool fallback) {
     auto pos = json.find("\"" + key + "\"");
     if (pos == std::string::npos) return fallback;
@@ -152,6 +167,13 @@ struct Config {
     long long windowId = 0;
     bool hasBounds = false;
     int boundsX = 0, boundsY = 0, boundsW = 0, boundsH = 0;
+    // Drag-selected sub-rectangle of a "display" source ("Area" mode), as a
+    // 0-1 fraction of the *resolved monitor's* own width/height -- same
+    // fraction-based contract as the macOS helper's cropFraction (see
+    // recording-helper.ts), applied on top of the monitor rect resolveDisplayRect()
+    // already computes rather than needing its own separate resolution step.
+    bool hasCropFraction = false;
+    double cropFractionX = 0, cropFractionY = 0, cropFractionW = 1, cropFractionH = 1;
     int fps = 30;
     int width = 0;
     int height = 0;
@@ -172,6 +194,11 @@ bool parseConfig(const std::string& json, Config& config) {
     config.boundsY = static_cast<int>(findInt(json, "boundsY", 0));
     config.boundsW = static_cast<int>(findInt(json, "boundsW", 0));
     config.boundsH = static_cast<int>(findInt(json, "boundsH", 0));
+    config.hasCropFraction = findBool(json, "hasCropFraction", false);
+    config.cropFractionX = findDouble(json, "cropFractionX", 0);
+    config.cropFractionY = findDouble(json, "cropFractionY", 0);
+    config.cropFractionW = findDouble(json, "cropFractionW", 1);
+    config.cropFractionH = findDouble(json, "cropFractionH", 1);
     config.fps = static_cast<int>(findInt(json, "fps", 30));
     if (config.fps <= 0) config.fps = 30;
     config.width = static_cast<int>(findInt(json, "width", 0));
@@ -553,6 +580,21 @@ int main(int argc, char* argv[]) {
     } else {
         rect = resolveDisplayRect(display, root, config);
         captureTarget = root;
+
+        // Crop is a sub-rectangle *within* the resolved monitor -- shrink
+        // `rect` to it here, in the same root-relative coordinate space
+        // resolveDisplayRect() already returned, so every downstream use of
+        // `rect` (width/height/srcX/srcY below) needs no further changes.
+        if (config.hasCropFraction) {
+            const int cropX = static_cast<int>(std::round(config.cropFractionX * rect.width));
+            const int cropY = static_cast<int>(std::round(config.cropFractionY * rect.height));
+            const int cropW = std::max(2, static_cast<int>(std::round(config.cropFractionW * rect.width)));
+            const int cropH = std::max(2, static_cast<int>(std::round(config.cropFractionH * rect.height)));
+            rect.x += cropX;
+            rect.y += cropY;
+            rect.width = cropW;
+            rect.height = cropH;
+        }
     }
 
     const int width = (std::max(2, config.width > 0 ? config.width : rect.width) / 2) * 2;

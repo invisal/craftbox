@@ -10,6 +10,7 @@
 #include <algorithm>
 #include <atomic>
 #include <chrono>
+#include <cmath>
 #include <condition_variable>
 #include <cctype>
 #include <cstdint>
@@ -36,6 +37,15 @@ struct CaptureConfig {
     int height = 0;
     MonitorBounds bounds{};
     bool hasDisplayBounds = false;
+    // Drag-selected sub-rectangle of a "display" source ("Area" mode), as a
+    // 0-1 fraction of the *captured* frame's own width/height (the WGC
+    // session's actual reported size, not `width`/`height` above, which are
+    // just this app's own estimate) -- same fraction-based contract as the
+    // macOS helper's cropFraction (see recording-helper.ts). Applied via
+    // ID3D11DeviceContext::CopySubresourceRegion on the captured texture,
+    // see the frame callback below.
+    bool hasCropFraction = false;
+    double cropFractionX = 0, cropFractionY = 0, cropFractionW = 1, cropFractionH = 1;
     bool captureSystemAudio = false;
     bool captureMic = false;
     bool captureCursor = false;
@@ -334,6 +344,11 @@ bool parseConfig(const std::string& json, CaptureConfig& config) {
     config.bounds.width = findInt(json, "displayW", 0);
     config.bounds.height = findInt(json, "displayH", 0);
     config.hasDisplayBounds = findBool(json, "hasDisplayBounds", false);
+    config.hasCropFraction = findBool(json, "hasCropFraction", false);
+    config.cropFractionX = findDouble(json, "cropFractionX", 0.0);
+    config.cropFractionY = findDouble(json, "cropFractionY", 0.0);
+    config.cropFractionW = findDouble(json, "cropFractionW", 1.0);
+    config.cropFractionH = findDouble(json, "cropFractionH", 1.0);
     config.captureSystemAudio = findBool(json, "captureSystemAudio", false);
     config.captureMic = findBool(json, "captureMic", false);
     config.captureCursor = findBool(json, "captureCursor", false);
@@ -425,12 +440,30 @@ int main(int argc, char* argv[]) {
     }
 
     // WGC owns the captured texture size. Encoding must use that exact size
-    // until a dedicated GPU scaling pass is introduced; CopyResource requires
-    // matching resource dimensions.
-    int width = session.captureWidth();
-    int height = session.captureHeight();
+    // (or the cropped sub-rectangle's size, see cropX/cropY below) until a
+    // dedicated GPU scaling pass is introduced; CopySubresourceRegion/
+    // CopyResource both require matching resource dimensions.
+    const int captureWidth = session.captureWidth();
+    const int captureHeight = session.captureHeight();
+
+    // Drag-selected sub-rectangle of the captured frame ("Area" mode) --
+    // same fraction-based contract as the macOS helper's cropFraction, see
+    // CaptureConfig::hasCropFraction's doc. Computed here (in the captured
+    // texture's own real pixel space) rather than trusting `config.width`/
+    // `height`, which are only ever this app's own pre-capture estimate.
+    int cropX = 0;
+    int cropY = 0;
+    int width = captureWidth;
+    int height = captureHeight;
+    if (config.hasCropFraction) {
+        cropX = std::clamp(static_cast<int>(std::lround(config.cropFractionX * captureWidth)), 0, std::max(0, captureWidth - 2));
+        cropY = std::clamp(static_cast<int>(std::lround(config.cropFractionY * captureHeight)), 0, std::max(0, captureHeight - 2));
+        width = std::clamp(static_cast<int>(std::lround(config.cropFractionW * captureWidth)), 2, captureWidth - cropX);
+        height = std::clamp(static_cast<int>(std::lround(config.cropFractionH * captureHeight)), 2, captureHeight - cropY);
+    }
     width = (std::max(2, width) / 2) * 2;
     height = (std::max(2, height) / 2) * 2;
+    const bool useCrop = cropX != 0 || cropY != 0 || width != captureWidth || height != captureHeight;
 
     const int pixels = width * height;
     const int bitrate = pixels >= 3840 * 2160 ? 45'000'000 : pixels >= 2560 * 1440 ? 28'000'000 : 18'000'000;
@@ -556,6 +589,12 @@ int main(int argc, char* argv[]) {
         if (!latestFrameTexture) {
             D3D11_TEXTURE2D_DESC desc{};
             texture->GetDesc(&desc);
+            // When cropping, the destination texture is the *cropped* size
+            // (width/height above), not a 1:1 copy of the captured
+            // texture's own dimensions -- CopySubresourceRegion below reads
+            // only the cropped sub-rectangle out of the full capture.
+            desc.Width = static_cast<UINT>(width);
+            desc.Height = static_cast<UINT>(height);
             desc.BindFlags = 0;
             desc.CPUAccessFlags = 0;
             desc.MiscFlags = 0;
@@ -567,7 +606,19 @@ int main(int argc, char* argv[]) {
             }
         }
 
-        session.context()->CopyResource(latestFrameTexture.Get(), texture);
+        if (useCrop) {
+            D3D11_BOX cropBox{};
+            cropBox.left = static_cast<UINT>(cropX);
+            cropBox.top = static_cast<UINT>(cropY);
+            cropBox.front = 0;
+            cropBox.right = static_cast<UINT>(cropX + width);
+            cropBox.bottom = static_cast<UINT>(cropY + height);
+            cropBox.back = 1;
+            session.context()->CopySubresourceRegion(
+                latestFrameTexture.Get(), 0, 0, 0, 0, texture, 0, &cropBox);
+        } else {
+            session.context()->CopyResource(latestFrameTexture.Get(), texture);
+        }
         latestFrameTimestampHns = timestampHns;
         if (!firstFrameWritten.exchange(true)) {
             control.cv.notify_all();
