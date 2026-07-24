@@ -24,10 +24,6 @@ import { killActiveNativeRecording } from './screen-recorder/capture/native/reco
 import { registerKuberneterHandlers } from './kuberneter';
 import { registerFileExplorerHandlers } from './file-explorer';
 
-if (process.env.BENPOCKET_DISABLE_GPU) {
-  app.disableHardwareAcceleration();
-}
-
 function createWindow(): BrowserWindow {
   // Create the browser window.
   const mainWindow = new BrowserWindow({
