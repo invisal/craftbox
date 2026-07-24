@@ -14,15 +14,18 @@ let backdropObjectUrl: string | null = null;
 const confirmLabel = new URLSearchParams(window.location.search).get('confirmLabel');
 if (confirmLabel) document.documentElement.classList.add('confirm-mode');
 const panel = document.getElementById('panel');
-const sizeValue = document.getElementById('size-value');
-const positionValue = document.getElementById('position-value');
+const widthInput = document.getElementById('width-input');
+const heightInput = document.getElementById('height-input');
+const xInput = document.getElementById('x-input');
+const yInput = document.getElementById('y-input');
 const confirmButton = document.getElementById('confirm-button');
 if (confirmButton && confirmLabel) confirmButton.textContent = confirmLabel;
 
 // Same confirm-mode gate as the panel above -- Screen Capture's region
 // screenshot has no equivalent instruction and keeps its plain crosshair.
 const hint = document.getElementById('hint');
-if (hint && confirmLabel) hint.textContent = 'Drag area you want to record';
+const hintMessage = document.getElementById('hint-message');
+if (hintMessage && confirmLabel) hintMessage.textContent = 'Drag area you want to record';
 
 function showHint(): void {
   if (hint && confirmLabel) hint.hidden = false;
@@ -164,14 +167,45 @@ function hidePanel(): void {
   if (panel) panel.hidden = true;
 }
 
+// Keeps the rect inside the overlay and above the same too-small threshold
+// pointerup already enforces for a drag -- applies equally to a typed
+// value, since nothing else validates what the user enters.
+function clampRect(rect: ScreenRect): ScreenRect {
+  const width = Math.min(Math.max(rect.width, 4), cssWidth);
+  const height = Math.min(Math.max(rect.height, 4), cssHeight);
+  const x = Math.min(Math.max(rect.x, 0), cssWidth - width);
+  const y = Math.min(Math.max(rect.y, 0), cssHeight - height);
+  return { x, y, width, height };
+}
+
+function writeInputsFromRect(rect: ScreenRect): void {
+  if (widthInput instanceof HTMLInputElement) widthInput.value = String(Math.round(rect.width));
+  if (heightInput instanceof HTMLInputElement) heightInput.value = String(Math.round(rect.height));
+  if (xInput instanceof HTMLInputElement) xInput.value = String(Math.round(rect.x));
+  if (yInput instanceof HTMLInputElement) yInput.value = String(Math.round(rect.y));
+}
+
+function readRectFromInputs(): ScreenRect | null {
+  if (
+    !(widthInput instanceof HTMLInputElement) ||
+    !(heightInput instanceof HTMLInputElement) ||
+    !(xInput instanceof HTMLInputElement) ||
+    !(yInput instanceof HTMLInputElement)
+  ) {
+    return null;
+  }
+  return {
+    x: Number(xInput.value) || 0,
+    y: Number(yInput.value) || 0,
+    width: Number(widthInput.value) || 0,
+    height: Number(heightInput.value) || 0
+  };
+}
+
 // Centered on the rect -- inside it if there's room, otherwise tucked just
 // below (or above, if there isn't room below either).
-function showConfirmPanel(rect: ScreenRect): void {
-  if (!panel || !sizeValue || !positionValue) return;
-
-  sizeValue.textContent = `${Math.round(rect.width)} × ${Math.round(rect.height)} px`;
-  positionValue.textContent = `${Math.round(rect.x)}, ${Math.round(rect.y)} px`;
-  panel.hidden = false;
+function positionPanel(rect: ScreenRect): void {
+  if (!panel) return;
 
   const { width: panelWidth, height: panelHeight } = panel.getBoundingClientRect();
   const centerX = rect.x + rect.width / 2;
@@ -185,6 +219,27 @@ function showConfirmPanel(rect: ScreenRect): void {
 
   panel.style.left = `${Math.round(left)}px`;
   panel.style.top = `${Math.round(Math.max(top, 8))}px`;
+}
+
+function showConfirmPanel(rect: ScreenRect): void {
+  if (!panel) return;
+  writeInputsFromRect(rect);
+  panel.hidden = false;
+  positionPanel(rect);
+}
+
+// Re-applied on blur/Enter (see the 'change' listeners below) rather than
+// live on every keystroke -- an 'input' listener would snap the drawn
+// selection to width:4 mid-edit any time the field goes briefly empty
+// (e.g. selecting "300" to retype "250").
+function applyInputsToRect(): void {
+  const raw = readRectFromInputs();
+  if (!raw) return;
+  const rect = clampRect(raw);
+  confirmedRect = rect;
+  writeInputsFromRect(rect);
+  redraw(rect);
+  positionPanel(rect);
 }
 
 async function loadBackdropFromPayload(payload: ArrayBuffer | string): Promise<HTMLImageElement> {
@@ -269,7 +324,23 @@ confirmButton?.addEventListener('click', () => {
   if (confirmedRect) finishRect(confirmedRect);
 });
 
+for (const input of [widthInput, heightInput, xInput, yInput]) {
+  if (!(input instanceof HTMLInputElement)) continue;
+  input.addEventListener('change', applyInputsToRect);
+  // Enter doesn't fire 'change' on its own until the field loses focus.
+  input.addEventListener('keydown', (event) => {
+    if (event.key === 'Enter') input.blur();
+  });
+}
+
 window.addEventListener('keydown', (event) => {
+  // Editing a Size/Position field: Escape clears focus instead of
+  // cancelling the whole picker -- the field's own last applied value
+  // (not necessarily whatever's still typed) stays in effect either way.
+  if (event.key === 'Escape' && document.activeElement instanceof HTMLInputElement) {
+    document.activeElement.blur();
+    return;
+  }
   if (event.key === 'Escape') cancel();
 });
 
