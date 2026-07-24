@@ -106,9 +106,12 @@ export const screenRecorderApi = {
       ipcRenderer.invoke(IpcChannels.WindowRestore, options),
     setBackgroundThrottling: (allowed: boolean): Promise<void> =>
       ipcRenderer.invoke(IpcChannels.WindowSetBackgroundThrottling, allowed),
-    /** Recorder toolbar only: click-through for its transparent regions -- see window-handlers.ts. */
-    setIgnoreMouseEvents: (ignore: boolean, options?: { forward?: boolean }): Promise<void> =>
-      ipcRenderer.invoke(IpcChannels.WindowSetIgnoreMouseEvents, ignore, options),
+    /** Recorder toolbar only: click-through for its transparent regions -- see recorder-toolbar-window.ts. */
+    setIgnoreMouseEvents: (ignore: boolean): Promise<void> =>
+      ipcRenderer.invoke(IpcChannels.WindowSetIgnoreMouseEvents, ignore),
+    /** Recorder toolbar only: current on-screen rect of the pill, so the main-process interactive-region poll (recorder-toolbar-window.ts) knows where it is. Pass null while nothing's rendered. */
+    reportInteractiveRegion: (region: ScreenRect | null): void =>
+      ipcRenderer.send(IpcChannels.WindowReportInteractiveRegion, region),
     toggleMaximize: (): Promise<void> => ipcRenderer.invoke(IpcChannels.WindowToggleMaximize),
     close: (): Promise<void> => ipcRenderer.invoke(IpcChannels.WindowClose),
     isMaximized: (): Promise<boolean> => ipcRenderer.invoke(IpcChannels.WindowIsMaximized),

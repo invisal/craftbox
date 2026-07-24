@@ -45,6 +45,7 @@ export const IpcChannels = {
   WindowMaximizeChanged: 'window:maximize-changed',
   WindowSetBackgroundThrottling: 'window:set-background-throttling',
   WindowSetIgnoreMouseEvents: 'window:set-ignore-mouse-events',
+  WindowReportInteractiveRegion: 'window:report-interactive-region',
   GetScreenRecordingStatus: 'permissions:get-screen-recording-status',
   OpenScreenRecordingSettings: 'permissions:open-screen-recording-settings',
   GetBootedSimulator: 'simulator:get-booted',
