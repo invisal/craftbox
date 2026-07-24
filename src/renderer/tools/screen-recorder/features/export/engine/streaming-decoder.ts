@@ -14,6 +14,8 @@ import type { ExportSegment } from '@screen-recorder/types/export';
  */
 
 const SOURCE_LOAD_TIMEOUT_MS = 60_000;
+const DECODER_STALL_TIMEOUT_MS = 15_000;
+const DECODER_FLUSH_TIMEOUT_MS = 20_000;
 const EPSILON_SEC = 0.001;
 
 /** Builds a full WebCodecs-compatible AV1 codec string from the AV1CodecConfigurationRecord. web-demuxer can return a bare "av01" when the WASM parser fails to read the extradata. */
@@ -323,8 +325,19 @@ export class StreamingVideoDecoder {
       if (decodeError) throw decodeError;
       if (pendingFrames.length > 0) return Promise.resolve(pendingFrames.shift()!);
       if (decodeDone) return Promise.resolve(null);
-      return new Promise((resolve) => {
-        frameResolve = resolve;
+      // Guarded the same way as the demuxer reads below -- some hardware
+      // VideoDecoder implementations accept decode() calls but silently
+      // never fire `output` or `error` for a given input, which otherwise
+      // hangs the export at 0% forever instead of failing fast.
+      return new Promise<VideoFrame | null>((resolve, reject) => {
+        const timer = setTimeout(() => {
+          frameResolve = null;
+          reject(new Error('Timed out waiting for the video decoder to produce a frame.'));
+        }, DECODER_STALL_TIMEOUT_MS);
+        frameResolve = (frame) => {
+          clearTimeout(timer);
+          resolve(frame);
+        };
       });
     };
 
@@ -355,7 +368,11 @@ export class StreamingVideoDecoder {
           this.decoder!.decode(chunk);
         }
         if (!this.cancelled && this.decoder!.state === 'configured') {
-          await this.decoder!.flush();
+          await this.withTimeout(
+            this.decoder!.flush(),
+            DECODER_FLUSH_TIMEOUT_MS,
+            'Timed out while finalizing video decoding.'
+          );
         }
       } catch (e) {
         decodeError = e instanceof Error ? e : new Error(String(e));

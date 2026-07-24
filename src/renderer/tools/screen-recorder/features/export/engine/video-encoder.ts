@@ -3,6 +3,7 @@ import type { ExportCodec, ExportFormat } from '@screen-recorder/types/export';
 
 const ENCODER_STALL_TIMEOUT_MS = 15_000;
 const ENCODER_FLUSH_TIMEOUT_MS = 20_000;
+const ENCODER_SUPPORT_CHECK_TIMEOUT_MS = 15_000;
 /** Smaller queue cap for software encoding so memory doesn't balloon (ported from the reference's Windows-software-fallback note). */
 const MAX_ENCODE_QUEUE_HARDWARE = 120;
 const MAX_ENCODE_QUEUE_SOFTWARE = 32;
@@ -16,7 +17,7 @@ interface CodecCandidate {
 }
 
 /** WebM cannot legally hold H.264/H.265/AV1 in this app's encoder choice -- always forces VP9, matching the previous ffmpeg pipeline's rule. */
-function resolveCodecCandidate(format: ExportFormat, codec: ExportCodec): CodecCandidate {
+export function resolveCodecCandidate(format: ExportFormat, codec: ExportCodec): CodecCandidate {
   if (format === 'webm') {
     return { webCodecsCodec: 'vp09.00.10.08', muxerCodec: 'vp9', hvc1Tag: false };
   }
@@ -95,7 +96,18 @@ export async function createVideoEncoder(
     hardwareAcceleration
   };
 
-  const support = await VideoEncoder.isConfigSupported(encoderConfig);
+  // Guarded the same way as the decoder's stall points (streaming-decoder.ts)
+  // -- on some Windows GPU/driver configurations, probing hardware codec
+  // support routes into the OS Media Foundation Transform subsystem and can
+  // hang indefinitely instead of resolving or rejecting, which otherwise
+  // hangs the whole export at 0% forever with no error.
+  const support = await withTimeout(
+    VideoEncoder.isConfigSupported(encoderConfig),
+    ENCODER_SUPPORT_CHECK_TIMEOUT_MS,
+    hardwareAcceleration === 'prefer-hardware'
+      ? 'Timed out checking hardware video encoder support.'
+      : 'Timed out checking software video encoder support.'
+  );
   if (!support.supported) {
     throw new Error(
       hardwareAcceleration === 'prefer-hardware'
@@ -164,9 +176,23 @@ export async function createVideoEncoder(
   };
 }
 
-/** Try hardware first then software (reversed on Windows, where hardware encoders have proven less reliable -- ported from the reference implementation's own finding). */
-export function getEncoderPreferences(): HardwareAcceleration[] {
-  if (typeof navigator !== 'undefined' && /\bWindows\b/i.test(navigator.userAgent)) {
+/**
+ * Try hardware first then software (reversed on Windows, where hardware
+ * encoders have proven less reliable -- ported from the reference
+ * implementation's own finding) -- except for H.264/H.265, whose software
+ * encoding isn't available at all in stock Electron builds (no proprietary
+ * codec license baked into the shipped Chromium binary, unlike VP9/AV1 which
+ * are royalty-free and always present). Trying "prefer-software" first for
+ * those codecs doesn't just risk unreliability, it deterministically fails
+ * every time -- go straight to hardware instead of wasting an attempt.
+ */
+export function getEncoderPreferences(muxerCodec: VideoCodec): HardwareAcceleration[] {
+  const softwareUnavailable = muxerCodec === 'avc' || muxerCodec === 'hevc';
+  if (
+    !softwareUnavailable &&
+    typeof navigator !== 'undefined' &&
+    /\bWindows\b/i.test(navigator.userAgent)
+  ) {
     return ['prefer-software', 'prefer-hardware'];
   }
   return ['prefer-hardware', 'prefer-software'];

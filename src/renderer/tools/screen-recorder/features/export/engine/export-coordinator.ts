@@ -158,6 +158,7 @@ async function finishVideoExport(
 ): Promise<ArrayBuffer> {
   if (signal?.aborted) throw new Error(EXPORT_CANCELLED_MESSAGE);
   const includeAudio = result.sourceHasAudio && options.includeAudio;
+  const audioMuxerCodec = options.format === 'webm' ? 'opus' : 'aac';
   const muxer = new VideoMuxer(
     {
       format: options.format as Exclude<typeof options.format, 'gif'>,
@@ -165,7 +166,7 @@ async function finishVideoExport(
       videoCodec: result.muxerCodec
     },
     includeAudio,
-    options.format === 'webm' ? 'opus' : 'aac'
+    audioMuxerCodec
   );
   await muxer.initialize();
 
@@ -181,7 +182,10 @@ async function finishVideoExport(
     let exportCodec: Awaited<ReturnType<typeof AudioProcessor.selectSupportedExportCodecForSource>>;
     try {
       await probeDemuxer.load(sourceFile);
-      exportCodec = await AudioProcessor.selectSupportedExportCodecForSource(probeDemuxer);
+      exportCodec = await AudioProcessor.selectSupportedExportCodecForSource(
+        probeDemuxer,
+        audioMuxerCodec
+      );
     } finally {
       probeDemuxer.destroy();
     }

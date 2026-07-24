@@ -40,13 +40,24 @@ export class AudioProcessor {
 
   static async selectSupportedExportCodec(
     sampleRate: number,
-    numberOfChannels: number
+    numberOfChannels: number,
+    requiredMuxerCodec: ExportAudioMuxerCodec
   ): Promise<ExportAudioCodec | null> {
     const channelOptions = [numberOfChannels];
     if (numberOfChannels > 2) channelOptions.push(2);
     if (!channelOptions.includes(1)) channelOptions.push(1);
 
-    for (const codec of EXPORT_AUDIO_CODECS) {
+    // The container dictates which audio codec is legal (WebM: Opus only;
+    // MP4/MOV: AAC only) -- picking whichever codec merely happens to be
+    // *system*-supported first (previously: AAC, unconditionally) produces a
+    // codec/container mismatch the muxer can't detect up front. It only
+    // surfaces once mediabunny tries to read the (wrong-shaped) codec
+    // description as if it were the container's expected format, e.g.
+    // reading an AAC AudioSpecificConfig as an Opus identification header.
+    const candidates = EXPORT_AUDIO_CODECS.filter(
+      (codec) => codec.muxerCodec === requiredMuxerCodec
+    );
+    for (const codec of candidates) {
       for (const channels of channelOptions) {
         const support = await AudioEncoder.isConfigSupported({
           codec: codec.encoderCodec,
@@ -61,7 +72,8 @@ export class AudioProcessor {
   }
 
   static async selectSupportedExportCodecForSource(
-    demuxer: WebDemuxer
+    demuxer: WebDemuxer,
+    requiredMuxerCodec: ExportAudioMuxerCodec
   ): Promise<ExportAudioCodec | null> {
     let audioConfig: AudioDecoderConfig;
     try {
@@ -73,7 +85,8 @@ export class AudioProcessor {
     if (!codecCheck.supported) return null;
     return AudioProcessor.selectSupportedExportCodec(
       audioConfig.sampleRate || 48000,
-      audioConfig.numberOfChannels || 2
+      audioConfig.numberOfChannels || 2,
+      requiredMuxerCodec
     );
   }
 
